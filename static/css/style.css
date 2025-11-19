@@ -1,0 +1,67 @@
+/* static/css/style.css */
+
+/* Кастомный скроллбар (более тонкий и эстетичный) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; /* gray-300 */
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; /* gray-400 */
+}
+
+/* Специфичные стили для плеера (Range Input) - Tailwind это делает сложно */
+input[type=range]::-webkit-slider-thumb {
+    pointer-events: all;
+    width: 12px;
+    height: 12px;
+    -webkit-appearance: none;
+    /* Тень и цвет задаются в Tailwind классах на родителе */
+}
+
+/* Классы для анимации появления (используются в ui.js) */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+    animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Фикс для TinyMCE (редактор биографии) внутри Tailwind */
+.tox-tinymce {
+    border-radius: 0.5rem !important;
+    border-color: #e5e7eb !important;
+}
+
+/* Стиль активного перетаскивания (Drag & Drop) */
+.drag-over-top {
+    border-top: 2px solid #06b6d4 !important; /* cyan-500 */
+}
+.drag-over-bottom {
+    border-bottom: 2px solid #06b6d4 !important;
+}
+
+/* Стили для уведомлений */
+.notification-toast {
+    pointer-events: auto;
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
