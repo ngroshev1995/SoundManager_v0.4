@@ -90,6 +90,7 @@ async function handleLogin() {
 
     localStorage.setItem("user_email", email);
     localStorage.setItem("access_token", data.access_token);
+    localStorage.setItem("is_admin", data.is_admin ? "true" : "false");
     onLoginSuccess();
   } catch (error) {
     showNotification(error.message, "error");

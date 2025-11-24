@@ -1,808 +1,484 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ClassicaLib</title>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Библиотека классической музыки</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
     />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем Tailwind с плагином Typography -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ["Inter", "sans-serif"] },
-            colors: { cyan: { 500: "#06b6d4", 600: "#0891b2" } },
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: { sans: ["Inter", "sans-serif"] },
+              colors: { cyan: { 500: "#06b6d4", 600: "#0891b2" } },
+            },
           },
-        },
-      };
+        };
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-      /* Тонкий скроллбар */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
 
-      /* Слайдер плеера */
-      input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 12px;
-        width: 12px;
-        background: #06b6d4;
-        border-radius: 50%;
-        cursor: pointer;
-        margin-top: -4px;
-      }
-      input[type="range"]::-webkit-slider-runnable-track {
-        width: 100%;
-        height: 4px;
-        background: #e2e8f0;
-        border-radius: 2px;
-      }
-    </style>
-  </head>
-  <body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
-    <!-- Auth View (Оставляем как есть, он тебе понравился) -->
-    <div
-      id="auth-view"
-      class="hidden fixed inset-0 z-50 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-      >
-        <div
-          class="bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white text-center"
-        >
-          <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4"></i>
-          <h1 class="text-3xl font-bold">ClassicaLib</h1>
+<!-- Auth View -->
+<div
+        id="auth-view"
+        class="hidden fixed inset-0 z-50 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4"
+>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white text-center">
+            <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4"></i>
+            <h1 class="text-3xl font-bold">ClassicaLib</h1>
         </div>
         <div id="login-form" class="p-8 space-y-6">
-          <input
-            type="email"
-            id="login-email"
-            placeholder="Email"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <input
-            type="password"
-            id="login-password"
-            placeholder="Пароль"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <button
-            id="login-btn"
-            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
-          >
-            Войти
-          </button>
-          <p class="text-center text-sm text-gray-500">
-            <a href="#" id="show-register" class="text-cyan-600 hover:underline"
-              >Регистрация</a
-            >
-          </p>
+            <input type="email" id="login-email" placeholder="Email"
+                   class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"/>
+            <input type="password" id="login-password" placeholder="Пароль"
+                   class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"/>
+            <button id="login-btn"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all">
+                Войти
+            </button>
+            <p class="text-center text-sm text-gray-500"><a href="#" id="show-register"
+                                                            class="text-cyan-600 hover:underline">Регистрация</a></p>
         </div>
         <div id="register-form" class="p-8 space-y-6 hidden">
-          <input
-            type="email"
-            id="register-email"
-            placeholder="Email"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <input
-            type="password"
-            id="register-password"
-            placeholder="Пароль"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <button
-            id="register-btn"
-            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
-          >
-            Создать аккаунт
-          </button>
-          <p class="text-center text-sm text-gray-500">
-            <a href="#" id="show-login" class="text-cyan-600 hover:underline"
-              >Вход</a
-            >
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main View -->
-    <div id="main-view" class="hidden flex flex-col h-full">
-      <!-- Header -->
-      <header
-        class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg flex-shrink-0 z-30"
-      >
-        <div
-          class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
-        >
-          <div class="flex items-center space-x-8">
-            <a
-              href="/"
-              data-navigo
-              class="flex items-center space-x-2 font-bold text-xl"
-            >
-              <i data-lucide="music-2" class="w-6 h-6"></i>
-              <span>ClassicaLib</span>
-            </a>
-            <nav class="hidden md:flex space-x-1">
-              <a
-                href="/recordings"
-                data-navigo
-                class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-                >Медиатека</a
-              >
-              <a
-                href="/composers"
-                data-navigo
-                class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-                >Композиторы</a
-              >
-              <div class="relative group">
-                <button
-                  class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1"
-                >
-                  Плейлисты <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                </button>
-                <!-- Dropdown -->
-                <div
-                  class="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl py-2 hidden group-hover:block text-gray-800 z-50 before:absolute before:-top-4 before:h-5 before:w-full before:bg-transparent before:content-['']"
-                  id="playlists-dropdown-menu"
-                >
-                  <div class="px-4 py-2 border-b border-gray-100">
-                    <a
-                      href="#"
-                      id="create-playlist-top-btn"
-                      class="text-cyan-600 font-semibold text-sm flex items-center gap-2"
-                      ><i data-lucide="plus" class="w-3 h-3"></i> Создать</a
-                    >
-                  </div>
-                </div>
-              </div>
-            </nav>
-          </div>
-          <div class="flex items-center space-x-4">
-            <span id="user-greeting" class="text-sm font-medium opacity-90"
-              >User</span
-            >
-            <button
-              id="logout-btn"
-              class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors"
-            >
-              <i data-lucide="log-out" class="w-4 h-4"></i>
+            <input type="email" id="register-email" placeholder="Email"
+                   class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"/>
+            <input type="password" id="register-password" placeholder="Пароль"
+                   class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"/>
+            <button id="register-btn"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all">
+                Создать аккаунт
             </button>
-          </div>
+            <p class="text-center text-sm text-gray-500"><a href="#" id="show-login"
+                                                            class="text-cyan-600 hover:underline">Вход</a></p>
         </div>
-      </header>
+    </div>
+</div>
 
-      <!-- Main Content (Scrollable) -->
-      <main
-        class="flex-1 overflow-y-auto bg-gray-50 relative"
-        id="main-content"
-      >
-        <!-- Хлебные крошки и заголовок (появляются только на внутренних страницах) -->
-        <div class="max-w-7xl mx-auto px-6 pt-6">
-          <div
-            id="breadcrumbs-container"
-            class="text-sm text-gray-500 mb-2"
-          ></div>
-          <div id="view-title-container" class="hidden mb-6"></div>
+<!-- Main View -->
+<div id="main-view" class="hidden flex flex-col h-full">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg flex-shrink-0 z-30">
+        <div class="w-full px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/" data-navigo class="flex items-center space-x-2 font-bold text-xl">
+                    <i data-lucide="music-2" class="w-6 h-6"></i>
+                    <span>ClassicaLib</span>
+                </a>
+                <nav class="hidden md:flex space-x-1">
+                    <div class="relative group">
+                        <a href="/recordings" data-navigo class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer">
+                            Медиатека <i data-lucide="chevron-down" class="w-3 h-3 opacity-70"></i>
+                        </a>
+                        <!-- Dropdown -->
+                        <div class="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 border border-gray-100">
+                            <!-- Треугольник сверху (стрелочка) -->
+                            <div class="absolute -top-1.5 left-6 w-3 h-3 bg-white transform rotate-45 border-l border-t border-gray-100"></div>
+
+                            <a href="/recordings/audio" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
+                                <i data-lucide="disc" class="w-4 h-4"></i> Аудиозаписи
+                            </a>
+                            <a href="/recordings/video" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
+                                <i data-lucide="youtube" class="w-4 h-4"></i> Видеозал
+                            </a>
+                        </div>
+                    </div>
+                    <a href="/composers" data-navigo
+                       class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium">Композиторы</a>
+                    <a href="/favorites" data-navigo id="nav-favorites-link"
+                       class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2">
+                        <i data-lucide="heart" class="w-4 h-4"></i> Избранное
+                    </a>
+                    <a href="/playlists" data-navigo id="nav-playlists-link"
+                       class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2">
+                        <i data-lucide="list-music" class="w-4 h-4"></i> Мои плейлисты
+                    </a>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4" id="header-auth-block"></div>
         </div>
+    </header>
 
-        <!-- Контейнер контента -->
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-gray-50 relative flex flex-col pb-24 transition-[padding] duration-300"
+          id="main-content">
+        <div id="content-header" class="max-w-7xl mx-auto px-6 pt-6">
+            <div id="breadcrumbs-container" class="text-sm text-gray-500 mb-2"></div>
+            <div id="view-title-container" class="hidden mb-6"></div>
+        </div>
         <div id="composition-list" class="pb-20"></div>
+        <div id="pagination-container" class="py-8 flex justify-center space-x-2 pb-32"></div>
 
-        <!-- Пагинация -->
-        <div
-          id="pagination-container"
-          class="py-8 flex justify-center space-x-2 pb-32"
-        ></div>
-      </main>
+        <footer class="bg-gray-800 text-white mt-auto border-t border-gray-700">
+            <div class="max-w-7xl mx-auto px-6 py-12">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="music-2" class="w-6 h-6 text-cyan-400"></i>
+                            <span class="text-lg font-bold">ClassicaLib</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">Ваша персональная библиотека классической музыки.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4 text-cyan-400">Навигация</h4>
+                        <ul class="space-y-2 text-sm text-gray-400">
+                            <li><a href="/recordings" data-navigo class="hover:text-cyan-400 transition-colors">Медиатека</a>
+                            </li>
+                            <li><a href="/composers" data-navigo class="hover:text-cyan-400 transition-colors">Композиторы</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 mt-10 pt-8 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center">
+                    <p>© 2025 ClassicaLib. Все права защищены.</p>
+                    <p class="mt-2 md:mt-0 flex items-center gap-1">Сделано с <i data-lucide="heart"
+                                                                                 class="w-3 h-3 text-red-500 fill-current"></i>
+                        к музыке.</p>
+                </div>
+            </div>
+        </footer>
+    </main>
 
-      <!-- Player (Fixed Bottom) -->
-      <footer
-        class="h-24 bg-white border-t border-gray-200 flex-shrink-0 flex items-center justify-between px-8 shadow-[0_-5px_10px_rgba(0,0,0,0.02)] z-40 relative"
-      >
+    <!-- Player -->
+    <footer id="music-player"
+            class="fixed bottom-0 left-0 right-0 h-24 bg-white border-t border-gray-200 flex items-center justify-between px-8 shadow-[0_-5px_10px_rgba(0,0,0,0.05)] z-50 transition-transform duration-300 ease-in-out transform">
+        <button id="player-toggle-btn"
+                class="absolute -top-8 right-8 bg-white border border-gray-200 border-b-0 rounded-t-xl p-1.5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] text-gray-500 hover:text-cyan-600 transition-colors flex items-center justify-center w-10 h-8"
+                title="Свернуть/Развернуть плеер">
+            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-300" id="player-toggle-icon"></i>
+        </button>
         <div class="flex items-center w-1/4 space-x-4">
-          <img
-            src="/static/img/placeholder.png"
-            id="player-cover-art"
-            class="w-14 h-14 rounded-lg shadow-md object-cover"
-          />
-          <div class="min-w-0">
-            <div id="player-title" class="font-bold text-gray-800 truncate">
-              Выберите трек
+            <img src="/static/img/placeholder.png" id="player-cover-art"
+                 class="w-14 h-14 rounded-lg shadow-md object-cover"/>
+            <div class="min-w-0">
+                <div id="player-title" class="font-bold text-gray-800 truncate">Выберите трек</div>
+                <div id="player-artist" class="text-xs text-gray-500 truncate">...</div>
             </div>
-            <div id="player-artist" class="text-xs text-gray-500 truncate">
-              ...
-            </div>
-          </div>
-          <button
-            class="favorite-btn text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <i data-lucide="heart" class="w-5 h-5"></i>
-          </button>
+            <button class="favorite-btn text-gray-400 hover:text-red-500 transition-colors"><i data-lucide="heart"
+                                                                                               class="w-5 h-5"></i>
+            </button>
         </div>
-
         <div class="flex flex-col items-center w-2/4 max-w-xl">
-          <div class="flex items-center space-x-6 mb-2">
-            <button id="prev-btn" class="text-gray-600 hover:text-cyan-600">
-              <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
-            </button>
-            <button
-              id="play-pause-btn"
-              class="w-10 h-10 bg-cyan-500 hover:bg-cyan-600 rounded-full flex items-center justify-center text-white shadow-lg transform hover:scale-105 transition-all"
-            >
-              <i
-                data-lucide="play"
-                class="w-5 h-5 fill-current ml-0.5"
-                id="play-icon"
-              ></i>
-              <i
-                data-lucide="pause"
-                class="w-5 h-5 fill-current hidden"
-                id="pause-icon"
-              ></i>
-            </button>
-            <button id="next-btn" class="text-gray-600 hover:text-cyan-600">
-              <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
-            </button>
-          </div>
-          <div
-            class="w-full flex items-center space-x-3 text-xs text-gray-400 font-medium"
-          >
-            <span id="current-time">0:00</span>
-            <input
-              type="range"
-              id="progress-bar"
-              value="0"
-              step="0.1"
-              class="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            />
-            <span id="total-time">0:00</span>
-          </div>
-          <audio id="audio-player" class="hidden"></audio>
+            <div class="flex items-center space-x-6 mb-2">
+                <button id="prev-btn" class="text-gray-600 hover:text-cyan-600"><i data-lucide="skip-back"
+                                                                                   class="w-6 h-6 fill-current"></i>
+                </button>
+                <button id="play-pause-btn"
+                        class="w-10 h-10 bg-cyan-500 hover:bg-cyan-600 rounded-full flex items-center justify-center text-white shadow-lg transform hover:scale-105 transition-all">
+                    <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5" id="play-icon"></i>
+                    <i data-lucide="pause" class="w-5 h-5 fill-current hidden" id="pause-icon"></i>
+                </button>
+                <button id="next-btn" class="text-gray-600 hover:text-cyan-600"><i data-lucide="skip-forward"
+                                                                                   class="w-6 h-6 fill-current"></i>
+                </button>
+            </div>
+            <div class="w-full flex items-center space-x-3 text-xs text-gray-400 font-medium">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress-bar" value="0" step="0.1"
+                       class="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"/>
+                <span id="total-time">0:00</span>
+            </div>
+            <audio id="audio-player" class="hidden"></audio>
         </div>
-
         <div class="flex items-center justify-end w-1/4 space-x-4">
-          <button id="queue-btn" class="text-gray-500 hover:text-cyan-600">
-            <i data-lucide="list-music" class="w-5 h-5"></i>
-          </button>
+            <button id="queue-btn" class="text-gray-500 hover:text-cyan-600"><i data-lucide="list-music"
+                                                                                class="w-5 h-5"></i></button>
         </div>
-      </footer>
-    </div>
+    </footer>
+</div>
 
-    <!-- Modals (Hidden) - Simple Structure for Logic Compatibility -->
-    <div
-      id="edit-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-    >
-      <div class="bg-white p-6 rounded-xl shadow-2xl w-96">
-        <h2 class="text-xl font-bold mb-4">Редактировать</h2>
-        <input type="hidden" id="edit-recording-id" />
-        <input
-          type="text"
-          id="edit-performers"
-          class="w-full border p-2 rounded mb-2"
-          placeholder="Исполнитель"
-        />
-        <input
-          type="number"
-          id="edit-recording-year"
-          class="w-full border p-2 rounded mb-4"
-          placeholder="Год"
-        />
-        <div class="hidden">
-          <input id="edit-title-en" /><input id="edit-title-ru" /><input
-            id="edit-title-original"
-          /><input id="edit-composition-year" /><input
-            id="edit-catalog-number"
-          /><input id="edit-work-en" /><input id="edit-work-ru" /><input
-            id="edit-work-original"
-          /><input id="edit-publication-year" /><input
-            id="edit-composer-en"
-          /><input id="edit-composer-ru" /><input id="edit-composer-original" />
-        </div>
-        <div id="tab-main" class="hidden active"></div>
-        <!-- Stub for UI compatibility -->
-        <div class="flex justify-end gap-2">
-          <button class="close-button px-4 py-2 text-gray-500">Отмена</button>
-          <button
-            id="save-recording-btn"
-            class="px-4 py-2 bg-cyan-600 text-white rounded"
-          >
-            Сохранить
-          </button>
-        </div>
-      </div>
-    </div>
+<!-- === МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ (УНИВЕРСАЛЬНОЕ) === -->
+<div id="edit-modal"
+     class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <!-- Контейнер с ограниченной высотой и вертикальной компоновкой -->
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
 
-    <!-- Stubs for other modals to prevent JS errors -->
-    <!-- 1. Создать КОМПОЗИТОРА -->
-    <div
-      id="add-composer-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative animate-scale-in"
-      >
-        <button
-          class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
-        >
-          <i data-lucide="x"></i>
+        <!-- Header (Фиксированный) -->
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+            <h3 class="text-lg font-bold text-gray-800" id="edit-modal-title">Редактировать</h3>
+            <button class="close-button text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Content (Скроллируемый) -->
+        <div class="p-6 space-y-4 overflow-y-auto" id="edit-modal-content"></div>
+
+        <!-- Footer (Фиксированный) -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+            <button class="close-button px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+                Отмена
+            </button>
+            <button id="confirm-edit-btn"
+                    class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all">
+                Сохранить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 1. Создать КОМПОЗИТОРА -->
+<div id="add-composer-modal"
+     class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden">
+        <!-- Шапка -->
+        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="user-plus"
+                                                                                   class="w-5 h-5 text-cyan-600"></i>
+                Добавить композитора</h2>
+            <button class="close-button text-gray-400 hover:text-gray-800"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Контент -->
+        <div class="space-y-4 overflow-y-auto pr-2">
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Портрет (опционально)</label>
+                <input type="file" id="add-composer-portrait" accept="image/*"
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
+            </div>
+            <div class="grid grid-cols-1 gap-4">
+                <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Имя (RU) <span
+                        class="text-red-500">*</span></label><input type="text" id="add-composer-name-ru"
+                                                                    class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                                                                    placeholder="Например: Петр Ильич Чайковский"/>
+                </div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Имя на родном
+                    языке</label><input type="text" id="add-composer-name-orig"
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
+                                        placeholder="Pyotr Tchaikovsky"/></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Родился</label><input
+                            type="number" id="add-composer-born" class="w-full px-3 py-2 border rounded-lg"
+                            placeholder="YYYY"/></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Умер</label><input
+                            type="number" id="add-composer-died" class="w-full px-3 py-2 border rounded-lg"
+                            placeholder="YYYY"/></div>
+                </div>
+            </div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткая биография</label><textarea
+                    id="add-composer-bio"
+                    class="w-full h-64 px-3 py-2 border rounded-lg outline-none resize-none"></textarea></div>
+        </div>
+
+        <!-- Подвал -->
+        <div class="mt-6 flex-shrink-0">
+            <button id="create-composer-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200">
+                Создать
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Создать ПРОИЗВЕДЕНИЕ -->
+<div id="add-work-modal"
+     class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden">
+        <!-- Шапка -->
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="book-open"
+                                                                                   class="w-5 h-5 text-cyan-600"></i>
+                Добавить произведение</h2>
+            <button class="close-button text-gray-400 hover:text-gray-800"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Контент -->
+        <div class="p-6 space-y-4 overflow-y-auto">
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка (опционально)</label>
+                <input type="file" id="add-work-cover" accept="image/*"
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
+            </div>
+            <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
+                    class="text-red-500">*</span></label><input type="text" id="add-work-name-ru"
+                                                                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"/>
+            </div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label><input
+                    type="text" id="add-work-name-orig" class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op., BWV,
+                K.)</label><input type="text" id="add-work-catalog"
+                                  class="w-full px-3 py-2 border rounded-lg outline-none"
+                                  placeholder="Например: Op. 23"/></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Начало (год)</label><input
+                        type="number" id="add-work-year-start" class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="YYYY"/></div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Конец (год)</label><input
+                        type="number" id="add-work-year-end" class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="YYYY"/></div>
+            </div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История создания</label><textarea
+                    id="add-work-notes"
+                    class="w-full h-48 px-3 py-2 border rounded-lg outline-none resize-none"></textarea></div>
+        </div>
+
+        <!-- Подвал -->
+        <div class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50">
+            <button id="create-work-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors">
+                Создать
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Создать КОМПОЗИЦИЮ -->
+<div id="add-composition-modal"
+     class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-scale-in">
+        <button class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"><i data-lucide="x"></i>
         </button>
-        <h2
-          class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
-        >
-          <i data-lucide="user-plus" class="w-5 h-5 text-cyan-600"></i> Добавить
-          композитора
-        </h2>
-
+        <h2 class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"><i data-lucide="music"
+                                                                                    class="w-5 h-5 text-cyan-600"></i>
+            Добавить часть</h2>
         <div class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- РУССКОЕ - ПЕРВОЕ И ОБЯЗАТЕЛЬНОЕ -->
-            <div class="md:col-span-3">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Имя (RU) <span class="text-red-500">*</span></label
-              >
-              <input
-                type="text"
-                id="add-composer-name-ru"
-                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none font-medium"
-                placeholder="Например: Петр Ильич Чайковский"
-              />
+            <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
+                    class="text-red-500">*</span></label><input type="text" id="add-composition-title-ru"
+                                                                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"/>
             </div>
-
-            <!-- Остальные опционально -->
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Name (English)</label
-              >
-              <input
-                type="text"
-                id="add-composer-name-en"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
-                placeholder="Pyotr Tchaikovsky"
-              />
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label><input
+                    type="text" id="add-composition-title-orig"
+                    class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год</label><input type="number"
+                                                                                                           id="add-composition-year"
+                                                                                                           class="w-full px-3 py-2 border rounded-lg outline-none"/>
+                </div>
+                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label><input
+                        type="text" id="add-composition-catalog"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
             </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Original Name</label
-              >
-              <input
-                type="text"
-                id="add-composer-name-orig"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                  >Родился</label
-                >
-                <input
-                  type="number"
-                  id="add-composer-born"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  placeholder="YYYY"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                  >Умер</label
-                >
-                <input
-                  type="number"
-                  id="add-composer-died"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  placeholder="YYYY"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Краткая биография</label
-            >
-            <textarea
-              id="add-composer-bio"
-              class="w-full h-24 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none resize-none"
-            ></textarea>
-          </div>
         </div>
-        <button
-          id="create-composer-btn"
-          class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200"
-        >
-          Создать
+        <button id="create-composition-btn"
+                class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors">
+            Создать
         </button>
-      </div>
     </div>
+</div>
 
-    <!-- 2. Создать ПРОИЗВЕДЕНИЕ -->
-    <div
-      id="add-work-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-scale-in"
-      >
-        <button
-          class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
-        >
-          <i data-lucide="x"></i>
+<!-- 4. Загрузить ЗАПИСЬ -->
+<div id="add-recording-modal"
+     class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative animate-scale-in">
+        <button class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"><i data-lucide="x"></i>
         </button>
-        <h2
-          class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
-        >
-          <i data-lucide="book-open" class="w-5 h-5 text-cyan-600"></i> Добавить
-          произведение
-        </h2>
-
+        <h2 class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"><i data-lucide="upload-cloud"
+                                                                                    class="w-5 h-5 text-cyan-600"></i>
+            Загрузить запись</h2>
+        <input type="hidden" id="add-recording-composition-id"/>
         <div class="space-y-4">
-          <!-- РУССКОЕ - ГЛАВНОЕ -->
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1"
-              >Название (RU) <span class="text-red-500">*</span></label
-            >
-            <input
-              type="text"
-              id="add-work-name-ru"
-              class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Title (EN)</label
-              >
-              <input
-                type="text"
-                id="add-work-name-en"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Исполнители</label><input
+                    type="text" id="add-recording-performers"
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
+                    placeholder="Кто исполняет?"/></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год записи</label><input
+                    type="number" id="add-recording-year"
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
+                    placeholder="YYYY"/></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ссылка на YouTube</label><input
+                    type="text" id="add-recording-youtube"
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
+                    placeholder="https://youtube.com/watch?v=..."/></div>
+            <div class="mt-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Аудиофайл (если есть)</label>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer"
+                     onclick="document.getElementById('composition-upload-input').click()">
+                    <span id="selected-recording-filename" class="text-sm text-gray-500 truncate max-w-[200px]">Выберите файл (необязательно)...</span>
+                    <i data-lucide="file-audio" class="text-cyan-600 w-5 h-5"></i>
+                </div>
             </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Original</label
-              >
-              <input
-                type="text"
-                id="add-work-name-orig"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Начало (год)</label
-              >
-              <input
-                type="number"
-                id="add-work-year-start"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Конец (год)</label
-              >
-              <input
-                type="number"
-                id="add-work-year-end"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-          </div>
         </div>
-        <button
-          id="create-work-btn"
-          class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
-        >
-          Создать
+        <button id="create-recording-btn"
+                class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200">
+            Загрузить
         </button>
-      </div>
     </div>
+</div>
 
-    <!-- 3. Создать КОМПОЗИЦИЮ -->
-    <div
-      id="add-composition-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-scale-in"
-      >
-        <button
-          class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
-        >
-          <i data-lucide="x"></i>
-        </button>
-        <h2
-          class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
-        >
-          <i data-lucide="music" class="w-5 h-5 text-cyan-600"></i> Добавить
-          часть
-        </h2>
-
-        <div class="space-y-4">
-          <!-- РУССКОЕ - ГЛАВНОЕ -->
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1"
-              >Название (RU) <span class="text-red-500">*</span></label
-            >
-            <input
-              type="text"
-              id="add-composition-title-ru"
-              class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Title (EN)</label
-              >
-              <input
-                type="text"
-                id="add-composition-title-en"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Original</label
-              >
-              <input
-                type="text"
-                id="add-composition-title-orig"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Год</label
-              >
-              <input
-                type="number"
-                id="add-composition-year"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Каталог (Op.)</label
-              >
-              <input
-                type="text"
-                id="add-composition-catalog"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-              />
-            </div>
-          </div>
+<div id="delete-modal"
+     class="modal hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-transform duration-200"
+         id="delete-modal-content">
+        <div class="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0"><i
+                    data-lucide="alert-triangle" class="text-red-600 w-6 h-6"></i></div>
+            <h3 class="text-lg font-bold text-red-800" id="delete-modal-title">Удаление</h3>
         </div>
-        <button
-          id="create-composition-btn"
-          class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
-        >
-          Создать
-        </button>
-      </div>
-    </div>
-
-    <!-- 4. Загрузить ЗАПИСЬ (Upload) -->
-    <div
-      id="add-recording-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative animate-scale-in"
-      >
-        <button
-          class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
-        >
-          <i data-lucide="x"></i>
-        </button>
-        <h2
-          class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
-        >
-          <i data-lucide="upload-cloud" class="w-5 h-5 text-cyan-600"></i>
-          Загрузить запись
-        </h2>
-        <input type="hidden" id="add-recording-composition-id" />
-
-        <div class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Исполнители *</label
-            >
-            <input
-              type="text"
-              id="add-recording-performers"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
-              placeholder="Кто исполняет?"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Год записи</label
-            >
-            <input
-              type="number"
-              id="add-recording-year"
-              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
-              placeholder="YYYY"
-            />
-          </div>
-
-          <!-- File Selector -->
-          <div class="mt-2">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Аудиофайл</label
-            >
-            <div
-              class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer"
-              onclick="document.getElementById('composition-upload-input').click()"
-            >
-              <span
-                id="selected-recording-filename"
-                class="text-sm text-gray-500 truncate max-w-[200px]"
-                >Выберите файл...</span
-              >
-              <i data-lucide="file-audio" class="text-cyan-600 w-5 h-5"></i>
-            </div>
-          </div>
-        </div>
-        <button
-          id="create-recording-btn"
-          class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200"
-        >
-          Загрузить
-        </button>
-      </div>
-    </div>
-
-    <div
-      id="delete-modal"
-      class="modal hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-transform duration-200"
-        id="delete-modal-content"
-      >
-        <!-- Красная шапка -->
-        <div
-          class="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-3"
-        >
-          <div
-            class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0"
-          >
-            <i data-lucide="alert-triangle" class="text-red-600 w-6 h-6"></i>
-          </div>
-          <h3 class="text-lg font-bold text-red-800" id="delete-modal-title">
-            Удаление
-          </h3>
-        </div>
-
         <div class="p-6">
-          <p class="text-gray-600 mb-6 leading-relaxed" id="delete-modal-text">
-            Вы уверены? Это действие необратимо.
-          </p>
-
-          <!-- Поле проверки имени (скрыто по умолчанию) -->
-          <div id="delete-verification-container" class="hidden mb-6">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-              Для подтверждения введите:
-              <span
-                id="delete-verification-target"
-                class="select-all text-red-600 font-mono bg-red-50 px-1 rounded"
-              ></span>
-            </label>
-            <input
-              type="text"
-              id="delete-verification-input"
-              class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none transition-colors"
-              placeholder="Введите имя точно..."
-            />
-          </div>
-
-          <div class="flex justify-end gap-3">
-            <button
-              class="close-button px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-            >
-              Отмена
-            </button>
-            <button
-              id="confirm-delete-btn"
-              class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md shadow-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Удалить навсегда
-            </button>
-          </div>
+            <p class="text-gray-600 mb-6 leading-relaxed" id="delete-modal-text">Вы уверены? Это действие
+                необратимо.</p>
+            <div id="delete-verification-container" class="hidden mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Для подтверждения введите: <span
+                        id="delete-verification-target"
+                        class="select-all text-red-600 font-mono bg-red-50 px-1 rounded"></span></label>
+                <input type="text" id="delete-verification-input"
+                       class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none transition-colors"
+                       placeholder="Введите имя точно..."/>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button class="close-button px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                    Отмена
+                </button>
+                <button id="confirm-delete-btn"
+                        class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md shadow-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    Удалить навсегда
+                </button>
+            </div>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- File Inputs -->
-    <input type="file" id="cover-art-upload-input" class="hidden" />
-    <input type="file" id="composition-upload-input" class="hidden" />
-    <input type="file" id="portrait-upload-input" class="hidden" />
+<!-- File Inputs -->
+<input type="file" id="cover-art-upload-input" class="hidden"/>
+<input type="file" id="composition-upload-input" class="hidden"/>
+<input type="file" id="portrait-upload-input" class="hidden"/>
 
-    <!-- Context Menus (Hidden) -->
-    <div
-      id="context-menu"
-      class="context-menu hidden fixed bg-white shadow-xl rounded border p-2 z-50"
-    ></div>
-    <div
-      id="playlist-context-menu"
-      class="context-menu hidden fixed bg-white shadow-xl rounded border p-2 z-50"
-    ></div>
-    <div
-      id="composer-context-menu"
-      class="context-menu hidden fixed bg-white shadow-xl rounded border p-2 z-50"
-    ></div>
-    <div
-      id="composition-context-menu"
-      class="context-menu hidden fixed bg-white shadow-xl rounded border p-2 z-50"
-    ></div>
+<!-- Context Menus -->
+<div id="context-menu" class="context-menu hidden fixed bg-white shadow-xl rounded border p-2 z-50"></div>
+<div id="notification-container" class="fixed bottom-32 right-6 z-50 flex flex-col gap-2"></div>
 
-    <div
-      id="notification-container"
-      class="fixed bottom-32 right-6 z-50 flex flex-col gap-2"
-    ></div>
-
-    <aside
-      id="queue-sidebar"
-      class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform z-50 pt-20 p-4"
-    >
-      <div class="flex justify-between mb-4">
-        <h2 class="font-bold">Очередь</h2>
+<aside id="queue-sidebar"
+       class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform z-50 pt-20 p-4">
+    <div class="flex justify-between mb-4"><h2 class="font-bold">Очередь</h2>
         <button id="close-queue-btn">x</button>
-      </div>
-      <div id="queue-list"></div>
-    </aside>
+    </div>
+    <div id="queue-list"></div>
+</aside>
 
-    <script
-      src="https://cdn.tiny.cloud/1/pv6nl30afhy5fumd6vgyvdmljmuuvbwnl2upcmsy9c954ojm/tinymce/6/tinymce.min.js"
-      referrerpolicy="origin"
-    ></script>
-    <script src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"></script>
-    <script type="module" src="/static/js/main.js"></script>
-  </body>
+<div id="selection-bar"
+     class="fixed bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 ease-in-out z-[45] flex justify-center pb-6 pointer-events-none">
+    <div class="bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 pointer-events-auto mb-24">
+        <div class="flex items-center gap-3 border-r border-gray-600 pr-6">
+            <button id="selection-cancel-btn" class="hover:text-gray-300"><i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <span class="font-bold text-sm whitespace-nowrap" id="selection-count">0 выбрано</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="bulk-add-playlist-btn"
+                    class="flex items-center gap-2 px-3 py-1.5 hover:bg-white/10 rounded-lg transition-colors text-sm font-medium">
+                <i data-lucide="plus-square" class="w-4 h-4"></i><span>В плейлист</span>
+            </button>
+            <button id="bulk-delete-btn"
+                    class="flex items-center gap-2 px-3 py-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-colors text-sm font-medium">
+                <i data-lucide="trash-2" class="w-4 h-4"></i><span id="bulk-delete-text">Удалить</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- TinyMCE -->
+<!-- ВАЖНО: Вставьте СВОЙ API KEY здесь -->
+<script src="https://cdn.tiny.cloud/1/pv6nl30afhy5fumd6vgyvdmljmuuvbwnl2upcmsy9c954ojm/tinymce/6/tinymce.min.js"
+        referrerpolicy="origin"></script>
+
+<script src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"></script>
+<script type="module" src="/static/js/main.js"></script>
+</body>
 </html>

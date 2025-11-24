@@ -7,6 +7,10 @@ let currentRecordingId = null; // Раньше: currentCompositionId
 let isPlaying = false;
 export let playQueue = [];
 
+export function hasActiveTrack() {
+    return currentRecordingId !== null;
+}
+
 /**
  * Инициализирует плеер и назначает обработчики событий элементам управления.
  */
@@ -105,6 +109,8 @@ function playRecordingObject(recording) {
   ui.updatePlayerInfo(recording);
   updateIcons();
 
+  ui.openPlayer();
+
   // Обновляем текущий индекс, если он изменился (например, при переходе из очереди)
   const indexInList = currentRecordingList.findIndex(
     (r) => r.id === recording.id
@@ -171,10 +177,12 @@ function playPrev() {
 function updateIcons() {
   ui.updatePlayPauseIcon(isPlaying);
 
+  ui.updateTrackRowIcon(currentRecordingId, isPlaying);
+
   // Просто добавляем/убираем класс, остальное сделает CSS
-  document.querySelectorAll(".recording-item, .recording-item-minimal").forEach(item => {
+  document.querySelectorAll(".recording-item").forEach(item => {
       const isThisItemPlaying = (isPlaying && parseInt(item.dataset.recordingId, 10) === currentRecordingId);
-      item.classList.toggle("playing", isThisItemPlaying);
+      item.classList.toggle("bg-cyan-50", isThisItemPlaying); // Опционально: подсвечивать всю строку
   });
 }
 
@@ -226,4 +234,7 @@ function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
+}
+export function forceUpdateIcons() {
+    updateIcons();
 }

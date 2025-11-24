@@ -17,6 +17,7 @@ class WorkBase(BaseModel):
     name: Optional[str] = None
     name_ru: Optional[str] = None
     original_name: Optional[str] = None
+    catalog_number: Optional[str] = None
     publication_year: Optional[int] = None
     publication_year_end: Optional[int] = None
     notes: Optional[str] = None
@@ -34,6 +35,7 @@ class CompositionBase(BaseModel):
 class RecordingBase(BaseModel):
     performers: Optional[str] = None
     recording_year: Optional[int] = None
+    youtube_url: Optional[str] = None
 
 
 # --- Create (Input) ---
@@ -53,7 +55,7 @@ class CompositionCreate(CompositionBase):
 
 
 class RecordingCreate(RecordingBase):
-    performers: str
+    performers: Optional[str] = None  # Теперь опционально
 
 
 # --- Update (Input) ---
@@ -72,7 +74,7 @@ class CompositionUpdate(CompositionBase):
 class RecordingUpdate(BaseModel):
     performers: Optional[str] = None
     recording_year: Optional[int] = None
-    # Для обновления иерархии
+    youtube_url: Optional[str] = None
     composer_name: Optional[str] = None
     work_name: Optional[str] = None
     composition_title: Optional[str] = None
@@ -91,6 +93,7 @@ class FullRecordingDetailsUpdate(BaseModel):
     # Запись
     performers: Optional[str] = None
     recording_year: Optional[int] = None
+    youtube_url: Optional[str] = None
 
     # Композиция
     title: Optional[str] = None
@@ -120,42 +123,48 @@ class BulkRecordingRequest(BaseModel):
 # Определяем их ПЕРЕД основными классами, чтобы можно было ссылаться
 class ComposerSimple(ComposerBase):
     id: int
+    slug: Optional[str] = None
     portrait_url: Optional[str] = None
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class WorkSimple(WorkBase):
     id: int
+    slug: Optional[str] = None
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CompositionSimple(CompositionBase):
     id: int
+    slug: Optional[str] = None
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Used for Dashboard and Search to avoid recursion
 class WorkWithComposer(WorkBase):
     id: int
+    slug: Optional[str] = None
     composer_id: int
     cover_art_url: Optional[str] = None
     composer: ComposerSimple
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Read (Output) - FULL VERSIONS ---
 class Composer(ComposerBase):
     id: int
+    slug: Optional[str] = None
     portrait_url: Optional[str] = None
     # works здесь не обязательны, так как мы грузим их отдельным запросом
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Work(WorkBase):
     id: int
+    slug: Optional[str] = None
     composer_id: int
     cover_art_url: Optional[str] = None
     composer: Composer
@@ -163,11 +172,12 @@ class Work(WorkBase):
     compositions: List[CompositionSimple] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Composition(CompositionBase):
     id: int
+    slug: Optional[str] = None
     work_id: int
     cover_art_url: Optional[str] = None
     work: Work # Здесь work полная, но так как в Work compositions=Simple, рекурсии не будет (почти, но лучше использовать WorkSimple если будут ошибки)
@@ -175,7 +185,7 @@ class Composition(CompositionBase):
     # Если Pydantic ругается, можно заменить Work на WorkSimple, но пока оставим Work.
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Recording(RecordingBase):
@@ -186,7 +196,7 @@ class Recording(RecordingBase):
     composition: Composition
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class RecordingPage(BaseModel):

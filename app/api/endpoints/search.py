@@ -10,61 +10,67 @@ from typing import List, Optional
 
 router = APIRouter()
 
+
 def is_match(text: Optional[str], term: str) -> bool:
-    """Вспомогательная функция для регистронезависимого сравнения в Python."""
-    if text is None:
+    """Проверяет вхождение строки (регистронезависимо)"""
+    if not text:
         return False
-    return term in text.casefold()
+    return term in text.lower()
+
 
 @router.get("/", response_model=schemas.search.SearchResults)
 def universal_search(q: str, db: Session = Depends(get_db)):
     if not q or len(q) < 2:
         return schemas.search.SearchResults(query=q)
 
-    # Приводим поисковый запрос к нижнему регистру ОДИН раз
-    search_term = q.casefold()
+    search_term = q.lower().strip()
 
-    # --- ИЗМЕНЕНИЕ: Загружаем все данные и фильтруем в Python ---
-
-    # 1. Поиск Композиторов
+    # 1. Композиторы (ищем в RU и Orig)
     all_composers = db.query(models.music.Composer).all()
     found_composers = [
-        c for c in all_composers
-        if is_match(c.name, search_term) or
-           is_match(c.name_ru, search_term) or
-           is_match(c.original_name, search_term)
-    ][:10] # Ограничиваем результат
+                          c for c in all_composers
+                          if is_match(c.name_ru, search_term) or
+                             is_match(c.original_name, search_term)
+                      ][:10]
 
-    # 2. Поиск Произведений
+    # 2. Произведения (ищем в RU и Orig)
     all_works = db.query(models.music.Work).options(joinedload(models.music.Work.composer)).all()
     found_works = [
-        w for w in all_works
-        if is_match(w.name, search_term) or
-           is_match(w.name_ru, search_term) or
-           is_match(w.original_name, search_term)
-    ][:20]
+                      w for w in all_works
+                      if is_match(w.name_ru, search_term) or
+                         is_match(w.original_name, search_term)
+                  ][:20]
 
-    # 3. Поиск Записей
+    # 3. Части (Compositions) - Ищем по названию части
+    all_compositions = db.query(models.music.Composition).options(
+        joinedload(models.music.Composition.work).joinedload(models.music.Work.composer)
+    ).all()
+
+    found_compositions = [
+                             c for c in all_compositions
+                             if is_match(c.title_ru, search_term) or
+                                is_match(c.title_original, search_term) or
+                                is_match(c.catalog_number, search_term)
+                         ][:20]
+
+    # 4. Записи (Ищем по исполнителям)
+    # (Поиск по названию произведения уже покрыт пунктами 2 и 3,
+    # здесь ищем именно исполнения)
     all_recordings = db.query(models.music.Recording).options(
         joinedload(models.music.Recording.composition)
         .joinedload(models.music.Composition.work)
         .joinedload(models.music.Work.composer)
     ).all()
-    found_recordings = [
-        r for r in all_recordings
-        if is_match(r.performers, search_term) or
-           (r.composition and (
-               is_match(r.composition.title, search_term) or
-               is_match(r.composition.title_ru, search_term) or
-               is_match(r.composition.title_original, search_term)
-           ))
-    ][:50]
 
-    # --- КОНЕЦ ИЗМЕНЕНИЯ ---
+    found_recordings = [
+                           r for r in all_recordings
+                           if is_match(r.performers, search_term)
+                       ][:50]
 
     return schemas.search.SearchResults(
         query=q,
         composers=found_composers,
         works=found_works,
+        compositions=found_compositions,
         recordings=found_recordings
     )

@@ -1,4 +1,3 @@
-// static/js/api.js
 import { showNotification } from "./ui.js";
 
 const API_BASE = "";
@@ -24,22 +23,23 @@ export async function apiRequest(endpoint, method = "GET", body = null) {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, options);
 
+    // === ЗАЩИТА ОТ БЕСКОНЕЧНОЙ ПЕРЕЗАГРУЗКИ ===
     if (response.status === 401) {
-      localStorage.removeItem("access_token");
-      window.location.reload();
-      throw new Error("Сессия истекла");
+      if (token) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("user_email");
+          localStorage.removeItem("is_admin"); // <--- ДОБАВЛЕНО
+          window.location.reload();
+      }
+      throw new Error("Доступ запрещен (401)");
     }
+    // ===========================================
 
-    // === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ===
-    // Если статус 204 (No Content), немедленно возвращаем true/null
-    // НЕЛЬЗЯ вызывать response.json(), это повесит скрипт ошибкой SyntaxError
     if (response.status === 204) {
       return null;
     }
-    // ===============================
 
     if (!response.ok) {
-      // Пытаемся прочитать ошибку, если сервер прислал JSON
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         const errorData = await response.json();
@@ -56,7 +56,6 @@ export async function apiRequest(endpoint, method = "GET", body = null) {
     return response.json();
   } catch (error) {
     console.error("API Error:", error);
-    // Пробрасываем ошибку дальше, чтобы main.js знал, что запрос упал
     throw error;
   }
 }
