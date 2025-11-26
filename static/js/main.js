@@ -806,64 +806,47 @@ function addEventListeners() {
       return;
     }
 
-    // --- ПРЯМАЯ ЗАГРУЗКА (ДЛЯ ОДНОЧАСТНЫХ ПРОИЗВЕДЕНИЙ) ---
+    // --- ПРЯМАЯ ЗАГРУЗКА (Запись для всего произведения) ---
     const directUploadBtn = target.closest("#direct-upload-btn");
     if (directUploadBtn) {
-      const w = state.view.currentWork;
-      if (!w) return;
+        const w = state.view.currentWork;
+        if (!w) return;
 
-      // Логика:
-      // 1. Если частей 0 -> Создаем невидимую часть с именем произведения -> Открываем окно загрузки для нее.
-      // 2. Если частей 1 -> Открываем окно загрузки для этой части.
-      // 3. Если частей > 1 -> Ошибка (кнопка должна быть скрыта, но на всякий случай).
+        // Ищем существующую часть для полного произведения (sort_order === 0)
+        // Или, если произведение считалось одночастным, берем единственную часть
+        let targetComp = w.compositions.find(c => c.sort_order === 0);
 
-      let targetCompId = null;
-
-      if (!w.compositions || w.compositions.length === 0) {
-        // Автоматически создаем "техническую" часть, чтобы было куда прикрепить файл
-        try {
-          // Меняем текст кнопки, чтобы пользователь видел процесс
-          const originalText = directUploadBtn.innerHTML;
-          directUploadBtn.textContent = "Подготовка...";
-
-          const newComp = await apiRequest(
-            `/api/recordings/works/${w.id}/compositions`,
-            "POST",
-            {
-              title_ru: w.name_ru, // Часть называется так же, как произведение
-              title_original: w.original_name,
-              catalog_number: w.catalog_number,
-            }
-          );
-
-          targetCompId = newComp.id;
-
-          // Обновляем локальные данные, чтобы при следующем клике не создавать дубль
-          if (!w.compositions) w.compositions = [];
-          w.compositions.push(newComp);
-
-          // Возвращаем текст кнопки
-          directUploadBtn.innerHTML = originalText;
-        } catch (err) {
-          ui.showNotification(
-            "Ошибка создания структуры: " + err.message,
-            "error"
-          );
-          return;
+        // Логика для одночастных (старая совместимость): если часть одна и она "обычная" (не 0), грузим в неё
+        if (!targetComp && w.compositions.length === 1 && w.compositions[0].sort_order !== 0) {
+             targetComp = w.compositions[0];
         }
-      } else if (w.compositions.length === 1) {
-        targetCompId = w.compositions[0].id;
-      } else {
-        ui.showNotification(
-          "Это многочастное произведение. Добавляйте записи в конкретную часть.",
-          "info"
-        );
-        return;
-      }
 
-      if (targetCompId) {
-        ui.showAddRecordingModal(targetCompId);
-      }
+        // Если спец-части нет, создаем её
+        if (!targetComp) {
+            try {
+                const originalText = directUploadBtn.innerHTML;
+                directUploadBtn.textContent = "Подготовка...";
+
+                const newComp = await apiRequest(`/api/recordings/works/${w.id}/compositions`, "POST", {
+                    title_ru: "Полное произведение",
+                    title_original: "Complete Work",
+                    sort_order: 0, // <--- ФЛАГ ПОЛНОГО ПРОИЗВЕДЕНИЯ
+                    catalog_number: w.catalog_number
+                });
+
+                targetComp = newComp;
+                w.compositions.push(newComp); // Обновляем стейт
+
+                directUploadBtn.innerHTML = originalText;
+            } catch (err) {
+                ui.showNotification("Ошибка создания раздела: " + err.message, "error");
+                return;
+            }
+        }
+
+        if (targetComp) {
+            ui.showAddRecordingModal(targetComp.id);
+        }
     }
 
     // --- УПРАВЛЕНИЕ ВИДЕО (Кнопки на карточке) ---
