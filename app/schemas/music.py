@@ -18,18 +18,31 @@ class WorkBase(BaseModel):
     name_ru: Optional[str] = None
     original_name: Optional[str] = None
     catalog_number: Optional[str] = None
+
+    # === НОВЫЕ ПОЛЯ ===
+    tonality: Optional[str] = None
+    genre: Optional[str] = None
+    nickname: Optional[str] = None
+    # ==================
+
     publication_year: Optional[int] = None
     publication_year_end: Optional[int] = None
     notes: Optional[str] = None
 
 
 class CompositionBase(BaseModel):
+    # === НОВЫЕ ПОЛЯ ===
+    sort_order: Optional[int] = 0
+    tonality: Optional[str] = None
+    # ==================
+
     title: Optional[str] = None
     title_ru: Optional[str] = None
     title_original: Optional[str] = None
     catalog_number: Optional[str] = None
     composition_year: Optional[int] = None
     notes: Optional[str] = None
+
 
 
 class RecordingBase(BaseModel):

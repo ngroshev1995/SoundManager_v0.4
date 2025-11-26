@@ -17,9 +17,9 @@ let state = {
   favoriteRecordingIds: new Set(),
   favoritesLoaded: false,
   composersPagination: {
-      skip: 0,
-      limit: 12, // Сколько грузить за раз
-      hasMore: true
+    skip: 0,
+    limit: 12, // Сколько грузить за раз
+    hasMore: true,
   },
   view: {
     current: "recordings",
@@ -76,7 +76,7 @@ function main() {
 
   // Если URL пустой - грузим дашборд
   if (!window.location.hash || window.location.hash === "#/") {
-      state.view.current = "dashboard";
+    state.view.current = "dashboard";
   }
 
   // Загружаем контент (для гостей тоже)
@@ -85,19 +85,19 @@ function main() {
 
 // Добавь эту функцию-хелпер:
 async function fetchUserProfile() {
-    try {
-        // Нужно создать эндпоинт /api/users/me который возвращает {id, email, is_admin}
-        // Если его нет, используем заглушку или старый способ, но лучше добавить эндпоинт.
-        // Пока предположим, что мы сохраняем флаг при логине.
+  try {
+    // Нужно создать эндпоинт /api/users/me который возвращает {id, email, is_admin}
+    // Если его нет, используем заглушку или старый способ, но лучше добавить эндпоинт.
+    // Пока предположим, что мы сохраняем флаг при логине.
 
-        // ВРЕМЕННОЕ РЕШЕНИЕ:
-        const userEmail = localStorage.getItem("user_email");
-        if (userEmail) ui.setUserGreeting(userEmail);
+    // ВРЕМЕННОЕ РЕШЕНИЕ:
+    const userEmail = localStorage.getItem("user_email");
+    if (userEmail) ui.setUserGreeting(userEmail);
 
-        // Лучше всего сохранить роль в localStorage при логине
-    } catch (e) {
-        console.error(e);
-    }
+    // Лучше всего сохранить роль в localStorage при логине
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function resetViewState() {
@@ -196,20 +196,20 @@ async function loadCurrentView() {
   const isLoggedIn = !!localStorage.getItem("access_token");
 
   if (protectedViews.includes(state.view.current) && !isLoggedIn) {
-      // Если гость на защищенной странице -> редирект на главную
-      console.warn("Доступ запрещен, редирект на главную");
-      state.view.current = "dashboard";
-      router.navigate("/");
-      // Код продолжит выполняться уже для dashboard
+    // Если гость на защищенной странице -> редирект на главную
+    console.warn("Доступ запрещен, редирект на главную");
+    state.view.current = "dashboard";
+    router.navigate("/");
+    // Код продолжит выполняться уже для dashboard
   }
 
   const contentHeader = document.getElementById("content-header");
   if (contentHeader) {
-      if (state.view.current === "dashboard") {
-          contentHeader.classList.add("hidden");
-      } else {
-          contentHeader.classList.remove("hidden");
-      }
+    if (state.view.current === "dashboard") {
+      contentHeader.classList.add("hidden");
+    } else {
+      contentHeader.classList.remove("hidden");
+    }
   }
 
   const list = document.getElementById("composition-list");
@@ -225,7 +225,9 @@ async function loadCurrentView() {
       const f = await apiRequest("/api/users/me/favorites");
       state.favoriteRecordingIds = new Set(f.map((r) => r.id));
       state.favoritesLoaded = true;
-    } catch (e) { console.warn(e); }
+    } catch (e) {
+      console.warn(e);
+    }
   }
 
   if (hasToken && state.playlists.length === 0) {
@@ -233,7 +235,9 @@ async function loadCurrentView() {
       const p = await apiRequest("/api/playlists/");
       state.playlists = p;
       ui.renderPlaylistList(p);
-    } catch (e) { console.warn(e); }
+    } catch (e) {
+      console.warn(e);
+    }
   }
 
   try {
@@ -340,7 +344,7 @@ async function loadCurrentView() {
         // Загружаем ВСЕ записи (можно оптимизировать на бэкенде, но пока фильтруем на фронте)
         const rAudio = await apiRequest(`/api/recordings/?skip=0&limit=100`); // Увеличил лимит
         // Фильтруем: оставляем только те, где есть файл (duration > 0)
-        const onlyAudio = rAudio.recordings.filter(r => r.duration > 0);
+        const onlyAudio = rAudio.recordings.filter((r) => r.duration > 0);
 
         state.currentViewRecordings = onlyAudio; // Для плеера
 
@@ -357,7 +361,7 @@ async function loadCurrentView() {
       case "library_video":
         const rVideo = await apiRequest(`/api/recordings/?skip=0&limit=100`);
         // Фильтруем: оставляем только те, где duration === 0
-        const onlyVideo = rVideo.recordings.filter(r => r.duration === 0);
+        const onlyVideo = rVideo.recordings.filter((r) => r.duration === 0);
 
         state.currentViewRecordings = onlyVideo;
 
@@ -377,6 +381,9 @@ async function loadCurrentView() {
       ui.showNotification("Ошибка загрузки: " + err.message, "error");
     }
   }
+
+  ui.renderBreadcrumbs();
+
   if (window.lucide) window.lucide.createIcons();
 
   if (player.hasActiveTrack()) {
@@ -402,12 +409,12 @@ function addEventListeners() {
     const target = e.target;
 
     if (target.closest("#load-more-composers-btn")) {
-        loadMoreComposers();
-        return;
+      loadMoreComposers();
+      return;
     }
 
     if (target.closest("#show-login-modal-btn")) {
-        ui.showAuthView();
+      ui.showAuthView();
     }
 
     // --- КОНТЕКСТНОЕ МЕНЮ ---
@@ -445,7 +452,9 @@ function addEventListeners() {
       // В стейте (state.currentViewRecordings) лежат ВСЕ записи (и видео тоже).
       // Нужно передать плееру ТОЛЬКО аудио, чтобы индексы совпали.
 
-      const playableList = state.currentViewRecordings.filter(r => r.duration > 0);
+      const playableList = state.currentViewRecordings.filter(
+        (r) => r.duration > 0
+      );
 
       player.handleTrackClick(
         parseInt(item.dataset.recordingId),
@@ -492,39 +501,6 @@ function addEventListeners() {
       return;
     }
 
-// --- ПЕРЕКЛЮЧЕНИЕ ЯЗЫКА (RU <-> ORIG) ---
-    if (target.closest(".lang-swap-btn")) {
-      const btn = target.closest(".lang-swap-btn");
-      const container = btn.closest(".title-container");
-      const textEl = container.querySelector(".main-title-text");
-
-      if (!textEl || !textEl.dataset.orig) return;
-
-      const current = textEl.textContent;
-      const ru = textEl.dataset.ru;
-      const orig = textEl.dataset.orig;
-
-      if (current === ru) {
-        textEl.textContent = orig;
-
-        // ВКЛЮЧЕНО (Оригинал):
-        // 1. Делаем иконку синей (text-cyan-600)
-        // 2. Убираем серый цвет (text-gray-400)
-        // 3. Убираем ховер (чтобы он не мешал восприятию активного состояния)
-        btn.classList.remove("text-gray-400", "hover:text-cyan-600");
-        btn.classList.add("text-cyan-600");
-
-      } else {
-        textEl.textContent = ru;
-
-        // ВЫКЛЮЧЕНО (Русский):
-        // Возвращаем серый цвет и ховер
-        btn.classList.remove("text-cyan-600");
-        btn.classList.add("text-gray-400", "hover:text-cyan-600");
-      }
-      return;
-    }
-
     // --- МОДАЛЬНЫЕ ОКНА (Открытие) ---
     if (target.closest("#add-composer-btn")) ui.showAddComposerModal();
     if (target.closest("#add-work-btn")) ui.showAddWorkModal();
@@ -548,61 +524,59 @@ function addEventListeners() {
     if (createComposerBtn) {
       e.preventDefault();
 
-      // Валидация имени
-      const nameRu = document.getElementById("add-composer-name-ru").value.trim();
+      const nameRu = document
+        .getElementById("add-composer-name-ru")
+        .value.trim();
       if (!nameRu) return ui.showNotification("Имя (RU) обязательно", "error");
 
-      // Получаем биографию из TinyMCE
-      let bioContent = "";
-      if (window.tinymce && tinymce.get("add-composer-bio")) {
-          bioContent = tinymce.get("add-composer-bio").getContent();
-      } else {
-          bioContent = document.getElementById("add-composer-bio").value;
-      }
+      // Получаем биографию из Quill
+      const bioContent = window.quillEditor
+        ? window.quillEditor.root.innerHTML
+        : "";
 
-      // Данные для создания (JSON)
       const composerData = {
         name_ru: nameRu,
-        original_name: document.getElementById("add-composer-name-orig").value.trim() || null,
-        year_born: parseInt(document.getElementById("add-composer-born").value) || null,
-        year_died: parseInt(document.getElementById("add-composer-died").value) || null,
+        original_name:
+          document.getElementById("add-composer-name-orig").value.trim() ||
+          null,
+        year_born:
+          parseInt(document.getElementById("add-composer-born").value) || null,
+        year_died:
+          parseInt(document.getElementById("add-composer-died").value) || null,
         notes: bioContent,
       };
 
-      // Блокируем кнопку
       createComposerBtn.disabled = true;
       createComposerBtn.textContent = "Создание...";
 
       try {
-          // ШАГ 1: Создаем сущность
-          const newComposer = await apiRequest("/api/recordings/composers", "POST", composerData);
+        const newComposer = await apiRequest(
+          "/api/recordings/composers",
+          "POST",
+          composerData
+        );
 
-          // ШАГ 2: Загружаем портрет (если есть)
-          const fileInput = document.getElementById("add-composer-portrait");
-          if (fileInput && fileInput.files.length > 0) {
-              createComposerBtn.textContent = "Загрузка фото...";
-              const fd = new FormData();
-              fd.append("file", fileInput.files[0]);
+        const fileInput = document.getElementById("add-composer-portrait");
+        if (fileInput && fileInput.files.length > 0) {
+          createComposerBtn.textContent = "Загрузка фото...";
+          const fd = new FormData();
+          fd.append("file", fileInput.files[0]);
+          await apiRequest(
+            `/api/recordings/composers/${newComposer.id}/cover`,
+            "POST",
+            fd
+          );
+        }
 
-              await apiRequest(`/api/recordings/composers/${newComposer.id}/cover`, "POST", fd);
-          }
-
-          ui.showNotification("Композитор успешно создан!", "success");
-
-          // Очистка
-          if (window.tinymce && tinymce.get("add-composer-bio")) {
-              tinymce.remove("#add-composer-bio");
-          }
-          document.getElementById("add-composer-modal").classList.add("hidden");
-
-          loadCurrentView();
-
+        ui.showNotification("Композитор успешно создан!", "success");
+        document.getElementById("add-composer-modal").classList.add("hidden");
+        loadCurrentView();
       } catch (err) {
-          console.error(err);
-          ui.showNotification("Ошибка: " + err.message, "error");
+        console.error(err);
+        ui.showNotification("Ошибка: " + err.message, "error");
       } finally {
-          createComposerBtn.disabled = false;
-          createComposerBtn.textContent = "Создать";
+        createComposerBtn.disabled = false;
+        createComposerBtn.textContent = "Создать";
       }
 
       return;
@@ -611,34 +585,34 @@ function addEventListeners() {
     // --- БИОГРАФИЯ (Читать далее) ---
     const bioBtn = target.closest(".bio-toggle-btn");
     if (bioBtn) {
-        const container = bioBtn.closest(".group\\/bio"); // Экранируем слэш
-        const content = container.querySelector(".bio-content");
-        const gradient = container.querySelector(".bio-gradient");
-        const icon = bioBtn.querySelector("svg") || bioBtn.querySelector("i");
-        const textSpan = bioBtn.querySelector(".btn-text");
+      const container = bioBtn.closest(".group\\/bio"); // Экранируем слэш
+      const content = container.querySelector(".bio-content");
+      const gradient = container.querySelector(".bio-gradient");
+      const icon = bioBtn.querySelector("svg") || bioBtn.querySelector("i");
+      const textSpan = bioBtn.querySelector(".btn-text");
 
-        const isExpanded = content.dataset.expanded === "true";
+      const isExpanded = content.dataset.expanded === "true";
 
-        if (isExpanded) {
-            // Сворачиваем
-            content.style.maxHeight = "15rem"; // 60 * 0.25rem (Tailwind max-h-60)
-            content.dataset.expanded = "false";
-            gradient.classList.remove("hidden");
-            textSpan.textContent = "Читать далее";
-            if(icon) icon.style.transform = "rotate(0deg)";
+      if (isExpanded) {
+        // Сворачиваем
+        content.style.maxHeight = "15rem"; // 60 * 0.25rem (Tailwind max-h-60)
+        content.dataset.expanded = "false";
+        gradient.classList.remove("hidden");
+        textSpan.textContent = "Читать далее";
+        if (icon) icon.style.transform = "rotate(0deg)";
 
-            // Возвращаем кнопку на место (она абсолютная, но при сворачивании блок уменьшается)
-            // На самом деле, для кнопки лучше убрать absolute при разворачивании, чтобы она была в потоке.
-            // ДАВАЙТЕ УЛУЧШИМ ВЕРСТКУ В UI.JS (см. ниже)
-        } else {
-            // Разворачиваем
-            content.style.maxHeight = content.scrollHeight + "px";
-            content.dataset.expanded = "true";
-            gradient.classList.add("hidden");
-            textSpan.textContent = "Свернуть";
-            if(icon) icon.style.transform = "rotate(180deg)";
-        }
-        return;
+        // Возвращаем кнопку на место (она абсолютная, но при сворачивании блок уменьшается)
+        // На самом деле, для кнопки лучше убрать absolute при разворачивании, чтобы она была в потоке.
+        // ДАВАЙТЕ УЛУЧШИМ ВЕРСТКУ В UI.JS (см. ниже)
+      } else {
+        // Разворачиваем
+        content.style.maxHeight = content.scrollHeight + "px";
+        content.dataset.expanded = "true";
+        gradient.classList.add("hidden");
+        textSpan.textContent = "Свернуть";
+        if (icon) icon.style.transform = "rotate(180deg)";
+      }
+      return;
     }
 
     // 2. Произведение (СОЗДАНИЕ)
@@ -649,35 +623,38 @@ function addEventListeners() {
       if (!cId) return ui.showNotification("Композитор не определен", "error");
 
       const nameRu = document.getElementById("add-work-name-ru").value.trim();
-      if (!nameRu)
-        return ui.showNotification("Название (RU) обязательно", "error");
+      if (!nameRu) return ui.showNotification("Название (RU) обязательно", "error");
 
-      // --- ПОЛУЧАЕМ ИСТОРИЮ ---
-      let notesContent = "";
-      if (window.tinymce && tinymce.get("add-work-notes")) {
-          notesContent = tinymce.get("add-work-notes").getContent();
-      } else {
-          notesContent = document.getElementById("add-work-notes").value;
-      }
-      // ------------------------
+      // Получаем историю из Quill
+      const notesContent = window.quillEditor ? window.quillEditor.root.innerHTML : "";
+
+      // Получаем жанр и конвертируем (если нужно)
+      const genreLabel = document.getElementById("add-work-genre").value;
+      // getGenreKeyByLabel должна быть доступна (либо импортирована, либо скопирована)
+      // Если она в ui.js и не экспортирована в window, лучше просто найти в массиве здесь
+      // Но для простоты, предположим, что ui.js подключен модулем и мы можем вызвать ui.getGenreKeyByLabel
+      // или просто продублируем логику поиска здесь для надежности:
+      let genreKey = genreLabel;
+      // (Простейшая логика: если это не сработает, сервер примет как есть)
 
       const data = {
         name_ru: nameRu,
         original_name: document.getElementById("add-work-name-orig").value.trim() || null,
+        tonality: document.getElementById("add-work-tonality").value.trim() || null,
         catalog_number: document.getElementById("add-work-catalog").value.trim() || null,
+        genre: genreLabel || null, // Отправляем то, что ввел юзер (или ключ, если он уже ключ)
+        nickname: document.getElementById("add-work-nickname").value.trim() || null,
         publication_year: parseInt(document.getElementById("add-work-year-start").value) || null,
         publication_year_end: parseInt(document.getElementById("add-work-year-end").value) || null,
-        notes: notesContent, // <-- Передаем текст
+        notes: notesContent,
       };
 
       createWorkBtn.disabled = true;
       createWorkBtn.textContent = "Создание...";
 
       try {
-          // 1. Создаем произведение
           const newWork = await apiRequest(`/api/recordings/composers/${cId}/works`, "POST", data);
 
-          // 2. Загружаем обложку (если есть)
           const fileInput = document.getElementById("add-work-cover");
           if (fileInput && fileInput.files.length > 0) {
               createWorkBtn.textContent = "Загрузка обложки...";
@@ -687,24 +664,14 @@ function addEventListeners() {
           }
 
           ui.showNotification("Произведение создано!", "success");
-
-          // Очистка
-          if (window.tinymce && tinymce.get("add-work-notes")) {
-              tinymce.remove("#add-work-notes");
-          }
           document.getElementById("add-work-modal").classList.add("hidden");
-
-          // Перезагружаем страницу композитора, чтобы увидеть новое произведение
           loadCurrentView();
-
       } catch (e) {
-          console.error(e);
-          ui.showNotification(e.message || "Ошибка", "error");
+          ui.showNotification(e.message, "error");
       } finally {
           createWorkBtn.disabled = false;
           createWorkBtn.textContent = "Создать";
       }
-
       return;
     }
 
@@ -722,25 +689,67 @@ function addEventListeners() {
       if (!titleRu)
         return ui.showNotification("Название (RU) обязательно", "error");
 
+      const order = parseInt(
+        document.getElementById("add-composition-order").value
+      );
+      if (isNaN(order) || order < 1) {
+        return ui.showNotification(
+          "Порядковый номер должен быть 1 или больше",
+          "error"
+        );
+      }
+
       const data = {
+        sort_order:
+          parseInt(document.getElementById("add-composition-order").value) || 0, // NEW
         title_ru: titleRu,
         title_original:
           document.getElementById("add-composition-title-orig").value.trim() ||
           null,
-        composition_year:
-          parseInt(document.getElementById("add-composition-year").value) ||
-          null,
+        tonality:
+          document.getElementById("add-composition-tonality").value.trim() ||
+          null, // NEW
         catalog_number:
           document.getElementById("add-composition-catalog").value.trim() ||
           null,
+        composition_year:
+          parseInt(document.getElementById("add-composition-year").value) ||
+          null,
       };
-      handleCreateEntity(
-        createCompBtn,
-        `/api/recordings/works/${wId}/compositions`,
-        data,
-        "add-composition-modal",
-        "Часть добавлена!"
-      );
+
+      createCompBtn.disabled = true;
+      createCompBtn.textContent = "Создание...";
+
+      try {
+        const newComp = await apiRequest(
+          `/api/recordings/works/${wId}/compositions`,
+          "POST",
+          data
+        );
+
+        // Обложка части
+        const fileInput = document.getElementById("add-composition-cover");
+        if (fileInput && fileInput.files.length > 0) {
+          const fd = new FormData();
+          fd.append("file", fileInput.files[0]);
+          await apiRequest(
+            `/api/recordings/compositions/${newComp.id}/cover`,
+            "POST",
+            fd
+          );
+        }
+
+        ui.showNotification("Часть добавлена!", "success");
+        document
+          .getElementById("add-composition-modal")
+          .classList.add("hidden");
+        loadCurrentView();
+      } catch (e) {
+        ui.showNotification(e.message, "error");
+      } finally {
+        createCompBtn.disabled = false;
+        createCompBtn.textContent = "Создать";
+      }
       return;
     }
 
@@ -748,8 +757,12 @@ function addEventListeners() {
     const createRecBtn = target.closest("#create-recording-btn");
     if (createRecBtn) {
       e.preventDefault();
-      const compId = document.getElementById("add-recording-composition-id").value;
-      const perf = document.getElementById("add-recording-performers").value.trim();
+      const compId = document.getElementById(
+        "add-recording-composition-id"
+      ).value;
+      const perf = document
+        .getElementById("add-recording-performers")
+        .value.trim();
 
       const youtubeInput = document.getElementById("add-recording-youtube");
       const youtubeUrl = youtubeInput ? youtubeInput.value.trim() : null;
@@ -759,7 +772,10 @@ function addEventListeners() {
 
       // === НОВАЯ ВАЛИДАЦИЯ: Файл ИЛИ Ссылка ===
       if (!file && !youtubeUrl) {
-          return ui.showNotification("Добавьте аудиофайл ИЛИ ссылку на YouTube", "error");
+        return ui.showNotification(
+          "Добавьте аудиофайл ИЛИ ссылку на YouTube",
+          "error"
+        );
       }
       // ========================================
 
@@ -769,12 +785,15 @@ function addEventListeners() {
       if (youtubeUrl) fd.append("youtube_url", youtubeUrl);
 
       if (document.getElementById("add-recording-year").value) {
-        fd.append("recording_year", document.getElementById("add-recording-year").value);
+        fd.append(
+          "recording_year",
+          document.getElementById("add-recording-year").value
+        );
       }
 
       // Отправляем файл только если он выбран
       if (file) {
-          fd.append("file", file);
+        fd.append("file", file);
       }
 
       handleCreateEntity(
@@ -790,52 +809,61 @@ function addEventListeners() {
     // --- ПРЯМАЯ ЗАГРУЗКА (ДЛЯ ОДНОЧАСТНЫХ ПРОИЗВЕДЕНИЙ) ---
     const directUploadBtn = target.closest("#direct-upload-btn");
     if (directUploadBtn) {
-        const w = state.view.currentWork;
-        if (!w) return;
+      const w = state.view.currentWork;
+      if (!w) return;
 
-        // Логика:
-        // 1. Если частей 0 -> Создаем невидимую часть с именем произведения -> Открываем окно загрузки для нее.
-        // 2. Если частей 1 -> Открываем окно загрузки для этой части.
-        // 3. Если частей > 1 -> Ошибка (кнопка должна быть скрыта, но на всякий случай).
+      // Логика:
+      // 1. Если частей 0 -> Создаем невидимую часть с именем произведения -> Открываем окно загрузки для нее.
+      // 2. Если частей 1 -> Открываем окно загрузки для этой части.
+      // 3. Если частей > 1 -> Ошибка (кнопка должна быть скрыта, но на всякий случай).
 
-        let targetCompId = null;
+      let targetCompId = null;
 
-        if (!w.compositions || w.compositions.length === 0) {
-            // Автоматически создаем "техническую" часть, чтобы было куда прикрепить файл
-            try {
-                // Меняем текст кнопки, чтобы пользователь видел процесс
-                const originalText = directUploadBtn.innerHTML;
-                directUploadBtn.textContent = "Подготовка...";
+      if (!w.compositions || w.compositions.length === 0) {
+        // Автоматически создаем "техническую" часть, чтобы было куда прикрепить файл
+        try {
+          // Меняем текст кнопки, чтобы пользователь видел процесс
+          const originalText = directUploadBtn.innerHTML;
+          directUploadBtn.textContent = "Подготовка...";
 
-                const newComp = await apiRequest(`/api/recordings/works/${w.id}/compositions`, "POST", {
-                    title_ru: w.name_ru, // Часть называется так же, как произведение
-                    title_original: w.original_name,
-                    catalog_number: w.catalog_number
-                });
-
-                targetCompId = newComp.id;
-
-                // Обновляем локальные данные, чтобы при следующем клике не создавать дубль
-                if (!w.compositions) w.compositions = [];
-                w.compositions.push(newComp);
-
-                // Возвращаем текст кнопки
-                directUploadBtn.innerHTML = originalText;
-
-            } catch (err) {
-                ui.showNotification("Ошибка создания структуры: " + err.message, "error");
-                return;
+          const newComp = await apiRequest(
+            `/api/recordings/works/${w.id}/compositions`,
+            "POST",
+            {
+              title_ru: w.name_ru, // Часть называется так же, как произведение
+              title_original: w.original_name,
+              catalog_number: w.catalog_number,
             }
-        } else if (w.compositions.length === 1) {
-            targetCompId = w.compositions[0].id;
-        } else {
-             ui.showNotification("Это многочастное произведение. Добавляйте записи в конкретную часть.", "info");
-             return;
-        }
+          );
 
-        if (targetCompId) {
-            ui.showAddRecordingModal(targetCompId);
+          targetCompId = newComp.id;
+
+          // Обновляем локальные данные, чтобы при следующем клике не создавать дубль
+          if (!w.compositions) w.compositions = [];
+          w.compositions.push(newComp);
+
+          // Возвращаем текст кнопки
+          directUploadBtn.innerHTML = originalText;
+        } catch (err) {
+          ui.showNotification(
+            "Ошибка создания структуры: " + err.message,
+            "error"
+          );
+          return;
         }
+      } else if (w.compositions.length === 1) {
+        targetCompId = w.compositions[0].id;
+      } else {
+        ui.showNotification(
+          "Это многочастное произведение. Добавляйте записи в конкретную часть.",
+          "info"
+        );
+        return;
+      }
+
+      if (targetCompId) {
+        ui.showAddRecordingModal(targetCompId);
+      }
     }
 
     // --- УПРАВЛЕНИЕ ВИДЕО (Кнопки на карточке) ---
@@ -843,41 +871,41 @@ function addEventListeners() {
     // 1. Редактировать видео
     const editVideoBtn = target.closest(".edit-video-btn");
     if (editVideoBtn) {
-        e.preventDefault();
-        e.stopPropagation(); // Чтобы не срабатывал клик по карточке
-        const rid = parseInt(editVideoBtn.dataset.recordingId);
-        const rec = state.currentViewRecordings.find((r) => r.id === rid);
+      e.preventDefault();
+      e.stopPropagation(); // Чтобы не срабатывал клик по карточке
+      const rid = parseInt(editVideoBtn.dataset.recordingId);
+      const rec = state.currentViewRecordings.find((r) => r.id === rid);
 
-        if (rec) {
-            ui.showEditEntityModal("recording", rec, async (data) => {
-                await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
-                ui.showNotification("Запись обновлена", "success");
-                state.selectedRecordingIds.clear();
-                ui.updateSelectionBar(0);
-                loadCurrentView();
-            });
-        }
-        return;
+      if (rec) {
+        ui.showEditEntityModal("recording", rec, async (data) => {
+          await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
+          ui.showNotification("Запись обновлена", "success");
+          state.selectedRecordingIds.clear();
+          ui.updateSelectionBar(0);
+          loadCurrentView();
+        });
+      }
+      return;
     }
 
     // 2. Удалить видео
     const delVideoBtn = target.closest(".delete-video-btn");
     if (delVideoBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const rid = parseInt(delVideoBtn.dataset.recordingId);
+      e.preventDefault();
+      e.stopPropagation();
+      const rid = parseInt(delVideoBtn.dataset.recordingId);
 
-        ui.showDeleteModal({
-            title: "Удалить видео?",
-            text: "Вы удаляете ссылку на видео. Это действие необратимо.",
-            onConfirm: async () => {
-                await apiRequest(`/api/recordings/${rid}`, "DELETE");
-                ui.showNotification("Видео удалено", "success");
-                document.getElementById("delete-modal").classList.add("hidden");
-                loadCurrentView();
-            },
-        });
-        return;
+      ui.showDeleteModal({
+        title: "Удалить видео?",
+        text: "Вы удаляете ссылку на видео. Это действие необратимо.",
+        onConfirm: async () => {
+          await apiRequest(`/api/recordings/${rid}`, "DELETE");
+          ui.showNotification("Видео удалено", "success");
+          document.getElementById("delete-modal").classList.add("hidden");
+          loadCurrentView();
+        },
+      });
+      return;
     }
 
     // --- РЕДАКТИРОВАНИЕ СУЩНОСТЕЙ ---
@@ -1525,40 +1553,46 @@ async function toggleFavorite(id, btn) {
   }
 }
 async function loadMoreComposers() {
-    const { skip, limit } = state.composersPagination;
+  const { skip, limit } = state.composersPagination;
 
-    // Показываем спиннер на кнопке (опционально, для красоты)
-    const btn = document.getElementById("load-more-composers-btn");
-    if (btn) {
-        btn.innerHTML = `<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div> Загрузка...`;
-        btn.disabled = true;
+  // Показываем спиннер на кнопке (опционально, для красоты)
+  const btn = document.getElementById("load-more-composers-btn");
+  if (btn) {
+    btn.innerHTML = `<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div> Загрузка...`;
+    btn.disabled = true;
+  }
+
+  try {
+    const newComposers = await apiRequest(
+      `/api/recordings/composers?skip=${skip}&limit=${limit}`
+    );
+
+    // Если вернулось меньше, чем лимит, значит это конец списка
+    if (newComposers.length < limit) {
+      state.composersPagination.hasMore = false;
     }
 
-    try {
-        const newComposers = await apiRequest(`/api/recordings/composers?skip=${skip}&limit=${limit}`);
+    // Увеличиваем отступ для следующего раза
+    state.composersPagination.skip += limit;
 
-        // Если вернулось меньше, чем лимит, значит это конец списка
-        if (newComposers.length < limit) {
-            state.composersPagination.hasMore = false;
-        }
+    // Рендерим (isAppend = true, если skip > limit, т.е. это не первая загрузка)
+    // Но проще проверять по skip: если skip == limit (после первого сложения), значит это была первая загрузка
+    const isAppend = skip > 0;
+    ui.renderComposerList(
+      newComposers,
+      isAppend,
+      state.composersPagination.hasMore,
+      state.displayLanguage
+    );
 
-        // Увеличиваем отступ для следующего раза
-        state.composersPagination.skip += limit;
-
-        // Рендерим (isAppend = true, если skip > limit, т.е. это не первая загрузка)
-        // Но проще проверять по skip: если skip == limit (после первого сложения), значит это была первая загрузка
-        const isAppend = skip > 0;
-        ui.renderComposerList(newComposers, isAppend, state.composersPagination.hasMore, state.displayLanguage);
-
-        // Возвращаем кнопку в норму (renderComposerList пересоздает/скрывает её, но на всякий случай)
-        if (btn && state.composersPagination.hasMore) {
-             btn.innerHTML = `<span>Показать ещё</span> <i data-lucide="chevron-down" class="w-4 h-4"></i>`;
-             btn.disabled = false;
-             if (window.lucide) window.lucide.createIcons();
-        }
-
-    } catch (e) {
-        console.error(e);
-        ui.showNotification("Ошибка загрузки: " + e.message, "error");
+    // Возвращаем кнопку в норму (renderComposerList пересоздает/скрывает её, но на всякий случай)
+    if (btn && state.composersPagination.hasMore) {
+      btn.innerHTML = `<span>Показать ещё</span> <i data-lucide="chevron-down" class="w-4 h-4"></i>`;
+      btn.disabled = false;
+      if (window.lucide) window.lucide.createIcons();
     }
+  } catch (e) {
+    console.error(e);
+    ui.showNotification("Ошибка загрузки: " + e.message, "error");
+  }
 }

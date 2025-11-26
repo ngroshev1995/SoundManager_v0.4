@@ -58,8 +58,7 @@ def upload_recording(
         performers: Optional[str] = Form(None),
         recording_year: Optional[int] = Form(None),
         youtube_url: Optional[str] = Form(None),
-        # ТЕПЕРЬ ФАЙЛ НЕ ОБЯЗАТЕЛЕН (default=None)
-        file: UploadFile = File(None),
+        file: UploadFile = File(None),  # Файл необязателен
         db: Session = Depends(get_db),
         u: models.User = Depends(deps.get_current_active_admin)
 ):
@@ -70,7 +69,7 @@ def upload_recording(
     if not db.query(models.music.Composition).get(composition_id):
         raise HTTPException(404, "Composition not found")
 
-    # Сценарий А: ЕСТЬ АУДИОФАЙЛ (Работаем как раньше)
+    # Сценарий А: ЕСТЬ АУДИОФАЙЛ
     if file:
         if not file.content_type or not file.content_type.startswith("audio/"):
             raise HTTPException(400, "Invalid file type")
@@ -105,10 +104,12 @@ def upload_recording(
 
     # Сценарий Б: ТОЛЬКО YOUTUBE (Файла нет)
     else:
-        dummy_guid = str(uuid.uuid4())
-        fake_path = f"youtube_only_{dummy_guid}"
-        # Генерируем фейковый хеш, чтобы БД не ругалась на уникальность, если там стоит запрет на дубликаты NULL
-        fake_hash = f"yt_{dummy_guid}"
+        # Генерируем уникальный ID для этой записи
+        unique_id = str(uuid.uuid4())
+
+        # Создаем уникальные фейковые данные, чтобы БД не ругалась на дубликаты
+        fake_path = f"youtube_only_{unique_id}"
+        fake_hash = f"yt_{unique_id}"
 
         rec_data = schemas.RecordingCreate(
             performers=performers,
@@ -120,9 +121,9 @@ def upload_recording(
             db,
             rec_in=rec_data,
             composition_id=composition_id,
-            duration=0,
-            file_path=fake_path,
-            file_hash=fake_hash  # <-- Передаем уникальную строку вместо None
+            duration=0,  # Длительность 0
+            file_path=fake_path,  # Уникальный путь
+            file_hash=fake_hash  # Уникальный хеш
         )
 
         return new_rec

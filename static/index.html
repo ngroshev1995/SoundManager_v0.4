@@ -20,11 +20,13 @@
           },
         };
     </script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
 </head>
-<body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-100 via-white to-cyan-100">
 
 <!-- Auth View -->
 <div
@@ -75,7 +77,8 @@
                 </a>
                 <nav class="hidden md:flex space-x-1">
                     <div class="relative group">
-                        <a href="/recordings" data-navigo class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer">
+                        <a href="/recordings" data-navigo
+                           class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer">
                             Медиатека <i data-lucide="chevron-down" class="w-3 h-3 opacity-70"></i>
                         </a>
                         <!-- Dropdown -->
@@ -83,10 +86,12 @@
                             <!-- Треугольник сверху (стрелочка) -->
                             <div class="absolute -top-1.5 left-6 w-3 h-3 bg-white transform rotate-45 border-l border-t border-gray-100"></div>
 
-                            <a href="/recordings/audio" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
+                            <a href="/recordings/audio" data-navigo
+                               class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
                                 <i data-lucide="disc" class="w-4 h-4"></i> Аудиозаписи
                             </a>
-                            <a href="/recordings/video" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
+                            <a href="/recordings/video" data-navigo
+                               class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2">
                                 <i data-lucide="youtube" class="w-4 h-4"></i> Видеозал
                             </a>
                         </div>
@@ -108,10 +113,10 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto bg-gray-50 relative flex flex-col pb-24 transition-[padding] duration-300"
+    <main class="flex-1 overflow-y-auto relative flex flex-col pb-24 transition-[padding] duration-300"
           id="main-content">
         <div id="content-header" class="max-w-7xl mx-auto px-6 pt-6">
-            <div id="breadcrumbs-container" class="text-sm text-gray-500 mb-2"></div>
+            <div id="breadcrumbs-container" class="text-sm text-gray-500 mb-6"></div>
             <div id="view-title-container" class="hidden mb-6"></div>
         </div>
         <div id="composition-list" class="pb-20"></div>
@@ -262,9 +267,11 @@
                             placeholder="YYYY"/></div>
                 </div>
             </div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткая биография</label><textarea
-                    id="add-composer-bio"
-                    class="w-full h-64 px-3 py-2 border rounded-lg outline-none resize-none"></textarea></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткая биография</label>
+                <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+                    <div id="add-composer-bio" class="h-64"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Подвал -->
@@ -291,32 +298,80 @@
 
         <!-- Контент -->
         <div class="p-6 space-y-4 overflow-y-auto">
+            <!-- Обложка -->
             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка (опционально)</label>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка</label>
                 <input type="file" id="add-work-cover" accept="image/*"
                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
             </div>
-            <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
-                    class="text-red-500">*</span></label><input type="text" id="add-work-name-ru"
-                                                                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"/>
+
+            <!-- Основные поля -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" id="add-work-name-ru"
+                           class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                           placeholder="Например: Симфония №5"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
+                    <input type="text" id="add-work-name-orig" class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="Symphony No. 5"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность</label>
+                    <input type="text" id="add-work-tonality" class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="до минор (c-moll)"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op., BWV, K.)</label>
+                    <input type="text" id="add-work-catalog" class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="Op. 67"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Жанр</label>
+                    <!-- INPUT с атрибутом list -->
+                    <input type="text" id="add-work-genre" list="genre-options"
+                           class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="Начните вводить..." autocomplete="off">
+
+                    <!-- DATALIST (скрытый список) -->
+                    <datalist id="genre-options">
+                        <!-- Опции будут добавлены через JS -->
+                    </datalist>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Популярное название /
+                        Прозвище</label>
+                    <input type="text" id="add-work-nickname" class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="«Судьба», «Лунная»"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год начала</label>
+                    <input type="number" id="add-work-year-start"
+                           class="w-full px-3 py-2 border rounded-lg outline-none" placeholder="YYYY"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год окончания</label>
+                    <input type="number" id="add-work-year-end" class="w-full px-3 py-2 border rounded-lg outline-none"
+                           placeholder="YYYY"/>
+                </div>
             </div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label><input
-                    type="text" id="add-work-name-orig" class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op., BWV,
-                K.)</label><input type="text" id="add-work-catalog"
-                                  class="w-full px-3 py-2 border rounded-lg outline-none"
-                                  placeholder="Например: Op. 23"/></div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Начало (год)</label><input
-                        type="number" id="add-work-year-start" class="w-full px-3 py-2 border rounded-lg outline-none"
-                        placeholder="YYYY"/></div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Конец (год)</label><input
-                        type="number" id="add-work-year-end" class="w-full px-3 py-2 border rounded-lg outline-none"
-                        placeholder="YYYY"/></div>
+
+            <!-- Редактор -->
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Описание / История создания</label>
+                <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+                    <div id="add-work-notes" class="h-48"></div>
+                </div>
             </div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История создания</label><textarea
-                    id="add-work-notes"
-                    class="w-full h-48 px-3 py-2 border rounded-lg outline-none resize-none"></textarea></div>
         </div>
 
         <!-- Подвал -->
@@ -332,28 +387,61 @@
 <!-- 3. Создать КОМПОЗИЦИЮ -->
 <div id="add-composition-modal"
      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative animate-scale-in">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative animate-scale-in">
         <button class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"><i data-lucide="x"></i>
         </button>
         <h2 class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"><i data-lucide="music"
                                                                                     class="w-5 h-5 text-cyan-600"></i>
             Добавить часть</h2>
+
         <div class="space-y-4">
-            <div><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
-                    class="text-red-500">*</span></label><input type="text" id="add-composition-title-ru"
-                                                                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"/>
+            <!-- Обложка -->
+            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка (если отличается)</label>
+                <input type="file" id="add-composition-cover" accept="image/*"
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
             </div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label><input
-                    type="text" id="add-composition-title-orig"
-                    class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год</label><input type="number"
-                                                                                                           id="add-composition-year"
-                                                                                                           class="w-full px-3 py-2 border rounded-lg outline-none"/>
+
+            <div class="grid grid-cols-4 gap-4">
+                <div class="col-span-1">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">№ <span
+                            class="text-red-500">*</span></label>
+                    <input type="number" id="add-composition-order" min="1" step="1"
+                           class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-center"
+                           placeholder="1" value="1"/>
                 </div>
-                <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label><input
-                        type="text" id="add-composition-catalog"
-                        class="w-full px-3 py-2 border rounded-lg outline-none"/></div>
+                <div class="col-span-3">
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название (RU) <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" id="add-composition-title-ru"
+                           class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                           placeholder="I. Allegro con brio"/>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
+                <input type="text" id="add-composition-title-orig"
+                       class="w-full px-3 py-2 border rounded-lg outline-none" placeholder="Allegro con brio"/>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность части</label>
+                    <input type="text" id="add-composition-tonality"
+                           class="w-full px-3 py-2 border rounded-lg outline-none" placeholder="ми-бемоль мажор"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
+                    <input type="text" id="add-composition-catalog"
+                           class="w-full px-3 py-2 border rounded-lg outline-none" placeholder="Op. 18 No. 1"/>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год (если отличается)</label>
+                <input type="number" id="add-composition-year" class="w-full px-3 py-2 border rounded-lg outline-none"
+                       placeholder="YYYY"/>
             </div>
         </div>
         <button id="create-composition-btn"
@@ -362,6 +450,7 @@
         </button>
     </div>
 </div>
+
 
 <!-- 4. Загрузить ЗАПИСЬ -->
 <div id="add-recording-modal"
@@ -472,11 +561,6 @@
         </div>
     </div>
 </div>
-
-<!-- TinyMCE -->
-<!-- ВАЖНО: Вставьте СВОЙ API KEY здесь -->
-<script src="https://cdn.tiny.cloud/1/pv6nl30afhy5fumd6vgyvdmljmuuvbwnl2upcmsy9c954ojm/tinymce/6/tinymce.min.js"
-        referrerpolicy="origin"></script>
 
 <script src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"></script>
 <script type="module" src="/static/js/main.js"></script>

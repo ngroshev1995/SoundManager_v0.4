@@ -1,21 +1,58 @@
 // static/js/ui.js
 
 let selectedRecordingFile = null;
+window.quillEditor = null;
+
+const GENRE_OPTIONS = [
+    { value: "Symphony", label: "Симфония" },
+    { value: "Sonata", label: "Соната" },
+    { value: "Concerto", label: "Концерт" },
+    { value: "Opera", label: "Опера" },
+    { value: "Chamber", label: "Камерная музыка" },
+    { value: "Vocal", label: "Вокальная музыка" },
+    { value: "Ballet", label: "Балет" },
+    { value: "Suite", label: "Сюита" },
+    { value: "Preludes", label: "Прелюдии" },
+    { value: "Etudes", label: "Этюды" },
+    { value: "Waltz", label: "Вальс" },
+    { value: "Polonaise", label: "Полонез" },
+    { value: "Mazurka", label: "Мазурка" },
+    { value: "Nocturne", label: "Ноктюрн" },
+    { value: "Rhapsody", label: "Рапсодия" },
+    { value: "Oratorio", label: "Оратория" },
+    { value: "Mass", label: "Месса" },
+    { value: "Requiem", label: "Реквием" },
+    { value: "Miniature", label: "Миниатюра" },
+    { value: "String", label: "Струнный квартет" }
+];
+
+// 2. АВТОМАТИЧЕСКИЙ СЛОВАРЬ ПЕРЕВОДОВ
+// (Код сам создаст объект { "Symphony": "Симфония", ... } на основе списка выше)
+const GENRE_TRANSLATIONS = GENRE_OPTIONS.reduce((acc, item) => {
+    acc[item.value] = item.label;
+    return acc;
+}, {});
 
 function isAdmin() {
-    // Ты не можешь быть админом, если ты не залогинен
-    return isLoggedIn() && localStorage.getItem("is_admin") === "true";
+  // Ты не можешь быть админом, если ты не залогинен
+  return isLoggedIn() && localStorage.getItem("is_admin") === "true";
 }
 
 function isLoggedIn() {
-    return !!localStorage.getItem("access_token");
+  return !!localStorage.getItem("access_token");
 }
 
 // --- HELPERS ---
 
+function getGenreKeyByLabel(label) {
+    if (!label) return null;
+    const option = GENRE_OPTIONS.find(g => g.label === label);
+    return option ? option.value : label; // Если нашли - возвращаем ключ (Symphony), если нет - то, что ввел юзер (Custom)
+}
+
 function getYoutubeIcon(url) {
-    if (!url) return "";
-    return `
+  if (!url) return "";
+  return `
       <a href="${url}" target="_blank" onclick="event.stopPropagation();"
          class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors ml-1"
          title="Смотреть на YouTube">
@@ -25,35 +62,36 @@ function getYoutubeIcon(url) {
 }
 
 export function updateHeaderAuth() {
-    const container = document.getElementById("header-auth-block");
-    const plLink = document.getElementById("nav-playlists-link");
-    const favLink = document.getElementById("nav-favorites-link"); // <--- НОВОЕ
+  const container = document.getElementById("header-auth-block");
+  const plLink = document.getElementById("nav-playlists-link");
+  const favLink = document.getElementById("nav-favorites-link"); // <--- НОВОЕ
 
-    if (!container) return;
+  if (!container) return;
 
-    if (!isLoggedIn()) {
-        // ГОСТЬ
-        container.innerHTML = `
+  if (!isLoggedIn()) {
+    // ГОСТЬ
+    container.innerHTML = `
             <button id="show-login-modal-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-bold">
                 Войти
             </button>
         `;
-        // Скрываем личные разделы
-        if (plLink) plLink.classList.add("hidden");
-        if (favLink) favLink.classList.add("hidden");
-    } else {
-        // ПОЛЬЗОВАТЕЛЬ (АДМИН ИЛИ ОБЫЧНЫЙ)
-        const username = localStorage.getItem("user_email")?.split("@")[0] || "User";
-        container.innerHTML = `
+    // Скрываем личные разделы
+    if (plLink) plLink.classList.add("hidden");
+    if (favLink) favLink.classList.add("hidden");
+  } else {
+    // ПОЛЬЗОВАТЕЛЬ (АДМИН ИЛИ ОБЫЧНЫЙ)
+    const username =
+      localStorage.getItem("user_email")?.split("@")[0] || "User";
+    container.innerHTML = `
             <span class="text-sm font-bold opacity-90">Здравствуйте, ${username}! 👋</span>
             <button id="logout-btn" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors" title="Выйти">
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
         `;
-        // Показываем личные разделы
-        if (plLink) plLink.classList.remove("hidden");
-        if (favLink) favLink.classList.remove("hidden");
-    }
+    // Показываем личные разделы
+    if (plLink) plLink.classList.remove("hidden");
+    if (favLink) favLink.classList.remove("hidden");
+  }
 }
 
 function getLocalizedText(entity, field, lang) {
@@ -171,7 +209,6 @@ export function renderDashboard(data, lang = "ru") {
         </div>
       </div>
     `;
-
 
   // Stats Strip
   const statsHTML = `
@@ -291,32 +328,53 @@ export function renderRecordingList(
   }
 
   // --- РАЗДЕЛЕНИЕ НА АУДИО И ВИДЕО ---
-  const audioRecordings = recordings.filter(r => r.duration > 0);
-  const videoRecordings = recordings.filter(r => r.duration === 0);
+  const audioRecordings = recordings.filter((r) => r.duration > 0);
+  const videoRecordings = recordings.filter((r) => r.duration === 0);
 
   let htmlContent = "";
 
   // 1. БЛОК АУДИО (Если есть)
   if (audioRecordings.length > 0) {
-      const audioRows = audioRecordings.map((r, i) => {
-          const isFav = favoriteRecordingIds.has(r.id);
-          const compName = getLocalizedText(r.composition, "title", lang);
-          const compoName = getLocalizedText(r.composition.work.composer, "name", lang);
-          const workName = getLocalizedText(r.composition.work, "name", lang);
-          const cover = r.composition.cover_art_url || r.composition.work.cover_art_url || "/static/img/placeholder.png";
-          const composerLink = `/composers/${r.composition.work.composer.slug || r.composition.work.composer.id}`;
-          const workLink = `/works/${r.composition.work.slug || r.composition.work.id}`;
-          const isSelected = window.state && window.state.selectedRecordingIds.has(r.id);
+    const audioRows = audioRecordings
+      .map((r, i) => {
+        const isFav = favoriteRecordingIds.has(r.id);
+        const compName = getLocalizedText(r.composition, "title", lang);
+        const compoName = getLocalizedText(
+          r.composition.work.composer,
+          "name",
+          lang
+        );
+        const workName = getLocalizedText(r.composition.work, "name", lang);
+        const cover =
+          r.composition.cover_art_url ||
+          r.composition.work.cover_art_url ||
+          "/static/img/placeholder.png";
+        const composerLink = `/composers/${
+          r.composition.work.composer.slug || r.composition.work.composer.id
+        }`;
+        const workLink = `/works/${
+          r.composition.work.slug || r.composition.work.id
+        }`;
+        const isSelected =
+          window.state && window.state.selectedRecordingIds.has(r.id);
 
-          return `
-          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50/80 ${isSelected ? "bg-cyan-50 border-cyan-200" : "border-b border-gray-100"} rounded-xl transition-colors cursor-pointer last:border-0"
+        return `
+          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50/80 ${
+            isSelected
+              ? "bg-cyan-50 border-cyan-200"
+              : "border-b border-gray-100"
+          } rounded-xl transition-colors cursor-pointer last:border-0"
                data-recording-id="${r.id}" data-index="${i}">
 
                <div class="w-10 flex justify-center items-center">
-                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${r.id}" ${isSelected ? "checked" : ""}>
+                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                      r.id
+                    }" ${isSelected ? "checked" : ""}>
                </div>
 
-               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${r.id}">
+               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                 r.id
+               }">
                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                </div>
 
@@ -327,21 +385,38 @@ export function renderRecordingList(
                         ${compName}
                         ${getYoutubeIcon(r.youtube_url)}
                    </div>
-                   <div class="text-xs text-gray-500 truncate">${r.performers || "Исполнитель не указан"}</div>
+                   <div class="text-xs text-gray-500 truncate">${
+                     r.performers || "Исполнитель не указан"
+                   }</div>
                </div>
 
-               ${!hideComposer ? `<div class="hidden md:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>` : ""}
-               ${!hideWork ? `<div class="hidden lg:block w-1/4 text-sm text-gray-500 truncate mr-4"><a href="${workLink}" data-navigo class="hover:text-cyan-600 hover:underline">${workName}</a></div>` : ""}
+               ${
+                 !hideComposer
+                   ? `<div class="hidden md:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>`
+                   : ""
+               }
+               ${
+                 !hideWork
+                   ? `<div class="hidden lg:block w-1/4 text-sm text-gray-500 truncate mr-4"><a href="${workLink}" data-navigo class="hover:text-cyan-600 hover:underline">${workName}</a></div>`
+                   : ""
+               }
 
-               <button class="favorite-btn p-2 ${isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"}" data-recording-id="${r.id}">
-                   <i data-lucide="heart" class="w-4 h-4 ${isFav ? "fill-current" : ""}"></i>
+               <button class="favorite-btn p-2 ${
+                 isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
+               }" data-recording-id="${r.id}">
+                   <i data-lucide="heart" class="w-4 h-4 ${
+                     isFav ? "fill-current" : ""
+                   }"></i>
                </button>
 
-               <div class="w-12 text-right text-xs text-gray-500 font-mono ml-2">${formatDuration(r.duration)}</div>
+               <div class="w-12 text-right text-xs text-gray-500 font-mono ml-2">${formatDuration(
+                 r.duration
+               )}</div>
           </div>`;
-      }).join("");
+      })
+      .join("");
 
-      htmlContent += `
+    htmlContent += `
         <div class="mb-10">
             <h3 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2"><i data-lucide="disc" class="w-5 h-5 text-cyan-600"></i> Аудиозаписи</h3>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">${audioRows}</div>
@@ -350,12 +425,18 @@ export function renderRecordingList(
 
   // 2. БЛОК ВИДЕО (Если есть)
   if (videoRecordings.length > 0) {
-      const videoRows = videoRecordings.map(r => {
-          const compName = getLocalizedText(r.composition, "title", lang);
-          const workName = getLocalizedText(r.composition.work, "name", lang);
-          const composerName = getLocalizedText(r.composition.work.composer, "name", lang);
+    const videoRows = videoRecordings
+      .map((r) => {
+        const compName = getLocalizedText(r.composition, "title", lang);
+        const workName = getLocalizedText(r.composition.work, "name", lang);
+        const composerName = getLocalizedText(
+          r.composition.work.composer,
+          "name",
+          lang
+        );
 
-          const controls = isAdmin() ? `
+        const controls = isAdmin()
+          ? `
             <div class="flex gap-2 ml-2 border-l border-gray-200 pl-2 flex-shrink-0">
                 <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" data-recording-id="${r.id}" title="Редактировать">
                     <i data-lucide="edit-2" class="w-4 h-4"></i>
@@ -364,9 +445,10 @@ export function renderRecordingList(
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
-          ` : "";
+          `
+          : "";
 
-          return `
+        return `
           <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-start justify-between group">
                <div class="flex items-start gap-4 min-w-0">
                    <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1">
@@ -376,22 +458,27 @@ export function renderRecordingList(
                        <div class="font-bold text-gray-800 mb-0.5">${compName}</div>
                        <div class="text-xs text-gray-500 leading-snug">
                             <span class="font-semibold text-gray-700">${composerName}</span> •
-                            ${r.performers || "Исполнитель не указан"} • ${workName}
+                            ${
+                              r.performers || "Исполнитель не указан"
+                            } • ${workName}
                        </div>
                    </div>
                </div>
 
                <!-- ИСПРАВЛЕНИЕ: Добавлен класс ml-6 для отступа слева -->
                <div class="flex items-center flex-shrink-0 ml-6">
-                   <a href="${r.youtube_url}" target="_blank" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap">
+                   <a href="${
+                     r.youtube_url
+                   }" target="_blank" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap">
                        <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
                    </a>
                    ${controls}
                </div>
           </div>`;
-      }).join("");
+      })
+      .join("");
 
-      htmlContent += `
+    htmlContent += `
         <div>
             <h3 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2"><i data-lucide="video" class="w-5 h-5 text-red-600"></i> Видеозаписи</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${videoRows}</div>
@@ -403,21 +490,26 @@ export function renderRecordingList(
 }
 
 // --- 3. RENDER COMPOSERS LIST (С ПОДГРУЗКОЙ) ---
-export function renderComposerList(composers, isAppend = false, hasMore = true, lang = "ru") {
+export function renderComposerList(
+  composers,
+  isAppend = false,
+  hasMore = true,
+  lang = "ru"
+) {
   const { listEl } = getElements();
 
   // Если это первая загрузка (не добавление), рисуем каркас страницы
   if (!isAppend) {
-      const viewTitle = document.getElementById("view-title-container");
-      viewTitle.classList.remove("hidden");
+    const viewTitle = document.getElementById("view-title-container");
+    viewTitle.classList.remove("hidden");
 
-      const addBtn = isAdmin()
-          ? `<button id="add-composer-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md flex items-center gap-2 transition-all text-sm font-bold whitespace-nowrap">
+    const addBtn = isAdmin()
+      ? `<button id="add-composer-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md flex items-center gap-2 transition-all text-sm font-bold whitespace-nowrap">
                  <i data-lucide="plus" class="w-4 h-4"></i> <span>Добавить</span>
              </button>`
-          : "";
+      : "";
 
-      viewTitle.innerHTML = `
+    viewTitle.innerHTML = `
             <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
                 <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
                     <i data-lucide="users" class="w-8 h-8 text-cyan-600"></i>
@@ -427,8 +519,8 @@ export function renderComposerList(composers, isAppend = false, hasMore = true, 
             </div>
         `;
 
-      // Рисуем контейнер для сетки и контейнер для кнопки
-      listEl.innerHTML = `
+    // Рисуем контейнер для сетки и контейнер для кнопки
+    listEl.innerHTML = `
         <div class="max-w-7xl mx-auto px-6 pb-10">
             <div id="composers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <!-- Сюда будут добавляться карточки -->
@@ -444,7 +536,8 @@ export function renderComposerList(composers, isAppend = false, hasMore = true, 
   }
 
   // Генерируем HTML карточек
-  const cardsHtml = composers.map((c) => {
+  const cardsHtml = composers
+    .map((c) => {
       const years = formatYearRange(c.year_born, c.year_died);
       const yearsBadge = years
         ? `<p class="text-xs text-gray-500 mt-1 font-medium bg-gray-50 inline-block px-2 py-0.5 rounded-full border border-gray-200">${years}</p>`
@@ -453,30 +546,37 @@ export function renderComposerList(composers, isAppend = false, hasMore = true, 
       return `
       <a href="/composers/${c.slug || c.id}" data-navigo
          class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl transition-all flex items-center gap-4 border border-gray-100 hover:border-cyan-200 group animate-fade-in">
-          <img src="${c.portrait_url || "/static/img/placeholder.png"}" class="w-16 h-16 rounded-full object-cover border-2 border-gray-100 group-hover:border-cyan-100 transition-colors shadow-sm flex-shrink-0">
+          <img src="${
+            c.portrait_url || "/static/img/placeholder.png"
+          }" class="w-16 h-16 rounded-full object-cover border-2 border-gray-100 group-hover:border-cyan-100 transition-colors shadow-sm flex-shrink-0">
           <div class="min-w-0">
-              <h3 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors truncate">${getLocalizedText(c, "name", lang)}</h3>
+              <h3 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors truncate">${getLocalizedText(
+                c,
+                "name",
+                lang
+              )}</h3>
               ${yearsBadge}
           </div>
       </a>
   `;
-  }).join("");
+    })
+    .join("");
 
   // Вставляем карточки в сетку
   const grid = document.getElementById("composers-grid");
   if (grid) {
-      // Вставляем HTML в конец контейнера (не стирая старое)
-      grid.insertAdjacentHTML('beforeend', cardsHtml);
+    // Вставляем HTML в конец контейнера (не стирая старое)
+    grid.insertAdjacentHTML("beforeend", cardsHtml);
   }
 
   // Управляем кнопкой "Показать еще"
   const btnContainer = document.getElementById("composers-load-more-container");
   if (btnContainer) {
-      if (hasMore) {
-          btnContainer.classList.remove("hidden");
-      } else {
-          btnContainer.classList.add("hidden");
-      }
+    if (hasMore) {
+      btnContainer.classList.remove("hidden");
+    } else {
+      btnContainer.classList.add("hidden");
+    }
   }
 
   if (window.lucide) window.lucide.createIcons();
@@ -485,20 +585,19 @@ export function renderComposerList(composers, isAppend = false, hasMore = true, 
 // --- 4. RENDER WORK LIST (ПРОФИЛЬ КОМПОЗИТОРА) ---
 export function renderWorkList(works, composer, lang = "ru") {
   const { listEl } = getElements();
-
-  // 1. СКРЫВАЕМ ВЕРХНИЙ КОНТЕЙНЕР
   document.getElementById("view-title-container").classList.add("hidden");
 
   const nameRu = composer.name_ru;
   const nameOrig = composer.original_name;
-  const swapBtn = nameOrig
-    ? `<button class="lang-swap-btn ml-3 p-2 rounded-full text-gray-400 hover:text-cyan-600 hover:bg-gray-50 transition-colors" title="Показать оригинал">
-         <i data-lucide="globe" class="w-5 h-5"></i>
-       </button>`
+
+  // Оригинальное имя статично
+  const originalNameHtml = nameOrig
+    ? `<div class="text-gray-400 text-lg font-medium mt-1">${nameOrig}</div>`
     : "";
 
   // Панель кнопок
-  const actionsBar = isAdmin() ? `
+  const actionsBar = isAdmin()
+    ? `
       <div class="mt-6 flex flex-wrap gap-3">
            <button id="add-work-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors shadow-sm flex items-center gap-2">
               <i data-lucide="plus" class="w-4 h-4"></i> <span>Произведение</span>
@@ -510,68 +609,54 @@ export function renderWorkList(works, composer, lang = "ru") {
               <i data-lucide="trash-2" class="w-5 h-5"></i>
            </button>
       </div>
-  ` : "";
+  `
+    : "";
 
-  // 2. ФОРМИРУЕМ ШАПКУ
+  // 2. ФОРМИРУЕМ ШАПКУ (Apple Music Style)
+  const bgImage = composer.portrait_url || "/static/img/placeholder.png";
+
   const header = `
-        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-start mb-8">
-            <div class="flex-shrink-0">
-                <img src="${composer.portrait_url || "/static/img/placeholder.png"}"
-                     class="w-32 h-32 md:w-40 md:h-40 rounded-xl object-cover border border-gray-100 shadow-sm">
+        <div class="relative overflow-hidden rounded-3xl shadow-xl border border-gray-100 mb-8 group">
+            <!-- === ФОНОВЫЙ СЛОЙ (Backdrop) === -->
+            <div class="absolute inset-0 z-0 pointer-events-none">
+                <!-- Размытая картинка -->
+                <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-125 transition-transform duration-[2000ms] group-hover:scale-110"
+                     style="background-image: url('${bgImage}')"></div>
+                <!-- Градиент для читаемости текста (Белый слева -> Прозрачный справа) -->
+                <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/20"></div>
             </div>
 
-            <div class="flex-1 w-full text-left">
-                <!-- ВЕРНУЛ КЛАСС title-container (нужен для переключения языка) -->
-                <div class="title-container flex items-center gap-2 mb-1">
-                     <!-- ВЕРНУЛ font-bold вместo font-extrabold -->
-                     <h1 class="text-2xl md:text-3xl font-bold text-gray-900 leading-tight main-title-text"
-                        data-ru="${nameRu}"
-                        data-orig="${nameOrig || ''}">${nameRu}</h1>
-                    ${swapBtn}
+            <!-- === КОНТЕНТ (Поверх фона) === -->
+            <div class="relative z-10 p-8 flex flex-col md:flex-row gap-8 items-start">
+                <div class="flex-shrink-0">
+                    <img src="${bgImage}"
+                         class="w-40 h-40 md:w-48 md:h-48 rounded-2xl object-cover shadow-2xl transform group-hover:scale-105 transition-transform duration-500">
                 </div>
 
-                <p class="text-gray-500 text-lg font-medium">${formatYearRange(composer.year_born, composer.year_died)}</p>
+                <div class="flex-1 w-full text-left pt-2">
+                    <div>
+                         <h1 class="text-4xl md:text-5xl font-black text-gray-900 leading-tight tracking-tight mb-1">${nameRu}</h1>
+                         ${originalNameHtml}
+                    </div>
 
-                ${actionsBar}
+                    <p class="text-gray-600 text-xl font-medium mt-3 flex items-center gap-2">
+                        <span class="bg-white/50 px-3 py-1 rounded-lg backdrop-blur-sm border border-white/20">
+                            ${formatYearRange(composer.year_born, composer.year_died)}
+                        </span>
+                    </p>
+
+                    ${actionsBar}
+                </div>
             </div>
         </div>
     `;
 
+  // БИОГРАФИЯ С ПРОВЕРКОЙ ПУСТОТЫ
   let bioHtml = "";
-  if (composer.notes) {
-      // Убираем тег "Биография", так как он есть внутри текста
-      // Но если вам нужно общее название блока, можно оставить h3
+  const hasBio = composer.notes && composer.notes.replace(/<[^>]*>/g, '').trim().length > 0;
 
-      // ID для JS
-      const contentId = `bio-content-${composer.id}`;
-      const btnId = `bio-btn-${composer.id}`;
-      const gradientId = `bio-gradient-${composer.id}`;
-
-bioHtml = `
-      <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-10 group/bio">
-          <div class="relative">
-              <div class="bio-content prose prose-cyan max-w-none text-gray-600 leading-relaxed max-h-60 overflow-hidden transition-all duration-500 ease-in-out" data-expanded="false">
-                  ${composer.notes}
-              </div>
-              <!-- Градиент внутри relative контейнера -->
-              <div class="bio-gradient absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none"></div>
-          </div>
-
-          <!-- Кнопка в обычном потоке (снизу) -->
-          <div class="flex justify-center -mt-4 relative z-10">
-              <button class="bio-toggle-btn px-6 py-2 bg-white border border-gray-200 text-cyan-600 font-bold rounded-full shadow-sm hover:shadow-md hover:bg-cyan-50 transition-all flex items-center gap-2 text-sm">
-                  <span class="btn-text">Читать далее</span> <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-300"></i>
-              </button>
-          </div>
-      </div>`;
-
-      // Добавляем скрипт для обработки клика ПОСЛЕ того, как HTML попадет в DOM
-      // Поскольку мы в SPA, лучше всего использовать делегирование событий в main.js,
-      // но для простоты можно использовать setTimeout здесь же, если мы уверены, что renderWorkList вызывается один раз.
-      // ЛУЧШИЙ ВАРИАНТ: Добавить data-атрибуты и обработать в main.js.
-
-      // Давайте перепишем кнопку с data-атрибутами для чистоты:
-      bioHtml = `
+  if (hasBio) {
+    bioHtml = `
       <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-10 relative group/bio">
           <div class="bio-content prose prose-cyan max-w-none text-gray-600 leading-relaxed max-h-60 overflow-hidden transition-[max-height] duration-500 ease-in-out" data-expanded="false">
               ${composer.notes}
@@ -586,48 +671,119 @@ bioHtml = `
       </div>`;
   }
 
-  // 3. ФОРМИРУЕМ СПИСОК
+  // 3. ФОРМИРУЕМ СПИСОК (С ГРУППИРОВКОЙ ПО ЖАНРАМ)
   let content = "";
-  if (!works || !works.length) {
+
+  if (!works || works.length === 0) {
     content = '<div class="text-left text-gray-500 italic bg-gray-50 p-8 rounded-xl border border-dashed border-gray-300">Произведения пока не добавлены.</div>';
   } else {
-    const cards = works.map((w) => {
-        if (w.name === "Без сборника") return "";
-        const cover = w.cover_art_url || "/static/img/placeholder.png";
-        const link = `/works/${w.slug || w.id}`;
 
-        return `
-            <a href="${link}" data-navigo
-               class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-cyan-400 hover:shadow-lg transition-all group flex flex-col h-full"
-               title="${w.original_name || ""}">
-                <div class="aspect-square bg-gray-100 relative overflow-hidden">
-                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                        <span class="text-white text-sm font-bold flex items-center gap-1"><i data-lucide="corner-down-right" class="w-4 h-4"></i> Открыть</span>
+    // --- ШАГ A: Группируем произведения ---
+    const groups = {};
+    const uncategorizedKey = "OTHER"; // Ключ для "Без жанра"
+
+    works.forEach((w) => {
+        if (w.name === "Без сборника") return; // Пропускаем технические
+
+        let key = w.genre || uncategorizedKey;
+
+        // Нормализация ключа (Symphony)
+        if (key !== uncategorizedKey) {
+            key = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+            // Обратный поиск (на случай старых русских значений в базе)
+            const entry = GENRE_OPTIONS.find(opt => opt.label === key || opt.value === key);
+            if (entry) key = entry.value;
+        }
+
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(w);
+    });
+
+    // --- ШАГ B: Определяем порядок вывода групп ---
+    const priorityOrder = ["Symphony", "Opera", "Ballet", "Concerto", "Sonata", "Suite", "Chamber", "Vocal"];
+
+    let sortedKeys = Object.keys(groups).sort((a, b) => {
+        if (a === uncategorizedKey) return 1;
+        if (b === uncategorizedKey) return -1;
+        const idxA = priorityOrder.indexOf(a);
+        const idxB = priorityOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    // --- ШАГ C: Генерируем HTML для каждой группы ---
+    sortedKeys.forEach(genreKey => {
+        const groupWorks = groups[genreKey];
+
+        // Заголовок группы
+        let groupTitle = "";
+        if (genreKey === uncategorizedKey) {
+            if (sortedKeys.length > 1) groupTitle = "Другие произведения";
+        } else {
+            let translation = GENRE_TRANSLATIONS[genreKey];
+            if (!translation) {
+                const keyCapitalized = genreKey.charAt(0).toUpperCase() + genreKey.slice(1).toLowerCase();
+                translation = GENRE_TRANSLATIONS[keyCapitalized];
+            }
+            groupTitle = translation || genreKey;
+        }
+
+        // HTML карточек внутри группы
+        const cardsHtml = groupWorks.map((w) => {
+            const cover = w.cover_art_url || "/static/img/placeholder.png";
+            const link = `/works/${w.slug || w.id}`;
+            const metaText = [w.tonality, w.catalog_number].filter(Boolean).join(" • ");
+
+            return `
+                <a href="${link}" data-navigo
+                   class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-cyan-400 hover:shadow-lg transition-all group flex flex-col h-full"
+                   title="${w.original_name || ""}">
+                    <div class="aspect-square bg-gray-100 relative overflow-hidden">
+                        <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                            <span class="text-white text-sm font-bold flex items-center gap-1"><i data-lucide="corner-down-right" class="w-4 h-4"></i> Открыть</span>
+                        </div>
                     </div>
+                    <div class="p-4 flex-1 flex flex-col text-left">
+                        <h4 class="font-bold text-gray-800 text-sm line-clamp-2 group-hover:text-cyan-600 transition-colors mb-1">${getLocalizedText(w,"name",lang)}</h4>
+                        ${metaText ? `<p class="text-xs text-gray-500 mb-2 font-medium">${metaText}</p>` : ""}
+                        <p class="text-xs text-gray-400 mt-auto pt-2 border-t border-gray-50 flex justify-between">
+                            <span>${formatYearRange(w.publication_year, w.publication_year_end)}</span>
+                            <span class="text-cyan-600 font-medium">${w.compositions ? w.compositions.length : 0} ч.</span>
+                        </p>
+                    </div>
+                </a>
+            `;
+        }).join("");
+
+        // Добавляем секцию в общий контент
+        content += `
+            <div class="mb-10 last:mb-0">
+                ${groupTitle ? `<h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 px-1"><span class="bg-cyan-100 text-cyan-700 px-3 py-1 rounded-lg text-sm uppercase tracking-wider">${groupTitle}</span> <span class="text-gray-400 text-sm font-normal ml-auto">${groupWorks.length}</span></h3>` : ""}
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
+                    ${cardsHtml}
                 </div>
-                <div class="p-4 flex-1 flex flex-col text-left">
-                    <h4 class="font-bold text-gray-800 text-sm line-clamp-2 group-hover:text-cyan-600 transition-colors mb-1">${getLocalizedText(w,"name",lang)}</h4>
-                    <p class="text-xs text-gray-400 mt-auto pt-2 border-t border-gray-50 flex justify-between">
-                        <span>${formatYearRange(w.publication_year, w.publication_year_end)}</span>
-                        <span class="text-cyan-600 font-medium">${w.compositions ? w.compositions.length : 0} ч.</span>
-                    </p>
-                </div>
-            </a>
+            </div>
         `;
-    }).join("");
-    content = `<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">${cards}</div>`;
+    });
   }
 
-  // 4. СОБИРАЕМ
+  // 4. СОБИРАЕМ ВСЁ ВМЕСТЕ
   listEl.innerHTML = `
       <div class="max-w-7xl mx-auto px-6 pb-16">
           ${header}
-          ${bioHtml} <!-- ВСТАВИЛИ БИОГРАФИЮ СЮДА -->
-          <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2 text-left">
-              <i data-lucide="book-open" class="w-5 h-5 text-cyan-600"></i>
-              <span>Произведения</span>
-          </h3>
+          ${bioHtml}
+
+          <!-- Общий заголовок раздела (если нужен) -->
+          <div class="border-b border-gray-200 pb-4 mb-6 mt-8">
+              <h3 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <i data-lucide="book-open" class="w-6 h-6 text-cyan-600"></i>
+                  <span>Каталог произведений</span>
+              </h3>
+          </div>
+
           ${content}
       </div>
   `;
@@ -635,32 +791,42 @@ bioHtml = `
   if (window.lucide) window.lucide.createIcons();
 }
 
-
-
-
 // --- 5. RENDER COMPOSITION GRID (СТРАНИЦА ПРОИЗВЕДЕНИЯ) ---
 export async function renderCompositionGrid(work, lang = "ru") {
   const { listEl } = getElements();
   document.getElementById("view-title-container").classList.add("hidden");
 
-  // Данные заголовка
+  // --- 1. ДАННЫЕ ДЛЯ ШАПКИ (ПРОИЗВЕДЕНИЕ) ---
   const nameRu = work.name_ru;
   const nameOrig = work.original_name;
+
+  // Каталог
   const catalogHtml = work.catalog_number
-      ? `<span class="text-gray-500 text-xl font-normal ml-3 px-2 py-0.5 bg-gray-100 rounded-md">${work.catalog_number}</span>`
+      ? `<span class="text-gray-500 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200">${work.catalog_number}</span>`
       : "";
 
-  const swapBtn = nameOrig
-    ? `<button class="lang-swap-btn ml-3 p-2 rounded-full text-gray-400 hover:text-cyan-600 hover:bg-gray-50 transition-colors" title="Показать оригинал">
-         <i data-lucide="globe" class="w-5 h-5"></i>
-       </button>`
-    : "";
+  // Жанр (Перевод)
+  const genreRu = GENRE_TRANSLATIONS[work.genre] || work.genre;
+  const genreBadge = work.genre
+      ? `<span class="text-xs font-bold uppercase tracking-wider text-cyan-700 bg-cyan-50 px-2 py-1 rounded border border-cyan-100 align-middle">${genreRu}</span>`
+      : `<span class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">Произведение</span>`;
+
+  // Строка с тональностью и прозвищем
+  let subInfo = [];
+  if (work.nickname) subInfo.push(`<span class="font-bold text-gray-700">«${work.nickname}»</span>`);
+  if (work.tonality) subInfo.push(`<span class="text-gray-600">${work.tonality}</span>`);
+  const subInfoHtml = subInfo.length > 0 ? `<div class="mt-2 text-lg">${subInfo.join(" <span class='text-gray-300 mx-2'>|</span> ")}</div>` : "";
+
+  // Оригинальное название (статично)
+  const originalNameHtml = nameOrig
+      ? `<div class="text-gray-400 text-sm font-medium mt-1">${nameOrig}</div>`
+      : "";
 
   const composerLink = `/composers/${work.composer.slug || work.composer.id}`;
 
   // Кнопки управления
   const adminControls = isAdmin() ? `
-    <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
+    <div class="flex flex-wrap gap-3 mt-6 md:mt-0 w-full md:w-auto">
         <button id="direct-upload-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2" data-work-id="${work.id}">
             <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить запись</span>
         </button>
@@ -675,32 +841,65 @@ export async function renderCompositionGrid(work, lang = "ru") {
         </button>
     </div>` : "";
 
-  // Шапка
+  // --- HTML ШАПКИ (Apple Music Style) ---
+  const bgImage = work.cover_art_url || "/static/img/placeholder.png";
+
   const header = `
-        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8 items-start mb-8">
-            <img src="${work.cover_art_url || "/static/img/placeholder.png"}" class="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-md object-cover flex-shrink-0 border border-gray-100">
-            <div class="flex-1 w-full">
-                <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">Произведение</div>
-                <div class="title-container flex items-center flex-wrap mb-2">
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 main-title-text"
-                        data-ru="${nameRu}" data-orig="${nameOrig || ''}">${nameRu}</h1>
-                    ${catalogHtml}
-                    ${swapBtn}
+        <div class="relative overflow-hidden rounded-3xl shadow-xl border border-gray-100 mb-8 group">
+            <!-- === ФОН === -->
+            <div class="absolute inset-0 z-0 pointer-events-none">
+                <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-125 transition-transform duration-[2000ms] group-hover:scale-110"
+                     style="background-image: url('${bgImage}')"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/30"></div>
+            </div>
+
+            <!-- === КОНТЕНТ === -->
+            <div class="relative z-10 p-8 flex flex-col md:flex-row gap-8 items-start">
+                <div class="flex-shrink-0 relative">
+                    <img src="${bgImage}" class="w-40 h-40 md:w-48 md:h-48 rounded-2xl shadow-2xl object-cover transform group-hover:scale-105 transition-transform duration-500">
+                    <!-- Тень для обложки -->
+                    <div class="absolute inset-0 rounded-2xl ring-1 ring-black/5"></div>
                 </div>
-                <a href="${composerLink}" data-navigo class="text-lg text-gray-600 hover:text-cyan-600 font-medium flex items-center gap-2 mb-6 w-fit">
-                    <i data-lucide="user" class="w-4 h-4"></i> ${getLocalizedText(work.composer, "name", lang)}
-                </a>
-                ${adminControls}
+
+                <div class="flex-1 w-full pt-1 flex flex-col">
+                    <div class="mb-3 flex items-center gap-2">
+                        ${genreBadge}
+                    </div>
+
+                    <div class="flex flex-wrap items-baseline gap-2 mb-1">
+                        <h1 class="text-3xl md:text-4xl font-black text-gray-900 leading-tight tracking-tight">${nameRu}</h1>
+                        ${catalogHtml}
+                    </div>
+
+                    ${originalNameHtml}
+                    ${subInfoHtml}
+
+                    <div class="mt-5 mb-2">
+                        <a href="${composerLink}" data-navigo class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 hover:bg-white hover:shadow-md border border-gray-100 transition-all text-gray-700 font-bold group/link">
+                            <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                                <img src="${work.composer.portrait_url || '/static/img/placeholder.png'}" class="w-full h-full object-cover">
+                            </div>
+                            <span>${getLocalizedText(work.composer, "name", lang)}</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 group-hover/link:text-cyan-600"></i>
+                        </a>
+                    </div>
+
+                    <!-- Блок кнопок -->
+                    <div class="mt-4">
+                        ${adminControls}
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
-  // История
-let historyHtml = "";
-  if (work.notes) {
+  // ИСТОРИЯ С ПРОВЕРКОЙ ПУСТОТЫ
+  let historyHtml = "";
+  const hasNotes = work.notes && work.notes.replace(/<[^>]*>/g, '').trim().length > 0;
+
+  if (hasNotes) {
       historyHtml = `
       <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-10 group/bio">
-          <!-- Заголовок убран, так как он может быть внутри текста -->
           <div class="relative">
               <div class="bio-content prose prose-cyan max-w-none text-gray-600 leading-relaxed max-h-60 overflow-hidden transition-all duration-500 ease-in-out" data-expanded="false">
                   ${work.notes}
@@ -719,34 +918,32 @@ let historyHtml = "";
   let content = "";
   const compositions = work.compositions || [];
 
-  // Флаг: показывать ли как "Одночастное с записями"
+  // Сортируем части
+  compositions.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  // Одночастное произведение: Если частей 0 или 1
   let showAsSingleWithRecords = false;
   let singlePartRecordings = [];
 
-  // 1. Проверяем: если часть одна, есть ли у нее записи?
   if (compositions.length === 1) {
       const comp = compositions[0];
       try {
          const recs = await window.apiRequest(`/api/recordings/compositions/${comp.id}/recordings`);
-         // Если записи ЕСТЬ, включаем режим "Одночастное произведение"
          if (recs.length > 0) {
              showAsSingleWithRecords = true;
              singlePartRecordings = recs;
-             // Обновляем плеер (только аудио)
-             window.state.currentViewRecordings = recs.filter(r => r.duration > 0);
+             // В плеер кладем ТОЛЬКО аудио
+             window.state.currentViewRecordings = recs;
          }
       } catch (e) { console.error(e); }
   }
 
-  // --- ВЕТВЛЕНИЕ ЛОГИКИ ---
-
   if (showAsSingleWithRecords) {
-      // СЦЕНАРИЙ 1: Одна часть + ЕСТЬ записи -> Показываем плеер и видео
+      // Одночастное с записями (плеер)
       const audioRecs = singlePartRecordings.filter(r => r.duration > 0);
       const videoRecs = singlePartRecordings.filter(r => r.duration === 0);
       let finalHtml = "";
 
-      // Блок Аудио
       if (audioRecs.length > 0) {
           const rows = audioRecs.map((r, i) => {
             const isFav = window.state.favoriteRecordingIds.has(r.id);
@@ -781,7 +978,6 @@ let historyHtml = "";
             </div>`;
       }
 
-      // Блок Видео
       if (videoRecs.length > 0) {
            const videoRows = videoRecs.map(r => {
                const controls = isAdmin() ? `
@@ -795,19 +991,20 @@ let historyHtml = "";
                 </div>` : "";
 
                return `
-              <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-start justify-between group">
-                   <div class="flex items-start gap-4 min-w-0 mr-4">
-                       <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1">
-                           <i data-lucide="youtube" class="w-6 h-6"></i>
+              <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-center justify-between group">
+                   <div class="flex items-center gap-4 min-w-0 mr-4">
+                       <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+                           <i data-lucide="youtube" class="w-5 h-5"></i>
                        </div>
                        <div class="min-w-0">
-                           <div class="font-bold text-gray-800 mb-0.5">${r.performers || "Исполнитель не указан"}</div>
+                           <!-- Убрал truncate -->
+                           <div class="font-bold text-gray-800 text-sm leading-tight mb-0.5">${r.performers || "Исполнитель не указан"}</div>
                            <div class="text-xs text-gray-500 font-mono">${r.recording_year || "Год не указан"}</div>
                        </div>
                    </div>
                    <div class="flex items-center flex-shrink-0 ml-6">
-                       <a href="${r.youtube_url}" target="_blank" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap">
-                           <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
+                       <a href="${r.youtube_url}" target="_blank" class="text-red-600 hover:text-red-700 text-sm font-bold flex items-center gap-1 px-3 py-1">
+                           Смотреть <i data-lucide="external-link" class="w-4 h-4"></i>
                        </a>
                        ${controls}
                    </div>
@@ -823,29 +1020,40 @@ let historyHtml = "";
       content = finalHtml;
 
   } else if (compositions.length > 0) {
-      // СЦЕНАРИЙ 2:
-      // - Либо частей > 1
-      // - Либо часть 1, но она ПУСТАЯ (без записей) <-- ВАШ СЛУЧАЙ
-      // Показываем СПИСОК ЧАСТЕЙ, чтобы вы видели свою созданную часть.
+      // --- СЦЕНАРИЙ 2: СПИСОК ЧАСТЕЙ ---
 
-      const list = compositions.map(c => `
+      const list = compositions.map(c => {
+          const metaParts = [];
+          if (c.tonality) metaParts.push(`<span class="font-medium text-gray-600">${c.tonality}</span>`);
+          if (c.catalog_number) metaParts.push(`<span>${c.catalog_number}</span>`);
+          if (c.composition_year) metaParts.push(`<span>${c.composition_year}</span>`);
+
+          const metaHtml = metaParts.length > 0
+              ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join('<span class="text-gray-300">•</span>')}</div>`
+              : "";
+
+          return `
             <a href="/compositions/${c.slug || c.id}" data-navigo
                class="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3"
                title="${c.title_original || ""}">
                 <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm">
-                        ${c.catalog_number || "#"}
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm">
+                        ${c.sort_order || "#"}
                     </div>
-                    <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors">${getLocalizedText(c, "title", lang)}</span>
+                    <div>
+                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors">${getLocalizedText(c, "title", lang)}</span>
+                        ${metaHtml}
+                    </div>
                 </div>
                 <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500"></i>
             </a>
-        `).join("");
+        `;
+      }).join("");
 
       content = `<div class="mt-8"><h3 class="text-lg font-bold mb-4 px-1 text-gray-700">Список частей</h3>${list}</div>`;
 
   } else {
-      // СЦЕНАРИЙ 3: Частей вообще нет (0)
+      // --- СЦЕНАРИЙ 3: ПУСТО ---
       content = `<div class="text-center text-gray-500 italic py-12 bg-gray-50 rounded-xl mt-8 border-2 border-dashed border-gray-200">
         Произведение пустое. <br>Загрузите запись (будет создана основная часть) или добавьте части вручную.
       </div>`;
@@ -867,53 +1075,89 @@ export function renderCompositionDetailView(
 
   const titleRu = composition.title_ru;
   const titleOrig = composition.title_original;
-  const swapBtn = titleOrig
-    ? `<button class="lang-swap-btn ml-2 p-1 rounded-full text-gray-400 hover:text-cyan-600 transition-colors" title="Показать оригинал">
-           <i data-lucide="globe" class="w-5 h-5"></i>
-       </button>`
+  const work = composition.work;
+
+  const effectiveCatalog = composition.catalog_number || work.catalog_number;
+
+  let metaParts = [];
+
+  if (composition.tonality) {
+    metaParts.push(
+      `<span class="font-medium text-gray-700">${composition.tonality}</span>`
+    );
+  }
+
+  if (effectiveCatalog) {
+    metaParts.push(`<span>${effectiveCatalog}</span>`);
+  }
+
+  if (composition.composition_year) {
+    metaParts.push(`<span>${composition.composition_year}</span>`);
+  }
+
+  const metaHtml =
+    metaParts.length > 0
+      ? `<div class="text-lg text-gray-500 mt-2 flex items-center gap-2">${metaParts.join(
+          '<span class="text-gray-300 mx-1">•</span>'
+        )}</div>`
+      : "";
+
+  const originalNameHtml = titleOrig
+    ? `<div class="text-gray-400 text-sm font-medium mt-1">${titleOrig}</div>`
     : "";
 
-  const workLink = `/works/${composition.work.slug || composition.work.id}`;
+  const workLink = `/works/${work.slug || work.id}`;
+
+  // --- HTML ШАПКИ (Apple Music Style) ---
+  // Берем обложку части или (если нет) произведения
+  const bgImage = composition.cover_art_url || work.cover_art_url || "/static/img/placeholder.png";
 
   const header = `
         <div class="max-w-7xl mx-auto px-6 pt-6 pb-8">
-            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <a href="${workLink}" data-navigo class="text-xs font-bold text-cyan-600 uppercase tracking-wider hover:underline">Произведение</a>
-                        <span class="text-gray-300">/</span>
-                        <span class="text-gray-400 text-xs">${
-                          composition.catalog_number || ""
-                        }</span>
-                    </div>
-
-                    <div class="title-container flex items-center gap-2 mb-2">
-                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 main-title-text"
-                            data-ru="${titleRu}"
-                            data-orig="${titleOrig || ""}">${titleRu}</h1>
-                        ${swapBtn}
-                    </div>
-
-                    <div class="text-gray-500 text-sm flex items-center gap-2">
-                        <i data-lucide="disc" class="w-4 h-4"></i>
-                        <span>Исполнений: <b>${
-                          recordings ? recordings.length : 0
-                        }</b></span>
-                    </div>
+            <div class="relative overflow-hidden rounded-3xl shadow-xl border border-gray-100 mb-8 group">
+                <!-- === ФОН === -->
+                <div class="absolute inset-0 z-0 pointer-events-none">
+                    <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-125"
+                         style="background-image: url('${bgImage}')"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/40"></div>
                 </div>
 
-                ${isAdmin() ? `
-                <div class="flex gap-3 w-full md:w-auto">
-                    <button id="delete-composition-btn" class="p-2.5 border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Удалить часть">
-                        <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
-                    <button id="edit-composition-btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors text-sm">
-                        Редактировать
-                    </button>
-                    <button class="add-recording-btn px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-cyan-200 transition-all flex items-center justify-center gap-2 text-sm" data-composition-id="${composition.id}">
-                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить</span>
-                    </button>
-                </div>` : ""}
+                <!-- === КОНТЕНТ === -->
+                <div class="relative z-10 p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                    <div class="flex-1">
+                        <div class="mb-4">
+                            <a href="${workLink}" data-navigo class="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white/50 hover:bg-white text-xs font-bold text-cyan-700 uppercase tracking-wider transition-all shadow-sm hover:shadow border border-cyan-100/50">
+                                <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                                ${getLocalizedText(work, "name", lang)}
+                            </a>
+                        </div>
+
+                        <div>
+                            <h1 class="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-1">${titleRu}</h1>
+                            ${originalNameHtml}
+                        </div>
+
+                        ${metaHtml}
+
+                        <div class="inline-flex items-center gap-2 mt-5 px-4 py-2 bg-white/60 backdrop-blur-md rounded-xl border border-white/20 text-gray-600 text-sm font-medium shadow-sm">
+                            <i data-lucide="disc" class="w-4 h-4 text-cyan-600"></i>
+                            <span>Исполнений: <b class="text-gray-900">${recordings ? recordings.length : 0}</b></span>
+                        </div>
+                    </div>
+
+                    ${isAdmin() ? `
+                    <div class="flex gap-3 w-full md:w-auto self-start md:self-center flex-shrink-0 ml-auto bg-white/50 p-2 rounded-2xl backdrop-blur-sm border border-white/20 shadow-inner">
+                        <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                        <button id="edit-composition-btn" class="px-5 py-3 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow">
+                            Редактировать
+                        </button>
+                        <button class="add-recording-btn px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center gap-2 text-sm transform hover:-translate-y-0.5" data-composition-id="${composition.id}">
+                            <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить</span>
+                        </button>
+                    </div>` : ""}
+                </div>
             </div>
         </div>
     `;
@@ -932,87 +1176,107 @@ export function renderCompositionDetailView(
                 </div>
             </div>`;
   } else {
-
-    // РАЗДЕЛЕНИЕ
-    const audioRecs = recordings.filter(r => r.duration > 0);
-    const videoRecs = recordings.filter(r => r.duration === 0);
-
+    const audioRecs = recordings.filter((r) => r.duration > 0);
+    const videoRecs = recordings.filter((r) => r.duration === 0);
     let finalHtml = "";
 
-    // 1. АУДИО
     if (audioRecs.length > 0) {
-        const rows = audioRecs.map((r, i) => {
-            const isFav = favs.has(r.id);
-            const isSelected = window.state && window.state.selectedRecordingIds.has(r.id);
-
-            return `
-            <div class="recording-item group flex items-center p-4 hover:bg-cyan-50 ${isSelected ? "bg-cyan-50 border-cyan-200" : "border-b border-gray-100"} bg-white last:border-0 transition-colors cursor-pointer"
+      const rows = audioRecs
+        .map((r, i) => {
+          const isFav = favs.has(r.id);
+          const isSelected =
+            window.state && window.state.selectedRecordingIds.has(r.id);
+          return `
+            <div class="recording-item group flex items-center p-4 hover:bg-cyan-50 ${
+              isSelected
+                ? "bg-cyan-50 border-cyan-200"
+                : "border-b border-gray-100"
+            } bg-white last:border-0 transition-colors cursor-pointer"
                  data-recording-id="${r.id}" data-index="${i}">
-
                  <div class="w-10 flex justify-center items-center">
-                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${r.id}" ${isSelected ? "checked" : ""}>
+                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                      r.id
+                    }" ${isSelected ? "checked" : ""}>
                  </div>
-
-                 <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${r.id}">
+                 <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                   r.id
+                 }">
                     <i data-lucide="play" class="w-6 h-6 fill-current"></i>
                  </div>
-
                  <div class="flex-1 ml-4">
                      <div class="font-bold text-gray-800 text-lg flex items-center">
                         ${r.performers || "Исполнитель не указан"}
                         ${getYoutubeIcon(r.youtube_url)}
                      </div>
-                     <div class="text-xs text-gray-500 font-mono mt-0.5">${r.recording_year || ""}</div>
+                     <div class="text-xs text-gray-500 font-mono mt-0.5">${
+                       r.recording_year || ""
+                     }</div>
                  </div>
-                 <button class="favorite-btn p-2 mr-4 ${isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"}" data-recording-id="${r.id}">
-                     <i data-lucide="heart" class="w-5 h-5 ${isFav ? "fill-current" : ""}"></i>
+                 <button class="favorite-btn p-2 mr-4 ${
+                   isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
+                 }" data-recording-id="${r.id}">
+                     <i data-lucide="heart" class="w-5 h-5 ${
+                       isFav ? "fill-current" : ""
+                     }"></i>
                  </button>
-                 <div class="w-16 text-right text-sm text-gray-500 font-mono">${formatDuration(r.duration)}</div>
+                 <div class="w-16 text-right text-sm text-gray-500 font-mono">${formatDuration(
+                   r.duration
+                 )}</div>
             </div>`;
-        }).join("");
+        })
+        .join("");
 
-        finalHtml += `
+      finalHtml += `
          <div class="mb-10">
             <h3 class="text-lg font-bold mb-4 text-gray-700">Аудиозаписи</h3>
             <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">${rows}</div>
          </div>`;
     }
 
-    // 2. ВИДЕО
     if (videoRecs.length > 0) {
-         const videoRows = videoRecs.map(r => {
-            const controls = isAdmin() ? `
-                <div class="flex gap-2 ml-3 border-l border-gray-200 pl-3 flex-shrink-0">
+      const videoRows = videoRecs
+        .map((r) => {
+          const controls = isAdmin()
+            ? `
+                <div class="flex gap-2 ml-2 border-l border-gray-200 pl-2 flex-shrink-0">
                     <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" data-recording-id="${r.id}">
                         <i data-lucide="edit-2" class="w-4 h-4"></i>
                     </button>
                     <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-recording-id="${r.id}">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
-                </div>` : "";
+                </div>`
+            : "";
 
-            return `
-              <div class="bg-white p-5 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-center justify-between group">
-                   <div class="flex items-center gap-5 min-w-0 mr-4">
+          return `
+              <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-center justify-between group">
+                   <div class="flex items-center gap-4 min-w-0 mr-4">
                        <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
                            <i data-lucide="youtube" class="w-6 h-6"></i>
                        </div>
                        <div class="min-w-0">
-                           <!-- ИСПРАВЛЕНИЕ: Убрал truncate -->
-                           <div class="font-bold text-gray-800 text-lg leading-tight mb-0.5">${r.performers || "Исполнитель не указан"}</div>
-                           <div class="text-sm text-gray-500 font-mono">${r.recording_year || "Год не указан"}</div>
+                           <div class="font-bold text-gray-800 text-lg leading-tight mb-0.5">${
+                             r.performers || "Исполнитель не указан"
+                           }</div>
+                           <div class="text-sm text-gray-500 font-mono">${
+                             r.recording_year || "Год не указан"
+                           }</div>
                        </div>
                    </div>
-                   <div class="flex items-center flex-shrink-0">
-                       <a href="${r.youtube_url}" target="_blank" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap">
+                   <div class="flex items-center flex-shrink-0 ml-6">
+                       <a href="${
+                         r.youtube_url
+                       }" target="_blank" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap">
                            <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
                        </a>
                        ${controls}
                    </div>
               </div>
-           `}).join("");
+           `;
+        })
+        .join("");
 
-         finalHtml += `
+      finalHtml += `
          <div>
             <h3 class="text-lg font-bold mb-4 text-gray-700">Видеозаписи</h3>
             <div class="grid grid-cols-1 gap-4">${videoRows}</div>
@@ -1079,7 +1343,146 @@ export function renderPagination(curr, total) {
   }
   c.innerHTML = h;
 }
-export function renderBreadcrumbs() {}
+export function renderBreadcrumbs() {
+  const container = document.getElementById("breadcrumbs-container");
+  if (!container) return;
+
+  const view = window.state.view.current;
+
+  // 1. Если мы на главной (Дашборд), скрываем крошки
+  if (view === "dashboard") {
+    container.innerHTML = "";
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.classList.remove("hidden");
+
+  // 2. Начальная точка (Корень)
+  let crumbs = [{ label: "ClassicaLib", link: "/" }];
+
+  // 3. Строим путь в зависимости от страницы
+  switch (view) {
+    // --- КОМПОЗИТОРЫ ---
+    case "composers":
+      crumbs.push({ label: "Композиторы" });
+      break;
+
+    case "composer_detail":
+      crumbs.push({ label: "Композиторы", link: "/composers" });
+      if (window.state.view.currentComposer) {
+        crumbs.push({
+          label: getLocalizedText(
+            window.state.view.currentComposer,
+            "name",
+            "ru"
+          ),
+        });
+      }
+      break;
+
+    case "work_detail":
+      // Путь: Композиторы -> Имя -> Произведение
+      crumbs.push({ label: "Композиторы", link: "/composers" });
+      const w = window.state.view.currentWork;
+      if (w && w.composer) {
+        const compLink = `/composers/${w.composer.slug || w.composer.id}`;
+        crumbs.push({
+          label: getLocalizedText(w.composer, "name", "ru"),
+          link: compLink,
+        });
+        crumbs.push({ label: getLocalizedText(w, "name", "ru") });
+      }
+      break;
+
+    case "composition_detail":
+      // Путь: Композиторы -> Имя -> Произведение -> Часть
+      crumbs.push({ label: "Композиторы", link: "/composers" });
+      const c = window.state.view.currentComposition;
+      if (c && c.work && c.work.composer) {
+        const compLink = `/composers/${
+          c.work.composer.slug || c.work.composer.id
+        }`;
+        const workLink = `/works/${c.work.slug || c.work.id}`;
+
+        crumbs.push({
+          label: getLocalizedText(c.work.composer, "name", "ru"),
+          link: compLink,
+        });
+        crumbs.push({
+          label: getLocalizedText(c.work, "name", "ru"),
+          link: workLink,
+        });
+        crumbs.push({ label: getLocalizedText(c, "title", "ru") });
+      }
+      break;
+
+    // --- МЕДИАТЕКА ---
+    case "library_hub":
+      crumbs.push({ label: "Медиатека" });
+      break;
+    case "library_audio":
+      crumbs.push({ label: "Медиатека", link: "/recordings" });
+      crumbs.push({ label: "Аудиозаписи" });
+      break;
+    case "library_video":
+      crumbs.push({ label: "Медиатека", link: "/recordings" });
+      crumbs.push({ label: "Видеозал" });
+      break;
+    case "recordings": // Старый роут, на всякий случай
+      crumbs.push({ label: "Медиатека" });
+      break;
+
+    // --- ПЛЕЙЛИСТЫ ---
+    case "playlists_overview":
+      crumbs.push({ label: "Мои плейлисты" });
+      break;
+    case "playlist":
+      crumbs.push({ label: "Мои плейлисты", link: "/playlists" });
+      // Найти имя плейлиста сложнее, так как в state.view.playlistId только ID.
+      // Мы берем имя из заголовка страницы (хак, но работает без лишних запросов)
+      const plTitle = document.querySelector("#view-title-container h2");
+      const plName = plTitle
+        ? plTitle.textContent.replace("Список", "").trim()
+        : "Плейлист";
+      crumbs.push({ label: plName });
+      break;
+
+    // --- ИЗБРАННОЕ ---
+    case "favorites":
+      crumbs.push({ label: "Избранное" });
+      break;
+
+    // --- ПОИСК ---
+    case "search":
+      crumbs.push({ label: "Поиск" });
+      crumbs.push({ label: `"${window.state.view.searchQuery}"` });
+      break;
+  }
+
+  // 4. Генерируем HTML
+  const html = crumbs
+    .map((crumb, index) => {
+      const isLast = index === crumbs.length - 1;
+
+      if (isLast) {
+        // Последний элемент - просто текст (жирный/черный)
+        return `<span class="font-semibold text-gray-900 truncate">${crumb.label}</span>`;
+      } else {
+        // Ссылка (серый цвет) + Разделитель
+        return `
+            <a href="${crumb.link}" data-navigo class="hover:text-cyan-600 hover:underline transition-colors flex-shrink-0">
+                ${crumb.label}
+            </a>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+          `;
+      }
+    })
+    .join("");
+
+  container.innerHTML = `<div class="flex items-center gap-2 overflow-hidden whitespace-nowrap">${html}</div>`;
+  if (window.lucide) window.lucide.createIcons();
+}
 export function setUserGreeting(email) {
   // Берем имя до знака @
   const username = email.split("@")[0];
@@ -1100,11 +1503,12 @@ export function showAddComposerModal() {
   modal.classList.remove("hidden");
 
   // Очистка полей
-  document.querySelectorAll("#add-composer-modal input").forEach((i) => (i.value = ""));
-  document.getElementById("add-composer-bio").value = "";
+  document
+    .querySelectorAll("#add-composer-modal input")
+    .forEach((i) => (i.value = ""));
 
-  // Инициализация редактора (одной строкой)
-  initFullTinyMCE('#add-composer-bio');
+  // Инициализация Quill (пустой)
+  initQuill("#add-composer-bio", "");
 
   // Закрытие
   const closeBtn = modal.querySelector(".close-button");
@@ -1112,37 +1516,74 @@ export function showAddComposerModal() {
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
 
   newClose.onclick = () => {
-      // При закрытии нужно удалять вручную, чтобы не висели в памяти
-      if (window.tinymce) tinymce.remove("#add-composer-bio");
-      modal.classList.add("hidden");
+    modal.classList.add("hidden");
   };
 }
 export function showAddWorkModal() {
   const modal = document.getElementById("add-work-modal");
   modal.classList.remove("hidden");
 
-  document.querySelectorAll("#add-work-modal input").forEach(i => i.value = "");
-  document.getElementById("add-work-notes").value = "";
+  // Очистка полей
+  document.querySelectorAll("#add-work-modal input").forEach((i) => (i.value = ""));
 
-  // Инициализация
-  initFullTinyMCE('#add-work-notes');
+  // Очищаем поле жанра (теперь это input)
+  const genreInput = document.getElementById("add-work-genre");
+  if (genreInput) genreInput.value = "";
 
+  // === ЗАПОЛНЕНИЕ DATALIST (Автокомплит) ===
+  const datalist = document.getElementById("genre-options");
+  if (datalist) {
+      datalist.innerHTML = ""; // Очищаем старые опции
+      GENRE_OPTIONS.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g.label;
+          datalist.appendChild(opt);
+      });
+  }
+  // ==========================================
+
+  // Инициализация Quill (пустой)
+  initQuill("#add-work-notes", "");
+
+  // Закрытие
   const closeBtn = modal.querySelector(".close-button");
   const newClose = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
 
   newClose.onclick = () => {
-      if (window.tinymce) tinymce.remove("#add-work-notes");
-      modal.classList.add("hidden");
+    modal.classList.add("hidden");
   };
 }
 
 export function showAddCompositionModal() {
-  document.getElementById("add-composition-modal").classList.remove("hidden");
-  document
-    .querySelectorAll("#add-composition-modal input")
-    .forEach((i) => (i.value = ""));
+  const modal = document.getElementById("add-composition-modal");
+  modal.classList.remove("hidden");
+
+  // 1. Сбрасываем инпуты
+  modal.querySelectorAll("input").forEach((i) => (i.value = ""));
+
+  // 2. ВЫЧИСЛЯЕМ СЛЕДУЮЩИЙ ПОРЯДКОВЫЙ НОМЕР
+  let nextOrder = 1;
+
+  // Берем текущее произведение из глобального стейта
+  const currentWork = window.state?.view?.currentWork;
+
+  if (
+    currentWork &&
+    currentWork.compositions &&
+    currentWork.compositions.length > 0
+  ) {
+    // Находим самый большой номер среди существующих частей
+    const maxOrder = Math.max(
+      ...currentWork.compositions.map((c) => c.sort_order || 0)
+    );
+    nextOrder = maxOrder + 1;
+  }
+
+  // 3. Устанавливаем
+  document.getElementById("add-composition-order").value = nextOrder;
 }
+
 export function showAddRecordingModal(id) {
   document.getElementById("add-recording-composition-id").value = id;
   document.getElementById("add-recording-modal").classList.remove("hidden");
@@ -1159,34 +1600,22 @@ export function showEditEntityModal(type, data, onSave) {
   const title = document.getElementById("edit-modal-title");
   const confirmBtn = document.getElementById("confirm-edit-btn");
 
-  // Сброс кнопки (клонирование для удаления старых event listeners)
+  // Сброс кнопки
   const newBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
 
-  // Функция очистки TinyMCE
-  const cleanupTinyMCE = () => {
-      if (window.tinymce) {
-          if (tinymce.get("edit-notes")) tinymce.remove("#edit-notes");
-          if (tinymce.get("edit-work-notes")) tinymce.remove("#edit-work-notes");
-      }
-  };
-
-  // Настройка закрытия модалки с очисткой
-  modal.querySelectorAll(".close-button").forEach(btn => {
-      // Клонируем, чтобы убрать старые слушатели
-      const newClose = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newClose, btn);
-
-      newClose.onclick = () => {
-          cleanupTinyMCE();
-          modal.classList.add("hidden");
-      };
+  // Настройка закрытия
+  modal.querySelectorAll(".close-button").forEach((btn) => {
+    const newClose = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newClose, btn);
+    newClose.onclick = () => {
+      modal.classList.add("hidden");
+    };
   });
 
   let fields = "";
   let modalTitle = "";
 
-  // Генерация полей в зависимости от типа
   if (type === "composer") {
     modalTitle = "Редактировать композитора";
     fields = `
@@ -1194,71 +1623,81 @@ export function showEditEntityModal(type, data, onSave) {
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Портрет</label>
             <input type="file" id="edit-cover-file" accept="image/*" class="text-sm w-full">
         </div>
-
         <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Имя (RU)</label>
-        <input id="edit-name-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.name_ru || ""
-        }"></div>
-
+        <input id="edit-name-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.name_ru || ""}"></div>
         <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Имя на родном языке</label>
-        <input id="edit-name-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.original_name || ""
-        }" placeholder="Например: Johann Sebastian Bach"></div>
-
+        <input id="edit-name-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.original_name || ""}"></div>
         <div class="grid grid-cols-2 gap-4 mb-3">
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Родился</label>
-            <input type="number" id="edit-year-born" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.year_born || ""
-            }"></div>
+            <input type="number" id="edit-year-born" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.year_born || ""}"></div>
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Умер</label>
-            <input type="number" id="edit-year-died" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.year_died || ""
-            }"></div>
+            <input type="number" id="edit-year-died" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.year_died || ""}"></div>
         </div>
-
         <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Биография</label>
-        <textarea id="edit-notes" class="w-full border border-gray-300 p-2 rounded-lg h-64 resize-none">${
-          data.notes || ""
-        }</textarea></div>
+        <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+            <div id="edit-notes" class="h-64"></div>
+        </div></div>
       `;
   } else if (type === "work") {
     modalTitle = "Редактировать произведение";
+
+    // 1. Получаем русское название для отображения в поле
+    const displayGenre = GENRE_TRANSLATIONS[data.genre] || data.genre;
+
+    // 2. Генерируем опции для datalist (Только русские названия)
+    const genreOptionsHtml = GENRE_OPTIONS.map(g =>
+        `<option value="${g.label}"></option>` // value="Симфония"
+    ).join('');
+
     fields = `
+        <!-- ... (обложка) ... -->
         <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Обложка (применится ко всем частям)</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Обложка</label>
             <input type="file" id="edit-cover-file" accept="image/*" class="text-sm w-full">
         </div>
 
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название (RU)</label>
-        <input id="edit-name-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.name_ru || ""
-        }"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название (RU)</label>
+                <input id="edit-name-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.name_ru || ""}">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
+                <input id="edit-name-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.original_name || ""}">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность</label>
+                <input id="edit-work-tonality" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.tonality || ""}">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
+                <input id="edit-work-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.catalog_number || ""}">
+            </div>
 
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
-        <input id="edit-name-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.original_name || ""
-        }"></div>
+            <!-- ИСПРАВЛЕННЫЙ ЖАНР -->
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Жанр</label>
+                <input type="text" id="edit-work-genre" list="edit-genre-options"
+                       class="w-full border border-gray-300 p-2 rounded-lg"
+                       value="${displayGenre || ""}" placeholder="Начните вводить..."> <!-- value на русском -->
+                <datalist id="edit-genre-options">
+                    ${genreOptionsHtml}
+                </datalist>
+            </div>
 
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
-        <input id="edit-work-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.catalog_number || ""
-        }"></div>
-
-        <div class="grid grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Популярное название</label>
+                <input id="edit-work-nickname" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.nickname || ""}">
+            </div>
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год начала</label>
-            <input type="number" id="edit-year-start" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.publication_year || ""
-            }"></div>
+            <input type="number" id="edit-year-start" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.publication_year || ""}"></div>
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год конца</label>
-            <input type="number" id="edit-year-end" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.publication_year_end || ""
-            }"></div>
+            <input type="number" id="edit-year-end" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.publication_year_end || ""}"></div>
         </div>
-
-        <div class="mt-4"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История и факты</label>
-        <textarea id="edit-work-notes" class="w-full border border-gray-300 p-2 rounded-lg h-64 resize-none">${
-          data.notes || ""
-        }</textarea></div>
+        <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История и факты</label>
+        <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+            <div id="edit-work-notes" class="h-64"></div>
+        </div></div>
       `;
   } else if (type === "composition") {
     modalTitle = "Редактировать часть";
@@ -1267,158 +1706,138 @@ export function showEditEntityModal(type, data, onSave) {
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Обложка части</label>
             <input type="file" id="edit-cover-file" accept="image/*" class="text-sm w-full">
         </div>
-
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название (RU)</label>
-        <input id="edit-title-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.title_ru || ""
-        }"></div>
-
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
-        <input id="edit-title-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.title_original || ""
-        }"></div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
-            <input id="edit-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.catalog_number || ""
-            }"></div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год</label>
-            <input type="number" id="edit-year" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-              data.composition_year || ""
-            }"></div>
+        <div class="grid grid-cols-4 gap-4 mb-3">
+            <div class="col-span-1">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">№</label>
+                <input type="number" id="edit-comp-order" min="1" class="w-full border border-gray-300 p-2 rounded-lg text-center font-bold" value="${data.sort_order || 0}">
+            </div>
+            <div class="col-span-3">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название (RU)</label>
+                <input id="edit-title-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.title_ru || ""}">
+            </div>
         </div>
+        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
+        <input id="edit-title-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.title_original || ""}"></div>
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность</label>
+            <input id="edit-comp-tonality" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.tonality || ""}"></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
+            <input id="edit-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.catalog_number || ""}"></div>
+        </div>
+        <div class="mt-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год</label>
+        <input type="number" id="edit-year" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.composition_year || ""}"></div>
       `;
   } else if (type === "recording") {
     modalTitle = "Редактировать запись";
     fields = `
         <div><label class="text-xs font-bold text-gray-500 uppercase">Исполнители</label>
-        <input id="edit-performers" class="w-full border p-2 rounded" value="${
-          data.performers || ""
-        }"></div>
-
+        <input id="edit-performers" class="w-full border p-2 rounded" value="${data.performers || ""}"></div>
         <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Год записи</label>
-        <input type="number" id="edit-rec-year" class="w-full border p-2 rounded" value="${
-          data.recording_year || ""
-        }"></div>
-
+        <input type="number" id="edit-rec-year" class="w-full border p-2 rounded" value="${data.recording_year || ""}"></div>
         <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">YouTube URL</label>
-        <input type="text" id="edit-youtube-url" class="w-full border p-2 rounded" value="${
-          data.youtube_url || ""
-        }" placeholder="https://..."></div>
+        <input type="text" id="edit-youtube-url" class="w-full border p-2 rounded" value="${data.youtube_url || ""}" placeholder="https://..."></div>
       `;
   } else if (type === "playlist_create" || type === "playlist_edit") {
     modalTitle = type === "playlist_create" ? "Новый плейлист" : "Переименовать плейлист";
     fields = `
         <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название</label>
-        <input id="edit-playlist-name" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.name || ""
-        }" placeholder="Мой плейлист"></div>
+        <input id="edit-playlist-name" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.name || ""}" placeholder="Мой плейлист"></div>
       `;
   }
 
   title.textContent = modalTitle;
   content.innerHTML = fields;
 
-  // Инициализация TinyMCE
+  // Инициализация Quill
   if (type === "composer" || type === "work") {
-      const selectorId = (type === 'work') ? '#edit-work-notes' : '#edit-notes';
-      initFullTinyMCE(selectorId);
+    const selectorId = type === "work" ? "#edit-work-notes" : "#edit-notes";
+    initQuill(selectorId, data.notes);
   }
 
-
-  // Обработчик сохранения
+  // СОХРАНЕНИЕ
   newBtn.onclick = async () => {
     newBtn.disabled = true;
     newBtn.textContent = "Сохранение...";
 
     try {
-      // 1. Собираем текстовые данные
       let payload = {};
       if (type === "composer") {
-        let bioContent = "";
-        if (window.tinymce && tinymce.get("edit-notes")) {
-            bioContent = tinymce.get("edit-notes").getContent();
-        } else {
-            bioContent = document.getElementById("edit-notes").value;
-        }
-
+        const bioContent = window.quillEditor ? window.quillEditor.root.innerHTML : "";
         payload = {
           name_ru: document.getElementById("edit-name-ru").value,
           original_name: document.getElementById("edit-name-orig").value,
-          year_born:
-            parseInt(document.getElementById("edit-year-born").value) || null,
-          year_died:
-            parseInt(document.getElementById("edit-year-died").value) || null,
+          year_born: parseInt(document.getElementById("edit-year-born").value) || null,
+          year_died: parseInt(document.getElementById("edit-year-died").value) || null,
           notes: bioContent,
         };
       } else if (type === "work") {
-        // === ПОЛУЧЕНИЕ ДАННЫХ ===
-        let notesContent = "";
-        if (window.tinymce && tinymce.get("edit-work-notes")) {
-            notesContent = tinymce.get("edit-work-notes").getContent();
-        } else {
-            notesContent = document.getElementById("edit-work-notes")?.value || "";
-        }
-        // ========================
+        const notesContent = window.quillEditor ? window.quillEditor.root.innerHTML : "";
+
+        // КОНВЕРТАЦИЯ ЖАНРА
+        const genreInputValue = document.getElementById("edit-work-genre").value;
+        const genreKey = getGenreKeyByLabel(genreInputValue);
 
         payload = {
           name_ru: document.getElementById("edit-name-ru").value,
           original_name: document.getElementById("edit-name-orig").value,
+          tonality: document.getElementById("edit-work-tonality").value,
+
+          genre: genreKey, // <-- Отправляем "Symphony"
+
+          nickname: document.getElementById("edit-work-nickname").value,
           catalog_number: document.getElementById("edit-work-catalog").value,
           publication_year: parseInt(document.getElementById("edit-year-start").value) || null,
           publication_year_end: parseInt(document.getElementById("edit-year-end").value) || null,
-          notes: notesContent, // <-- Передаем
+          notes: notesContent,
         };
+
       } else if (type === "composition") {
+        const order = parseInt(document.getElementById("edit-comp-order").value);
+        if (isNaN(order) || order < 1) {
+          throw new Error("Порядковый номер должен быть положительным числом");
+        }
         payload = {
+          sort_order: order,
           title_ru: document.getElementById("edit-title-ru").value,
           title_original: document.getElementById("edit-title-orig").value,
+          tonality: document.getElementById("edit-comp-tonality").value,
           catalog_number: document.getElementById("edit-catalog").value,
-          composition_year:
-            parseInt(document.getElementById("edit-year").value) || null,
+          composition_year: parseInt(document.getElementById("edit-year").value) || null,
         };
       } else if (type === "recording") {
         payload = {
           performers: document.getElementById("edit-performers").value,
-          recording_year:
-            parseInt(document.getElementById("edit-rec-year").value) || null,
+          recording_year: parseInt(document.getElementById("edit-rec-year").value) || null,
           youtube_url: document.getElementById("edit-youtube-url").value.trim() || null,
         };
       } else if (type === "playlist_create" || type === "playlist_edit") {
-        payload = {
-          name: document.getElementById("edit-playlist-name").value,
-        };
+        payload = { name: document.getElementById("edit-playlist-name").value };
       }
 
-      // 2. Отправляем текстовые данные
       await onSave(payload);
 
-      // 3. Проверяем и загружаем файл (если выбран)
       const fileInput = document.getElementById("edit-cover-file");
       if (fileInput && fileInput.files.length > 0) {
-          const file = fileInput.files[0];
-          const fd = new FormData();
-          fd.append("file", file);
+        const file = fileInput.files[0];
+        const fd = new FormData();
+        fd.append("file", file);
 
-          let uploadUrl = "";
-          if (type === "composer") uploadUrl = `/api/recordings/composers/${data.id}/cover`;
-          if (type === "work") uploadUrl = `/api/recordings/works/${data.id}/cover`;
-          if (type === "composition") uploadUrl = `/api/recordings/compositions/${data.id}/cover`;
+        let uploadUrl = "";
+        if (type === "composer") uploadUrl = `/api/recordings/composers/${data.id}/cover`;
+        if (type === "work") uploadUrl = `/api/recordings/works/${data.id}/cover`;
+        if (type === "composition") uploadUrl = `/api/recordings/compositions/${data.id}/cover`;
 
-          if (uploadUrl) {
-              newBtn.textContent = "Загрузка обложки...";
-              await window.apiRequest(uploadUrl, "POST", fd);
-          }
+        if (uploadUrl) {
+          newBtn.textContent = "Загрузка обложки...";
+          await window.apiRequest(uploadUrl, "POST", fd);
+        }
       }
 
-      cleanupTinyMCE();
       modal.classList.add("hidden");
-
-      // Обновляем страницу для отображения новой обложки/текста
       window.showNotification("Успешно сохранено!", "success");
+
       if (type === "composer" || type === "work" || type === "composition") {
-          setTimeout(() => window.location.reload(), 500);
+        setTimeout(() => window.location.reload(), 500);
       }
 
     } catch (e) {
@@ -1547,55 +1966,54 @@ export function hideContextMenu(menu) {
   menu.classList.add("hidden");
 }
 export function initPlayerToggle() {
-    const footer = document.getElementById("music-player");
-    const btn = document.getElementById("player-toggle-btn");
-    const icon = document.getElementById("player-toggle-icon");
-    const mainContent = document.getElementById("main-content"); // <--- Находим контейнер
+  const footer = document.getElementById("music-player");
+  const btn = document.getElementById("player-toggle-btn");
+  const icon = document.getElementById("player-toggle-icon");
+  const mainContent = document.getElementById("main-content"); // <--- Находим контейнер
 
-    if (!footer || !btn) return;
+  if (!footer || !btn) return;
 
-    // Проверяем сохраненное состояние
-    const isCollapsed = localStorage.getItem("player_collapsed") === "true";
+  // Проверяем сохраненное состояние
+  const isCollapsed = localStorage.getItem("player_collapsed") === "true";
 
-    if (isCollapsed) {
-        footer.classList.add("translate-y-full");
-        icon.classList.add("rotate-180");
-        mainContent?.classList.remove("pb-24"); // <--- Убираем отступ, если свернут
+  if (isCollapsed) {
+    footer.classList.add("translate-y-full");
+    icon.classList.add("rotate-180");
+    mainContent?.classList.remove("pb-24"); // <--- Убираем отступ, если свернут
+  } else {
+    mainContent?.classList.add("pb-24"); // <--- Добавляем, если развернут
+  }
+
+  btn.onclick = () => {
+    const collapsed = footer.classList.toggle("translate-y-full");
+
+    if (collapsed) {
+      icon.classList.add("rotate-180");
+      mainContent?.classList.remove("pb-24"); // <--- Убираем отступ
     } else {
-        mainContent?.classList.add("pb-24"); // <--- Добавляем, если развернут
+      icon.classList.remove("rotate-180");
+      mainContent?.classList.add("pb-24"); // <--- Возвращаем отступ
     }
 
-    btn.onclick = () => {
-        const collapsed = footer.classList.toggle("translate-y-full");
-
-        if (collapsed) {
-            icon.classList.add("rotate-180");
-            mainContent?.classList.remove("pb-24"); // <--- Убираем отступ
-        } else {
-            icon.classList.remove("rotate-180");
-            mainContent?.classList.add("pb-24"); // <--- Возвращаем отступ
-        }
-
-        localStorage.setItem("player_collapsed", collapsed);
-    };
+    localStorage.setItem("player_collapsed", collapsed);
+  };
 }
-
 
 // Вспомогательная функция: принудительно открыть плеер (например, при старте трека)
 export function openPlayer() {
-    const footer = document.getElementById("music-player");
-    const icon = document.getElementById("player-toggle-icon");
-    const mainContent = document.getElementById("main-content");
+  const footer = document.getElementById("music-player");
+  const icon = document.getElementById("player-toggle-icon");
+  const mainContent = document.getElementById("main-content");
 
-    if (!footer) return;
+  if (!footer) return;
 
-    footer.classList.remove("translate-y-full");
-    if (icon) icon.classList.remove("rotate-180");
+  footer.classList.remove("translate-y-full");
+  if (icon) icon.classList.remove("rotate-180");
 
-    // Возвращаем отступ, чтобы плеер не перекрывал контент
-    mainContent?.classList.add("pb-24");
+  // Возвращаем отступ, чтобы плеер не перекрывал контент
+  mainContent?.classList.add("pb-24");
 
-    localStorage.setItem("player_collapsed", "false");
+  localStorage.setItem("player_collapsed", "false");
 }
 
 export function updateTrackRowIcon(recordingId, isPlaying) {
@@ -1663,15 +2081,23 @@ export function renderPlaylistsOverview(playlists) {
                 <div class="aspect-square bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white shadow-inner mb-4 group-hover:scale-105 transition-transform duration-300">
                     <i data-lucide="music" class="w-12 h-12 opacity-50"></i>
                 </div>
-                <h3 class="font-bold text-gray-800 text-lg truncate group-hover:text-cyan-600 transition-colors">${p.name}</h3>
-                <p class="text-xs text-gray-400 font-medium">${p.recordings ? p.recordings.length : 0} треков</p>
+                <h3 class="font-bold text-gray-800 text-lg truncate group-hover:text-cyan-600 transition-colors">${
+                  p.name
+                }</h3>
+                <p class="text-xs text-gray-400 font-medium">${
+                  p.recordings ? p.recordings.length : 0
+                } треков</p>
             </a>
 
             <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                <button class="edit-playlist-btn p-2 bg-white rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-id="${p.id}" data-name="${p.name}" title="Переименовать">
+                <button class="edit-playlist-btn p-2 bg-white rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-id="${
+                  p.id
+                }" data-name="${p.name}" title="Переименовать">
                     <i data-lucide="edit-2" class="w-4 h-4"></i>
                 </button>
-                <button class="delete-playlist-btn p-2 bg-white rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${p.id}" data-name="${p.name}" title="Удалить">
+                <button class="delete-playlist-btn p-2 bg-white rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${
+                  p.id
+                }" data-name="${p.name}" title="Удалить">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -1756,12 +2182,12 @@ export function showSelectPlaylistModal(playlists, onSelect) {
   modal.classList.remove("hidden");
 }
 export function renderSearchResults(data, favoriteIds = new Set()) {
-    const { listEl } = getElements();
-    const viewTitle = document.getElementById("view-title-container");
+  const { listEl } = getElements();
+  const viewTitle = document.getElementById("view-title-container");
 
-    // Шапка
-    viewTitle.classList.remove("hidden");
-    viewTitle.innerHTML = `
+  // Шапка
+  viewTitle.classList.remove("hidden");
+  viewTitle.innerHTML = `
         <div class="w-full mb-8 border-b border-gray-200 pb-4">
             <h2 class="text-3xl font-bold text-gray-900">
                 Результаты поиска: <span class="text-cyan-600">"${data.query}"</span>
@@ -1769,120 +2195,158 @@ export function renderSearchResults(data, favoriteIds = new Set()) {
         </div>
     `;
 
-    let htmlContent = "";
-    let hasResults = false;
+  let htmlContent = "";
+  let hasResults = false;
 
-    // 1. Композиторы
-    if (data.composers.length > 0) {
-        hasResults = true;
-        const items = data.composers.map(c => `
+  // 1. Композиторы
+  if (data.composers.length > 0) {
+    hasResults = true;
+    const items = data.composers
+      .map(
+        (c) => `
             <a href="/composers/${c.slug || c.id}" data-navigo
                class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-cyan-300 hover:shadow-md transition-all group">
-                <img src="${c.portrait_url || '/static/img/placeholder.png'}" class="w-16 h-16 rounded-full object-cover">
+                <img src="${
+                  c.portrait_url || "/static/img/placeholder.png"
+                }" class="w-16 h-16 rounded-full object-cover">
                 <div>
-                    <h4 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">${c.name_ru}</h4>
-                    <p class="text-xs text-gray-500">${c.original_name || ''}</p>
+                    <h4 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">${
+                      c.name_ru
+                    }</h4>
+                    <p class="text-xs text-gray-500">${
+                      c.original_name || ""
+                    }</p>
                 </div>
             </a>
-        `).join("");
+        `
+      )
+      .join("");
 
-        htmlContent += `
+    htmlContent += `
             <div class="mb-10">
                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5 text-cyan-600"></i> Композиторы</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${items}</div>
             </div>
         `;
-    }
+  }
 
-    // 2. Произведения
-    if (data.works.length > 0) {
-        hasResults = true;
-        const items = data.works.map(w => `
+  // 2. Произведения
+  if (data.works.length > 0) {
+    hasResults = true;
+    const items = data.works
+      .map(
+        (w) => `
             <a href="/works/${w.slug || w.id}" data-navigo
                class="flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-cyan-300 hover:shadow-md transition-all group">
                 <div class="w-12 h-12 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-600 flex-shrink-0">
                     <i data-lucide="book-open" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">${w.name_ru}</h4>
+                    <h4 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors">${
+                      w.name_ru
+                    }</h4>
                     <p class="text-sm text-gray-500">${w.composer.name_ru}</p>
                 </div>
             </a>
-        `).join("");
+        `
+      )
+      .join("");
 
-        htmlContent += `
+    htmlContent += `
             <div class="mb-10">
                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="book" class="w-5 h-5 text-cyan-600"></i> Произведения</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">${items}</div>
             </div>
         `;
-    }
+  }
 
-    // 3. Части (Compositions)
-    if (data.compositions.length > 0) {
-        hasResults = true;
-        const items = data.compositions.map(c => `
+  // 3. Части (Compositions)
+  if (data.compositions.length > 0) {
+    hasResults = true;
+    const items = data.compositions
+      .map(
+        (c) => `
             <a href="/compositions/${c.slug || c.id}" data-navigo
                class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-cyan-300 transition-all group">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded">${c.catalog_number || '#'}</div>
+                    <div class="text-xs font-bold text-gray-400 bg-gray-50 px-2 py-1 rounded">${
+                      c.catalog_number || "#"
+                    }</div>
                     <div class="truncate">
-                        <div class="font-semibold text-gray-800 group-hover:text-cyan-600 truncate">${c.title_ru}</div>
-                        <div class="text-xs text-gray-400 truncate">${c.work.composer.name_ru} — ${c.work.name_ru}</div>
+                        <div class="font-semibold text-gray-800 group-hover:text-cyan-600 truncate">${
+                          c.title_ru
+                        }</div>
+                        <div class="text-xs text-gray-400 truncate">${
+                          c.work.composer.name_ru
+                        } — ${c.work.name_ru}</div>
                     </div>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
             </a>
-        `).join("");
+        `
+      )
+      .join("");
 
-        htmlContent += `
+    htmlContent += `
             <div class="mb-10">
                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="music" class="w-5 h-5 text-cyan-600"></i> Части</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">${items}</div>
             </div>
         `;
-    }
+  }
 
-    // 4. Записи (Recordings)
-    if (data.recordings.length > 0) {
-        hasResults = true;
-        // Используем логику генерации строк из renderRecordingList, но упрощенно
-        // Чтобы не дублировать код, можно вызвать renderRecordingList в отдельный div,
-        // но здесь мы соберем вручную для контроля верстки.
-        const items = data.recordings.map((r, i) => {
-            const isFav = favoriteIds.has(r.id);
-            return `
+  // 4. Записи (Recordings)
+  if (data.recordings.length > 0) {
+    hasResults = true;
+    // Используем логику генерации строк из renderRecordingList, но упрощенно
+    // Чтобы не дублировать код, можно вызвать renderRecordingList в отдельный div,
+    // но здесь мы соберем вручную для контроля верстки.
+    const items = data.recordings
+      .map((r, i) => {
+        const isFav = favoriteIds.has(r.id);
+        return `
             <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 bg-white border-b border-gray-100 last:border-0 transition-colors cursor-pointer"
                  data-recording-id="${r.id}" data-index="${i}">
-                 <div class="w-10 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${r.id}">
+                 <div class="w-10 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                   r.id
+                 }">
                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                  </div>
                  <div class="flex-1 ml-4 min-w-0">
-                     <div class="font-bold text-gray-800 text-sm truncate">${r.performers}</div>
-                     <div class="text-xs text-gray-500 truncate">${r.composition.title_ru} (${r.composition.work.composer.name_ru})</div>
+                     <div class="font-bold text-gray-800 text-sm truncate">${
+                       r.performers
+                     }</div>
+                     <div class="text-xs text-gray-500 truncate">${
+                       r.composition.title_ru
+                     } (${r.composition.work.composer.name_ru})</div>
                  </div>
-                 <button class="favorite-btn p-2 ${isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"}" data-recording-id="${r.id}">
-                     <i data-lucide="heart" class="w-4 h-4 ${isFav ? "fill-current" : ""}"></i>
+                 <button class="favorite-btn p-2 ${
+                   isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
+                 }" data-recording-id="${r.id}">
+                     <i data-lucide="heart" class="w-4 h-4 ${
+                       isFav ? "fill-current" : ""
+                     }"></i>
                  </button>
             </div>
             `;
-        }).join("");
+      })
+      .join("");
 
-        htmlContent += `
+    htmlContent += `
             <div class="mb-10">
                 <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="disc" class="w-5 h-5 text-cyan-600"></i> Исполнения</h3>
                 <div class="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">${items}</div>
             </div>
         `;
-    }
+  }
 
-    if (!hasResults) {
-        listEl.innerHTML = `<div class="text-center py-20 text-gray-500 text-lg">Ничего не найдено по запросу "${data.query}"</div>`;
-    } else {
-        listEl.innerHTML = `<div class="max-w-7xl mx-auto px-6">${htmlContent}</div>`;
-    }
+  if (!hasResults) {
+    listEl.innerHTML = `<div class="text-center py-20 text-gray-500 text-lg">Ничего не найдено по запросу "${data.query}"</div>`;
+  } else {
+    listEl.innerHTML = `<div class="max-w-7xl mx-auto px-6">${htmlContent}</div>`;
+  }
 
-    if (window.lucide) window.lucide.createIcons();
+  if (window.lucide) window.lucide.createIcons();
 }
 export function renderLibraryHub() {
   // 1. ВОТ ЭТА СТРОКА БЫЛА ПОТЕРЯНА. ОНА ОБЯЗАТЕЛЬНА:
@@ -1890,9 +2354,9 @@ export function renderLibraryHub() {
 
   const viewTitle = document.getElementById("view-title-container");
   if (viewTitle) {
-      viewTitle.classList.remove("hidden");
-      // Центрируем заголовок
-      viewTitle.innerHTML = `
+    viewTitle.classList.remove("hidden");
+    // Центрируем заголовок
+    viewTitle.innerHTML = `
         <div class="text-center">
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Медиатека</h2>
             <p class="text-gray-500">Выберите формат материалов</p>
@@ -1948,35 +2412,51 @@ export function renderLibraryHub() {
   listEl.innerHTML = html;
   if (window.lucide) window.lucide.createIcons();
 }
-// Вспомогательная функция для инициализации мощного редактора
-function initFullTinyMCE(selectorId) {
-    if (!window.tinymce) return;
+function initQuill(selectorId, content) {
+  // 1. Находим контейнер
+  const container = document.querySelector(selectorId);
+  if (!container) return;
 
-    // Удаляем старый экземпляр, если был
-    // (selectorId приходит в формате '#id', для remove нужен id без решетки или селектор)
-    const idWithoutHash = selectorId.replace('#', '');
-    if (tinymce.get(idWithoutHash)) {
-        tinymce.remove(selectorId);
-    }
+  // 2. Логика очистки (если редактор уже был тут)
+  // Если элемент уже имеет класс ql-container, значит Quill уже инициализирован
+  if (container.classList.contains('ql-container')) {
+      const parent = container.parentNode;
+      const newDiv = document.createElement('div');
+      newDiv.id = selectorId.replace("#", "");
 
-    tinymce.init({
-        selector: selectorId,
-        height: 400, // Сделали повыше
-        menubar: true, // Включили верхнее меню (Файл, Правка...)
-        promotion: false, // Убрали кнопку "Upgrade"
-        branding: false, // Убрали логотип TinyMCE
+      // Восстанавливаем класс высоты (h-64 или h-48), убирая классы Quill
+      // Это важно, чтобы редактор не схлопнулся
+      let originalClasses = container.className;
+      originalClasses = originalClasses.replace('ql-container', '').replace('ql-snow', '').trim();
+      // Если классы потерялись, восстанавливаем дефолтные
+      if (!originalClasses) {
+          originalClasses = selectorId.includes('work') ? 'h-48' : 'h-64';
+      }
+      newDiv.className = originalClasses;
 
-        // === ПОЛНЫЙ НАБОР ПЛАГИНОВ ===
-        plugins: 'preview importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap pagebreak nonbreaking anchor insertdatetime advlist lists wordcount help charmap quickbars emoticons',
+      parent.innerHTML = ""; // Чистим родителя
+      parent.appendChild(newDiv); // Вставляем чистый div
+  }
 
-        // === ПОЛНЫЙ ТУЛБАР ===
-        toolbar: 'undo redo | bold italic underline strikethrough | fontfamily fontsize blocks | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen  preview save print | insertfile image media template link anchor codesample | ltr rtl',
+  // 3. Инициализация
+  window.quillEditor = new Quill(selectorId, {
+    theme: "snow",
+    placeholder: "Введите текст...",
+    modules: {
+      toolbar: [
+        ["bold", "italic", "underline"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        [{ header: [1, 2, 3, false] }],
+        ["link", "clean"],
+      ],
+    },
+  });
 
-        // === ВАЖНО: СКРЫВАЕМ СКРОЛЛБАР ===
-        // 'sliding' создает кнопку "...", куда прячутся лишние инструменты
-        toolbar_mode: 'sliding',
-
-        contextmenu: 'link image table',
-        language: 'ru', // Если у вас подключен языковой пакет (иначе будет англ)
-    });
+  // 4. Вставка контента (ИСПРАВЛЕНО)
+  // Проверяем на null и undefined
+  if (content && content !== "null" && content !== "undefined") {
+      // Используем pasteHTML - это самый надежный способ вставить "чужой" HTML
+      window.quillEditor.clipboard.dangerouslyPasteHTML(0, content);
+  }
 }
+

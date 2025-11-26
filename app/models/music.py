@@ -29,10 +29,18 @@ class Work(Base):
     __tablename__ = "works"
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String, unique=True, index=True, nullable=True)
-    name = Column(String, index=True, nullable=True)
+
+    name = Column(String, index=True, nullable=True)  # Original name (технически)
     name_ru = Column(String, index=True, nullable=False)
+    original_name = Column(String, nullable=True)  # Явное поле для оригинала
+
+    # === НОВЫЕ ПОЛЯ ===
+    tonality = Column(String, nullable=True)
+    genre = Column(String, index=True, nullable=True)
+    nickname = Column(String, nullable=True)
+    # ==================
+
     catalog_number = Column(String, index=True, nullable=True)
-    original_name = Column(String, nullable=True)
     publication_year = Column(Integer, nullable=True)
     publication_year_end = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
@@ -40,7 +48,6 @@ class Work(Base):
 
     composer_id = Column(Integer, ForeignKey("composers.id"), nullable=False)
     composer = relationship("Composer", back_populates="works")
-
     compositions = relationship("Composition", back_populates="work", cascade="all, delete-orphan")
 
 
@@ -48,14 +55,17 @@ class Work(Base):
 class Composition(Base):
     __tablename__ = "compositions"
     id = Column(Integer, primary_key=True, index=True)
-
-    # НОВОЕ ПОЛЕ
     slug = Column(String, unique=True, index=True, nullable=True)
+
+    # === НОВОЕ ПОЛЕ ===
+    sort_order = Column(Integer, default=0, index=True)  # Порядковый номер
+    tonality = Column(String, nullable=True)  # Тональность части
+    # ==================
 
     title = Column(String, index=True, nullable=True)
     title_ru = Column(String, index=True, nullable=False)
-
     title_original = Column(String, nullable=True)
+
     catalog_number = Column(String, index=True, nullable=True)
     composition_year = Column(Integer, nullable=True)
     notes = Column(Text, nullable=True)
@@ -63,7 +73,6 @@ class Composition(Base):
 
     work_id = Column(Integer, ForeignKey("works.id"), nullable=False)
     work = relationship("Work", back_populates="compositions")
-
     recordings = relationship("Recording", back_populates="composition", cascade="all, delete-orphan")
 
 
