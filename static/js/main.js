@@ -499,15 +499,25 @@ function addEventListeners() {
         const id = target.closest(".delete-post-btn").dataset.id;
 
         if(confirm("Удалить статью?")) {
-             await apiRequest(`/api/blog/${id}`, "DELETE");
-             ui.showNotification("Статья удалена", "success");
+             try {
+                 await apiRequest(`/api/blog/${id}`, "DELETE");
+                 ui.showNotification("Статья удалена", "success");
 
-             // Перенаправляем на список
-             router.navigate("/blog");
-             // Или так, если роутер не сработает сразу:
-             // window.location.hash = "/blog";
-             // window.location.reload(); // Самый надежный вариант
+                 // 1. Меняем URL в адресной строке
+                 router.navigate("/blog");
+
+                 // 2. Принудительно обновляем состояние приложения
+                 state.view.current = "blog_list";
+                 state.view.blogSlug = null; // Очищаем слаг удаленной статьи
+
+                 // 3. Принудительно загружаем список
+                 loadCurrentView();
+
+             } catch (e) {
+                 ui.showNotification("Ошибка удаления: " + e.message, "error");
+             }
         }
+        return;
     }
 
     // --- КОНТЕКСТНОЕ МЕНЮ ---
@@ -1345,6 +1355,114 @@ function addEventListeners() {
   };
   setupNoCatalogToggle('add-work-no-catalog', 'add-work-catalog');
   setupNoCatalogToggle('add-composition-no-catalog', 'add-composition-catalog');
+
+  // --- DRAG & DROP ДЛЯ ЧАСТЕЙ (Сортировка) ---
+  let draggedComp = null;
+
+  document.addEventListener("dragstart", (e) => {
+    const item = e.target.closest(".comp-sortable-item");
+    if (item) {
+      draggedComp = item;
+      item.classList.add("opacity-50", "border-cyan-400");
+      e.dataTransfer.effectAllowed = "move";
+    }
+  });
+
+  document.addEventListener("dragend", (e) => {
+    if (draggedComp) {
+      draggedComp.classList.remove("opacity-50", "border-cyan-400");
+      document.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+          el.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+      draggedComp = null;
+    }
+  });
+
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+
+    // Ищем цель (над чем мы сейчас)
+    const target = e.target.closest(".comp-sortable-item");
+
+    // Если мы не над элементом списка или навели на самого себя - ничего не делаем
+    if (!target || target === draggedComp) {
+        // Важно: если мы "ушли" с элемента в пустоту, нужно очистить подсветку
+        document.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+        return;
+    }
+
+    // === ИСПРАВЛЕНИЕ: Сначала убираем подсветку со ВСЕХ элементов ===
+    document.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+        // Оставляем только текущий target, если мы над ним, но проще очистить всё и нарисовать заново
+        if (el !== target) {
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+        }
+    });
+    // ===============================================================
+
+    const rect = target.getBoundingClientRect();
+    const offset = e.clientY - rect.top;
+
+    // Очищаем текущий (чтобы не было и top и bottom одновременно)
+    target.classList.remove("drag-over-top", "drag-over-bottom");
+
+    // Рисуем линию
+    if (offset < rect.height / 2) {
+        target.classList.add("drag-over-top");
+    } else {
+        target.classList.add("drag-over-bottom");
+    }
+  });
+
+  document.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    const target = e.target.closest(".comp-sortable-item");
+    if (!target || !draggedComp || target === draggedComp) return;
+
+    // 1. Перемещаем элемент в DOM
+    const parent = target.parentNode; // Контейнер
+    target.classList.remove("drag-over-top", "drag-over-bottom");
+
+    // Определяем куда вставлять
+    const rect = target.getBoundingClientRect();
+    const offset = e.clientY - rect.top;
+
+    if (offset < rect.height / 2) {
+        parent.insertBefore(draggedComp, target);
+    } else {
+        parent.insertBefore(draggedComp, target.nextSibling);
+    }
+
+    // 2. === МАГИЯ: ВИЗУАЛЬНЫЙ ПЕРЕСЧЕТ НОМЕРОВ ===
+    // Берем все элементы в новом порядке
+    const allItems = parent.querySelectorAll(".comp-sortable-item");
+    const newIds = [];
+
+    allItems.forEach((item, index) => {
+        // Обновляем цифру в кружочке (1, 2, 3...)
+        const numberBadge = item.querySelector(".comp-sort-number");
+        if (numberBadge) {
+            numberBadge.textContent = index + 1;
+        }
+        // Собираем ID для отправки
+        newIds.push(parseInt(item.dataset.compId));
+    });
+
+    // 3. Отправляем на сервер
+    if (state.view.currentWork) {
+        try {
+            await apiRequest(`/api/recordings/works/${state.view.currentWork.id}/reorder-compositions`, "PUT", {
+                composition_ids: newIds
+            });
+            // ui.showNotification("Порядок сохранен", "success"); // Можно не показывать, чтобы не спамить
+        } catch (err) {
+            ui.showNotification("Ошибка сортировки", "error");
+            console.error(err);
+        }
+    }
+  });
 }
 
 async function handleCreateEntity(btn, url, data, modalId, successMsg) {

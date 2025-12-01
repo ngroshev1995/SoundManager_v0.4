@@ -326,3 +326,21 @@ def update_composition_cover(db: Session, comp_id: int, url: str):
     db.commit()
     db.refresh(comp)
     return comp
+
+
+def reorder_compositions(db: Session, work_id: int, new_order_ids: List[int]):
+    # Получаем все части этого произведения
+    work = get_work(db, work_id)
+    if not work: return None
+
+    # Создаем карту {id: объект} для быстрого доступа
+    comp_map = {c.id: c for c in work.compositions}
+
+    # Проходим по присланному списку ID и ставим им порядок 1, 2, 3...
+    for index, comp_id in enumerate(new_order_ids):
+        if comp_id in comp_map:
+            # sort_order начинается с 1
+            comp_map[comp_id].sort_order = index + 1
+
+    db.commit()
+    return True

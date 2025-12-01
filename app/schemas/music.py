@@ -225,3 +225,6 @@ class WorkWithCompositions(Work):
 
 class ComposerWithWorks(Composer):
     works: List[Work] = []
+
+class CompositionReorder(BaseModel):
+    composition_ids: List[int]

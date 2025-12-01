@@ -25,6 +25,30 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <!-- Plyr Player -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+    <!-- Стили для Plyr, чтобы он был бирюзовым -->
+    <style>
+        /* Красим Plyr в наш цвет */
+        .plyr--audio .plyr__control.plyr__tab-focus,
+        .plyr--audio .plyr__control:hover,
+        .plyr--audio .plyr__control[aria-expanded=true] {
+            background: #06b6d4; /* cyan-500 */
+        }
+        .plyr--full-ui input[type=range] {
+            color: #06b6d4;
+        }
+        .plyr__control--overlaid {
+            background: #06b6d4;
+        }
+        .plyr--audio .plyr__controls {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px;
+        }
+    </style>
 </head>
 <body class="text-gray-800 h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-100 via-white to-cyan-100">
 

@@ -298,3 +298,14 @@ def upload_composition_cover(
     if not crud.music.get_composition(db, id): raise HTTPException(404, "Composition not found")
     url = utils.save_upload_file(file, "compositions", f"part_{id}")
     return crud.music.update_composition_cover(db, id, url)
+
+
+@router.put("/works/{work_id}/reorder-compositions", status_code=200)
+def reorder_work_compositions(
+    work_id: int,
+    payload: schemas.music.CompositionReorder,
+    db: Session = Depends(get_db),
+    u: models.User = Depends(deps.get_current_active_admin)
+):
+    crud.music.reorder_compositions(db, work_id, payload.composition_ids)
+    return {"status": "ok"}
