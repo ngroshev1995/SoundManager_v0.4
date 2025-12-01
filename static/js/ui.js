@@ -3120,3 +3120,4 @@ export function showBlogModal(post = null) {
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
   newClose.onclick = () => modal.classList.add("hidden");
 }
+
