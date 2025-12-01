@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+from app.api.endpoints import blog
 
 from app.api.endpoints import auth, recordings, playlists, users, dashboard, search
 
@@ -27,6 +28,7 @@ app.include_router(playlists.router, prefix="/api/playlists", tags=["Playlists"]
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
+app.include_router(blog.router, prefix="/api/blog", tags=["Blog"])
 
 # Путь к статическим файлам
 STATIC_DIR = ROOT_DIR.parent / "static"

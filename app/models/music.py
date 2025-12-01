@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.associationproxy import association_proxy
 from app.db.base import Base, recording_favorites_association
@@ -38,6 +38,7 @@ class Work(Base):
     tonality = Column(String, nullable=True)
     genre = Column(String, index=True, nullable=True)
     nickname = Column(String, nullable=True)
+    is_no_catalog = Column(Boolean, default=False)
     # ==================
 
     catalog_number = Column(String, index=True, nullable=True)
@@ -60,6 +61,7 @@ class Composition(Base):
     # === НОВОЕ ПОЛЕ ===
     sort_order = Column(Integer, default=0, index=True)  # Порядковый номер
     tonality = Column(String, nullable=True)  # Тональность части
+    is_no_catalog = Column(Boolean, default=False)
     # ==================
 
     title = Column(String, index=True, nullable=True)

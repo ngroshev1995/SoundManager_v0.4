@@ -181,6 +181,16 @@ function setupRouter() {
         resetViewState();
         loadCurrentView();
       },
+      "/blog": () => {
+        state.view.current = "blog_list";
+        resetViewState();
+        loadCurrentView();
+      },
+      "/blog/:slug": ({ data }) => {
+        state.view.current = "blog_post";
+        state.view.blogSlug = data.slug;
+        loadCurrentView();
+      },
     })
     .resolve();
 
@@ -373,6 +383,14 @@ async function loadCurrentView() {
           state.favoriteRecordingIds
         );
         break;
+        case "blog_list":
+          const posts = await apiRequest("/api/blog/");
+          ui.renderBlogList(posts);
+          break;
+        case "blog_post":
+        const post = await apiRequest(`/api/blog/${state.view.blogSlug}`);
+        ui.renderBlogPost(post);
+        break;
     }
   } catch (err) {
     console.error(err);
@@ -415,6 +433,81 @@ function addEventListeners() {
 
     if (target.closest("#show-login-modal-btn")) {
       ui.showAuthView();
+    }
+
+    // --- БЛОГ ---
+    if (target.closest("#create-post-btn")) {
+        ui.showBlogModal();
+    }
+
+    const editPostBtn = target.closest(".edit-post-btn");
+    if (editPostBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const slug = editPostBtn.dataset.slug;
+        const post = await apiRequest(`/api/blog/${slug}`);
+        ui.showBlogModal(post);
+    }
+
+    if (target.closest("#save-blog-btn")) {
+        const id = document.getElementById("blog-post-id").value;
+
+        // === ВАЛИДАЦИЯ ===
+        const title = document.getElementById("blog-title").value.trim();
+        const slug = document.getElementById("blog-slug").value.trim();
+
+        if (!title) return ui.showNotification("Введите заголовок статьи", "error");
+        if (!slug) return ui.showNotification("URL (Slug) обязателен", "error");
+
+        const data = {
+            title: document.getElementById("blog-title").value,
+            slug: document.getElementById("blog-slug").value,
+            summary: document.getElementById("blog-summary").value,
+            meta_description: document.getElementById("blog-meta-desc").value,
+            meta_keywords: document.getElementById("blog-keywords").value,
+            content: window.quillEditor.root.innerHTML
+        };
+
+        try {
+            let savedPost;
+            if (id) {
+                savedPost = await apiRequest(`/api/blog/${id}`, "PUT", data);
+            } else {
+                savedPost = await apiRequest("/api/blog/", "POST", data);
+            }
+
+            // Загрузка обложки
+            const fileInput = document.getElementById("blog-cover");
+            if (fileInput.files.length > 0) {
+                const fd = new FormData();
+                fd.append("file", fileInput.files[0]);
+                await apiRequest(`/api/blog/${savedPost.id}/cover`, "POST", fd);
+            }
+
+            document.getElementById("blog-modal").classList.add("hidden");
+            ui.showNotification("Сохранено", "success");
+            loadCurrentView();
+
+        } catch (e) {
+            ui.showNotification(e.message, "error");
+        }
+    }
+
+    if (target.closest(".delete-post-btn")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = target.closest(".delete-post-btn").dataset.id;
+
+        if(confirm("Удалить статью?")) {
+             await apiRequest(`/api/blog/${id}`, "DELETE");
+             ui.showNotification("Статья удалена", "success");
+
+             // Перенаправляем на список
+             router.navigate("/blog");
+             // Или так, если роутер не сработает сразу:
+             // window.location.hash = "/blog";
+             // window.location.reload(); // Самый надежный вариант
+        }
     }
 
     // --- КОНТЕКСТНОЕ МЕНЮ ---
@@ -641,6 +734,7 @@ function addEventListeners() {
         name_ru: nameRu,
         original_name: document.getElementById("add-work-name-orig").value.trim() || null,
         tonality: document.getElementById("add-work-tonality").value.trim() || null,
+        is_no_catalog: document.getElementById("add-work-no-catalog").checked, // <--- НОВОЕ
         catalog_number: document.getElementById("add-work-catalog").value.trim() || null,
         genre: genreLabel || null, // Отправляем то, что ввел юзер (или ключ, если он уже ключ)
         nickname: document.getElementById("add-work-nickname").value.trim() || null,
@@ -706,12 +800,9 @@ function addEventListeners() {
         title_original:
           document.getElementById("add-composition-title-orig").value.trim() ||
           null,
-        tonality:
-          document.getElementById("add-composition-tonality").value.trim() ||
-          null, // NEW
-        catalog_number:
-          document.getElementById("add-composition-catalog").value.trim() ||
-          null,
+        tonality: document.getElementById("add-composition-tonality").value.trim() || null,
+        is_no_catalog: document.getElementById("add-composition-no-catalog").checked, // <--- НОВОЕ
+        catalog_number: document.getElementById("add-composition-catalog").value.trim() || null,
         composition_year:
           parseInt(document.getElementById("add-composition-year").value) ||
           null,
@@ -1241,6 +1332,19 @@ function addEventListeners() {
       ui.showNotification("Ошибка сохранения порядка", "error");
     }
   });
+  // --- ЛОГИКА ЧЕКБОКСА "БЕЗ НОМЕРА" ---
+  const setupNoCatalogToggle = (checkId, inputId) => {
+      const checkbox = document.getElementById(checkId);
+      const input = document.getElementById(inputId);
+      if(checkbox && input) {
+          checkbox.addEventListener('change', (e) => {
+              input.disabled = e.target.checked;
+              if(e.target.checked) input.value = "";
+          });
+      }
+  };
+  setupNoCatalogToggle('add-work-no-catalog', 'add-work-catalog');
+  setupNoCatalogToggle('add-composition-no-catalog', 'add-composition-catalog');
 }
 
 async function handleCreateEntity(btn, url, data, modalId, successMsg) {

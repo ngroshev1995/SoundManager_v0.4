@@ -25,6 +25,9 @@ const GENRE_OPTIONS = [
     { value: "Miniature", label: "Миниатюра" },
     { value: "String Quartet", label: "Струнный квартет" },
     { value: "Serenade", label: "Серенада" },
+    { value: "Overture", label: "Увертюра" },
+    { value: "Motet", label: "Мотет" },
+    { value: "Fanfare", label: "Фанфары" },
 ];
 
 // 2. АВТОМАТИЧЕСКИЙ СЛОВАРЬ ПЕРЕВОДОВ
@@ -44,6 +47,25 @@ function isLoggedIn() {
 }
 
 // --- HELPERS ---
+
+function slugify(text) {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Заменяем пробелы на -
+        .replace(/[^\w\-а-яё]+/g, '')   // Удаляем все спецсимволы (кроме букв и -)
+        .replace(/--+/g, '-')           // Заменяем множественные - на один
+        .replace(/^-+/, '')             // Удаляем - в начале
+        .replace(/-+$/, '')             // Удаляем - в конце
+        // Простая транслитерация
+        .replace(/а/g, 'a').replace(/б/g, 'b').replace(/в/g, 'v').replace(/г/g, 'g')
+        .replace(/д/g, 'd').replace(/е/g, 'e').replace(/ё/g, 'e').replace(/ж/g, 'zh')
+        .replace(/з/g, 'z').replace(/и/g, 'i').replace(/й/g, 'y').replace(/к/g, 'k')
+        .replace(/л/g, 'l').replace(/м/g, 'm').replace(/н/g, 'n').replace(/о/g, 'o')
+        .replace(/п/g, 'p').replace(/р/g, 'r').replace(/с/g, 's').replace(/т/g, 't')
+        .replace(/у/g, 'u').replace(/ф/g, 'f').replace(/х/g, 'h').replace(/ц/g, 'c')
+        .replace(/ч/g, 'ch').replace(/ш/g, 'sh').replace(/щ/g, 'sch').replace(/ъ/g, '')
+        .replace(/ы/g, 'y').replace(/ь/g, '').replace(/э/g, 'e').replace(/ю/g, 'yu')
+        .replace(/я/g, 'ya');
+}
 
 function getGenreKeyByLabel(label) {
     if (!label) return null;
@@ -692,11 +714,18 @@ export function renderWorkList(works, composer, lang = "ru") {
         if (genreKey === uncategorizedKey) {
             if (sortedKeys.length > 1) groupTitle = "Другие произведения";
         } else {
+            // 1. Пробуем найти точный перевод
             let translation = GENRE_TRANSLATIONS[genreKey];
+
+            // 2. Если нет, ищем без учета регистра среди ключей словаря
             if (!translation) {
-                const keyCapitalized = genreKey.charAt(0).toUpperCase() + genreKey.slice(1).toLowerCase();
-                translation = GENRE_TRANSLATIONS[keyCapitalized];
+                const lowerKey = genreKey.toLowerCase();
+                const foundKey = Object.keys(GENRE_TRANSLATIONS).find(k => k.toLowerCase() === lowerKey);
+                if (foundKey) {
+                    translation = GENRE_TRANSLATIONS[foundKey];
+                }
             }
+
             groupTitle = translation || genreKey;
         }
 
@@ -769,17 +798,29 @@ export async function renderCompositionGrid(work, lang = "ru") {
   // --- 1. ШАПКА ---
   const nameRu = work.name_ru;
   const nameOrig = work.original_name;
-  const catalogHtml = work.catalog_number
-      ? `<span class="text-gray-500 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200">${work.catalog_number}</span>` : "";
+
+  // Каталог (с учетом флага "без номера")
+  let catalogHtml = "";
+  if (work.is_no_catalog) {
+      catalogHtml = `<span class="text-gray-400 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-50 rounded-md border border-gray-100" title="Без номера по каталогу">б/н</span>`;
+  } else if (work.catalog_number) {
+      catalogHtml = `<span class="text-gray-500 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200">${work.catalog_number}</span>`;
+  }
+
   const genreRu = GENRE_TRANSLATIONS[work.genre] || work.genre;
   const genreBadge = work.genre
       ? `<span class="text-xs font-bold uppercase tracking-wider text-cyan-700 bg-cyan-50 px-2 py-1 rounded border border-cyan-100 align-middle">${genreRu}</span>`
       : `<span class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">Произведение</span>`;
+
   let subInfo = [];
-  if (work.nickname) subInfo.push(`<span class="font-bold text-gray-700">«${work.nickname}»</span>`);
+  if (work.nickname) subInfo.push(`<span class="font-bold text-gray-700">${work.nickname}</span>`);
   if (work.tonality) subInfo.push(`<span class="text-gray-600">${work.tonality}</span>`);
   const subInfoHtml = subInfo.length > 0 ? `<div class="mt-2 text-lg">${subInfo.join(" <span class='text-gray-300 mx-2'>|</span> ")}</div>` : "";
-  const originalNameHtml = nameOrig ? `<div class="text-gray-400 text-sm font-medium mt-1">${nameOrig}</div>` : "";
+
+  const originalNameHtml = nameOrig
+      ? `<div class="text-gray-400 text-sm font-medium mt-1">${nameOrig}</div>`
+      : "";
+
   const composerLink = `/composers/${work.composer.slug || work.composer.id}`;
 
   const adminControls = isAdmin() ? `
@@ -799,25 +840,34 @@ export async function renderCompositionGrid(work, lang = "ru") {
     </div>` : "";
 
   const bgImage = work.cover_art_url || "/static/img/placeholder.png";
+
   const header = `
         <div class="relative overflow-hidden rounded-3xl shadow-xl border border-gray-100 mb-8 group">
             <div class="absolute inset-0 z-0 pointer-events-none">
-                <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-125 transition-transform duration-[2000ms] group-hover:scale-110" style="background-image: url('${bgImage}')"></div>
+                <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-125 transition-transform duration-[2000ms] group-hover:scale-110"
+                     style="background-image: url('${bgImage}')"></div>
                 <div class="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-white/30"></div>
             </div>
+
             <div class="relative z-10 p-8 flex flex-col md:flex-row gap-8 items-start">
                 <div class="flex-shrink-0 relative">
                     <img src="${bgImage}" class="w-40 h-40 md:w-48 md:h-48 rounded-2xl shadow-2xl object-cover transform group-hover:scale-105 transition-transform duration-500">
                     <div class="absolute inset-0 rounded-2xl ring-1 ring-black/5"></div>
                 </div>
+
                 <div class="flex-1 w-full pt-1 flex flex-col">
-                    <div class="mb-3 flex items-center gap-2">${genreBadge}</div>
+                    <div class="mb-3 flex items-center gap-2">
+                        ${genreBadge}
+                    </div>
+
                     <div class="flex flex-wrap items-baseline gap-2 mb-1">
                         <h1 class="text-3xl md:text-4xl font-black text-gray-900 leading-tight tracking-tight">${nameRu}</h1>
                         ${catalogHtml}
                     </div>
+
                     ${originalNameHtml}
                     ${subInfoHtml}
+
                     <div class="mt-5 mb-2">
                         <a href="${composerLink}" data-navigo class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 hover:bg-white hover:shadow-md border border-gray-100 transition-all text-gray-700 font-bold group/link">
                             <div class="w-6 h-6 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
@@ -827,7 +877,10 @@ export async function renderCompositionGrid(work, lang = "ru") {
                             <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 group-hover/link:text-cyan-600"></i>
                         </a>
                     </div>
-                    <div class="mt-4">${adminControls}</div>
+
+                    <div class="mt-4">
+                        ${adminControls}
+                    </div>
                 </div>
             </div>
         </div>
@@ -835,6 +888,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
   let historyHtml = "";
   const hasNotes = work.notes && work.notes.replace(/<[^>]*>/g, '').trim().length > 0;
+
   if (hasNotes) {
       historyHtml = `
       <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-10 group/bio">
@@ -852,7 +906,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
       </div>`;
   }
 
-  // === 2. РАЗДЕЛЕНИЕ КОНТЕНТА (ИСПРАВЛЕНО) ===
+  // === 2. РАЗДЕЛЕНИЕ КОНТЕНТА ===
   const allComps = work.compositions || [];
 
   // 1. Ищем спец-часть "Полное произведение" (№0)
@@ -860,15 +914,12 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
   // Флаг: нужно ли рисовать плеер (одночастное/целиком)
   let showPlayerBlock = false;
+  let recs = [];
 
-  // Если спец-части нет, но есть ровно одна обычная часть - она кандидат
+  // Если спец-части нет, но есть ровно одна обычная часть - она кандидат на "одночастное"
   let candidateForSingle = (!fullWorkComp && allComps.length === 1) ? allComps[0] : null;
 
-  // Пробуем загрузить записи для спец-части ИЛИ кандидата
   const targetComp = fullWorkComp || candidateForSingle;
-
-  // Сюда загрузим записи
-  let recs = [];
 
   if (targetComp) {
       try {
@@ -881,11 +932,10 @@ export async function renderCompositionGrid(work, lang = "ru") {
       } catch (e) { console.error(e); }
   }
 
-  // Флаг: скрывать ли список частей?
-  // Скрываем, ТОЛЬКО если это кандидат на одночастное И у него ЕСТЬ записи
+  // Флаг: действительно ли это одночастное произведение С ЗАПИСЯМИ?
   const hidePartsList = (candidateForSingle && showPlayerBlock);
 
-  // Формируем список частей для отображения
+  // Формируем список частей для отображения (убираем 0 и, если надо, единственную часть)
   const movementParts = hidePartsList
       ? []
       : allComps.filter(c => c.sort_order !== 0).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -904,11 +954,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
                  const isFav = window.state.favoriteRecordingIds.has(r.id);
                  const isSelected = window.state.selectedRecordingIds.has(r.id);
 
-                 // Название для одночастного
-                 const displayTitle = (r.composition.sort_order === 0)
-                        ? getLocalizedText(work, "name", lang)
-                        : getLocalizedText(r.composition, "title", lang);
-
                  return `
                  <div class="recording-item group flex items-center p-4 hover:bg-cyan-50 ${isSelected ? "bg-cyan-50 border-cyan-200" : "border-b border-gray-100"} bg-white last:border-0 transition-colors cursor-pointer"
                      data-recording-id="${r.id}" data-index="${i}">
@@ -920,7 +965,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
                      </div>
                      <div class="flex-1 ml-4">
                          <div class="font-bold text-gray-800 text-lg flex items-center">
-                            ${displayTitle}
+                            ${r.performers || "Неизвестный исполнитель"}
                             ${getYoutubeIcon(r.youtube_url)}
                          </div>
                          <div class="text-xs text-gray-500 font-mono mt-0.5">${r.recording_year || ""}</div>
@@ -950,18 +995,13 @@ export async function renderCompositionGrid(work, lang = "ru") {
                         <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-recording-id="${r.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>` : "";
 
-                 const displayTitle = (r.composition.sort_order === 0)
-                        ? getLocalizedText(work, "name", lang)
-                        : getLocalizedText(r.composition, "title", lang);
-
                  return `
                  <div class="bg-white p-4 flex items-center justify-between group hover:bg-gray-50 border border-gray-100 rounded-xl mb-3 shadow-sm">
                      <div class="flex items-center gap-4 min-w-0 mr-4">
                          <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0"><i data-lucide="youtube" class="w-5 h-5"></i></div>
                          <div class="min-w-0">
-                             <div class="font-bold text-gray-800 text-lg mb-0.5">${displayTitle}</div>
-                             <div class="text-sm text-gray-500 font-medium">${r.performers || "Исполнитель не указан"}</div>
-                             <div class="text-xs text-gray-400 mt-0.5">${r.recording_year || ""}</div>
+                             <div class="font-bold text-gray-800 text-lg mb-0.5">${r.performers || "Исполнитель не указан"}</div>
+                             <div class="text-xs text-gray-400 font-mono">${r.recording_year || ""}</div>
                          </div>
                      </div>
                      <div class="flex items-center flex-shrink-0 ml-6">
@@ -987,7 +1027,14 @@ export async function renderCompositionGrid(work, lang = "ru") {
       const list = movementParts.map(c => {
           const metaParts = [];
           if (c.tonality) metaParts.push(`<span class="font-medium text-gray-600">${c.tonality}</span>`);
-          if (c.catalog_number) metaParts.push(`<span>${c.catalog_number}</span>`);
+
+          // Логика каталога части
+          if (c.is_no_catalog) {
+              metaParts.push(`<span class="text-gray-400">б/н</span>`);
+          } else if (c.catalog_number) {
+              metaParts.push(`<span>${c.catalog_number}</span>`);
+          }
+
           if (c.composition_year) metaParts.push(`<span>${c.composition_year}</span>`);
           const metaHtml = metaParts.length > 0 ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join('<span class="text-gray-300">•</span>')}</div>` : "";
 
@@ -1038,7 +1085,17 @@ export function renderCompositionDetailView(
   const titleOrig = composition.title_original;
   const work = composition.work;
 
-  const effectiveCatalog = composition.catalog_number || work.catalog_number;
+  // Если у части стоит "б/н" -> "б/н"
+  // Если у части есть номер -> номер
+  // Если у части ничего нет -> смотрим произведение (если там "б/н" -> "б/н", иначе номер)
+  let effectiveCatalog = "";
+  if (composition.is_no_catalog) {
+      effectiveCatalog = "б/н";
+  } else if (composition.catalog_number) {
+      effectiveCatalog = composition.catalog_number;
+  } else {
+      effectiveCatalog = work.is_no_catalog ? "б/н" : work.catalog_number;
+  }
 
   let metaParts = [];
 
@@ -1484,29 +1541,40 @@ export function showAddWorkModal() {
   const modal = document.getElementById("add-work-modal");
   modal.classList.remove("hidden");
 
-  // Очистка полей
+  // 1. Очистка всех текстовых полей
   document.querySelectorAll("#add-work-modal input").forEach((i) => (i.value = ""));
 
-  // Очищаем поле жанра (теперь это input)
+  // 2. === ИСПРАВЛЕНИЕ: СБРОС ЧЕКБОКСА Б/Н ===
+  const noCatalogCheck = document.getElementById("add-work-no-catalog");
+  const catalogInput = document.getElementById("add-work-catalog");
+
+  if (noCatalogCheck) {
+      noCatalogCheck.checked = false; // Снимаем галочку
+  }
+  if (catalogInput) {
+      catalogInput.disabled = false; // Разблокируем поле ввода
+  }
+  // =======================================
+
+  // 3. Очищаем поле жанра
   const genreInput = document.getElementById("add-work-genre");
   if (genreInput) genreInput.value = "";
 
-  // === ЗАПОЛНЕНИЕ DATALIST (Автокомплит) ===
+  // 4. Заполнение списка жанров
   const datalist = document.getElementById("genre-options");
   if (datalist) {
-      datalist.innerHTML = ""; // Очищаем старые опции
+      datalist.innerHTML = "";
       GENRE_OPTIONS.forEach(g => {
           const opt = document.createElement("option");
           opt.value = g.label;
           datalist.appendChild(opt);
       });
   }
-  // ==========================================
 
-  // Инициализация Quill (пустой)
+  // 5. Инициализация Quill (пустой)
   initQuill("#add-work-notes", "");
 
-  // Закрытие
+  // 6. Закрытие
   const closeBtn = modal.querySelector(".close-button");
   const newClose = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
@@ -1520,28 +1588,43 @@ export function showAddCompositionModal() {
   const modal = document.getElementById("add-composition-modal");
   modal.classList.remove("hidden");
 
-  // 1. Сбрасываем инпуты
+  // 1. Сбрасываем все инпуты
   modal.querySelectorAll("input").forEach((i) => (i.value = ""));
 
-  // 2. ВЫЧИСЛЯЕМ СЛЕДУЮЩИЙ ПОРЯДКОВЫЙ НОМЕР
-  let nextOrder = 1;
-
-  // Берем текущее произведение из глобального стейта
   const currentWork = window.state?.view?.currentWork;
+
+  // 2. === ЛОГИКА НАСЛЕДОВАНИЯ Б/Н ===
+  const noCatalogCheck = document.getElementById("add-composition-no-catalog");
+  const catalogInput = document.getElementById("add-composition-catalog");
+
+  if (noCatalogCheck && catalogInput) {
+      if (currentWork && currentWork.is_no_catalog) {
+          // Если у родителя "б/н", ставим галочку и блокируем поле
+          noCatalogCheck.checked = true;
+          catalogInput.disabled = true;
+          catalogInput.value = "";
+      } else {
+          // Иначе сбрасываем в дефолт
+          noCatalogCheck.checked = false;
+          catalogInput.disabled = false;
+      }
+  }
+  // ==================================
+
+  // 3. Вычисляем следующий порядковый номер
+  let nextOrder = 1;
 
   if (
     currentWork &&
     currentWork.compositions &&
     currentWork.compositions.length > 0
   ) {
-    // Находим самый большой номер среди существующих частей
     const maxOrder = Math.max(
       ...currentWork.compositions.map((c) => c.sort_order || 0)
     );
     nextOrder = maxOrder + 1;
   }
 
-  // 3. Устанавливаем
   document.getElementById("add-composition-order").value = nextOrder;
 }
 
@@ -1577,6 +1660,8 @@ export function showEditEntityModal(type, data, onSave) {
   let fields = "";
   let modalTitle = "";
 
+  // --- ГЕНЕРАЦИЯ ПОЛЕЙ ---
+
   if (type === "composer") {
     modalTitle = "Редактировать композитора";
     fields = `
@@ -1594,6 +1679,7 @@ export function showEditEntityModal(type, data, onSave) {
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Умер</label>
             <input type="number" id="edit-year-died" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.year_died || ""}"></div>
         </div>
+        <!-- Quill Container -->
         <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Биография</label>
         <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
             <div id="edit-notes" class="h-64"></div>
@@ -1602,16 +1688,15 @@ export function showEditEntityModal(type, data, onSave) {
   } else if (type === "work") {
     modalTitle = "Редактировать произведение";
 
-    // 1. Получаем русское название для отображения в поле
+    // Конвертация жанра для отображения
     const displayGenre = GENRE_TRANSLATIONS[data.genre] || data.genre;
 
-    // 2. Генерируем опции для datalist (Только русские названия)
+    // Опции для datalist
     const genreOptionsHtml = GENRE_OPTIONS.map(g =>
-        `<option value="${g.label}"></option>` // value="Симфония"
+        `<option value="${g.label}"></option>`
     ).join('');
 
     fields = `
-        <!-- ... (обложка) ... -->
         <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Обложка</label>
             <input type="file" id="edit-cover-file" accept="image/*" class="text-sm w-full">
@@ -1622,25 +1707,38 @@ export function showEditEntityModal(type, data, onSave) {
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название (RU)</label>
                 <input id="edit-name-ru" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.name_ru || ""}">
             </div>
+
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Оригинальное название</label>
                 <input id="edit-name-orig" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.original_name || ""}">
             </div>
+
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность</label>
                 <input id="edit-work-tonality" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.tonality || ""}">
             </div>
+
+            <!-- КАТАЛОГ (Один раз, внутри сетки) -->
             <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
-                <input id="edit-work-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.catalog_number || ""}">
+                <div class="flex justify-between items-end mb-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Каталог (Op.)</label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="edit-work-no-catalog" ${data.is_no_catalog ? 'checked' : ''}
+                               onchange="document.getElementById('edit-work-catalog').disabled = this.checked; if(this.checked) document.getElementById('edit-work-catalog').value = '';"
+                               class="w-4 h-4 text-cyan-600 rounded border-gray-300">
+                        <span class="text-xs text-gray-500">Б/Н</span>
+                    </label>
+                </div>
+                <input id="edit-work-catalog" class="w-full border border-gray-300 p-2 rounded-lg disabled:bg-gray-100 disabled:text-gray-400"
+                       value="${data.catalog_number || ""}" ${data.is_no_catalog ? 'disabled' : ''}>
             </div>
 
-            <!-- ИСПРАВЛЕННЫЙ ЖАНР -->
+            <!-- ЖАНР (Input + Datalist) -->
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Жанр</label>
                 <input type="text" id="edit-work-genre" list="edit-genre-options"
                        class="w-full border border-gray-300 p-2 rounded-lg"
-                       value="${displayGenre || ""}" placeholder="Начните вводить..."> <!-- value на русском -->
+                       value="${displayGenre || ""}" placeholder="Начните вводить...">
                 <datalist id="edit-genre-options">
                     ${genreOptionsHtml}
                 </datalist>
@@ -1650,11 +1748,15 @@ export function showEditEntityModal(type, data, onSave) {
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Популярное название</label>
                 <input id="edit-work-nickname" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.nickname || ""}">
             </div>
+
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год начала</label>
             <input type="number" id="edit-year-start" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.publication_year || ""}"></div>
+
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год конца</label>
             <input type="number" id="edit-year-end" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.publication_year_end || ""}"></div>
         </div>
+
+        <!-- Quill Container -->
         <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История и факты</label>
         <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
             <div id="edit-work-notes" class="h-64"></div>
@@ -1682,8 +1784,20 @@ export function showEditEntityModal(type, data, onSave) {
         <div class="grid grid-cols-2 gap-4">
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Тональность</label>
             <input id="edit-comp-tonality" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.tonality || ""}"></div>
-            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Каталог (Op.)</label>
-            <input id="edit-catalog" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.catalog_number || ""}"></div>
+
+            <div>
+                <div class="flex justify-between items-end mb-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase">Каталог (Op.)</label>
+                    <label class="flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" id="edit-comp-no-catalog" ${data.is_no_catalog ? 'checked' : ''}
+                               onchange="document.getElementById('edit-catalog').disabled = this.checked; if(this.checked) document.getElementById('edit-catalog').value = '';"
+                               class="w-3 h-3 text-cyan-600 rounded border-gray-300">
+                        <span class="text-[10px] text-gray-500">Б/Н</span>
+                    </label>
+                </div>
+                <input id="edit-catalog" class="w-full border border-gray-300 p-2 rounded-lg disabled:bg-gray-100 disabled:text-gray-400"
+                       value="${data.catalog_number || ""}" ${data.is_no_catalog ? 'disabled' : ''}>
+            </div>
         </div>
         <div class="mt-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год</label>
         <input type="number" id="edit-year" class="w-full border border-gray-300 p-2 rounded-lg" value="${data.composition_year || ""}"></div>
@@ -1709,19 +1823,20 @@ export function showEditEntityModal(type, data, onSave) {
   title.textContent = modalTitle;
   content.innerHTML = fields;
 
-  // Инициализация Quill
+  // --- ИНИЦИАЛИЗАЦИЯ QUILL ---
   if (type === "composer" || type === "work") {
     const selectorId = type === "work" ? "#edit-work-notes" : "#edit-notes";
     initQuill(selectorId, data.notes);
   }
 
-  // СОХРАНЕНИЕ
+  // --- СОХРАНЕНИЕ ---
   newBtn.onclick = async () => {
     newBtn.disabled = true;
     newBtn.textContent = "Сохранение...";
 
     try {
       let payload = {};
+
       if (type === "composer") {
         const bioContent = window.quillEditor ? window.quillEditor.root.innerHTML : "";
         payload = {
@@ -1731,10 +1846,11 @@ export function showEditEntityModal(type, data, onSave) {
           year_died: parseInt(document.getElementById("edit-year-died").value) || null,
           notes: bioContent,
         };
+
       } else if (type === "work") {
         const notesContent = window.quillEditor ? window.quillEditor.root.innerHTML : "";
 
-        // КОНВЕРТАЦИЯ ЖАНРА
+        // Конвертация жанра
         const genreInputValue = document.getElementById("edit-work-genre").value;
         const genreKey = getGenreKeyByLabel(genreInputValue);
 
@@ -1742,10 +1858,9 @@ export function showEditEntityModal(type, data, onSave) {
           name_ru: document.getElementById("edit-name-ru").value,
           original_name: document.getElementById("edit-name-orig").value,
           tonality: document.getElementById("edit-work-tonality").value,
-
-          genre: genreKey, // <-- Отправляем "Symphony"
-
+          genre: genreKey,
           nickname: document.getElementById("edit-work-nickname").value,
+          is_no_catalog: document.getElementById("edit-work-no-catalog").checked,
           catalog_number: document.getElementById("edit-work-catalog").value,
           publication_year: parseInt(document.getElementById("edit-year-start").value) || null,
           publication_year_end: parseInt(document.getElementById("edit-year-end").value) || null,
@@ -1762,21 +1877,26 @@ export function showEditEntityModal(type, data, onSave) {
           title_ru: document.getElementById("edit-title-ru").value,
           title_original: document.getElementById("edit-title-orig").value,
           tonality: document.getElementById("edit-comp-tonality").value,
+          is_no_catalog: document.getElementById("edit-comp-no-catalog").checked,
           catalog_number: document.getElementById("edit-catalog").value,
           composition_year: parseInt(document.getElementById("edit-year").value) || null,
         };
+
       } else if (type === "recording") {
         payload = {
           performers: document.getElementById("edit-performers").value,
           recording_year: parseInt(document.getElementById("edit-rec-year").value) || null,
           youtube_url: document.getElementById("edit-youtube-url").value.trim() || null,
         };
+
       } else if (type === "playlist_create" || type === "playlist_edit") {
         payload = { name: document.getElementById("edit-playlist-name").value };
       }
 
+      // 1. Отправка данных
       await onSave(payload);
 
+      // 2. Отправка файла (если выбран)
       const fileInput = document.getElementById("edit-cover-file");
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
@@ -2374,50 +2494,202 @@ export function renderLibraryHub() {
   if (window.lucide) window.lucide.createIcons();
 }
 function initQuill(selectorId, content) {
-  // 1. Находим контейнер
   const container = document.querySelector(selectorId);
   if (!container) return;
 
-  // 2. Логика очистки (если редактор уже был тут)
-  // Если элемент уже имеет класс ql-container, значит Quill уже инициализирован
+  // Очистка старого
   if (container.classList.contains('ql-container')) {
       const parent = container.parentNode;
       const newDiv = document.createElement('div');
       newDiv.id = selectorId.replace("#", "");
-
-      // Восстанавливаем класс высоты (h-64 или h-48), убирая классы Quill
-      // Это важно, чтобы редактор не схлопнулся
-      let originalClasses = container.className;
-      originalClasses = originalClasses.replace('ql-container', '').replace('ql-snow', '').trim();
-      // Если классы потерялись, восстанавливаем дефолтные
-      if (!originalClasses) {
-          originalClasses = selectorId.includes('work') ? 'h-48' : 'h-64';
-      }
+      let originalClasses = container.className.replace('ql-container', '').replace('ql-snow', '').trim();
+      if (!originalClasses) originalClasses = selectorId.includes('work') ? 'h-48' : 'h-64';
       newDiv.className = originalClasses;
-
-      parent.innerHTML = ""; // Чистим родителя
-      parent.appendChild(newDiv); // Вставляем чистый div
+      parent.innerHTML = "";
+      parent.appendChild(newDiv);
   }
 
-  // 3. Инициализация
+  // === КАСТОМНЫЙ ЗАГРУЗЧИК КАРТИНОК ===
+  const imageHandler = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      // Показываем "Загрузка..." в редакторе (опционально)
+      const range = window.quillEditor.getSelection(true);
+
+      try {
+          // Отправляем на сервер
+          const res = await window.apiRequest('/api/blog/upload-image', 'POST', fd);
+
+          // Вставляем картинку по URL
+          window.quillEditor.insertEmbed(range.index, 'image', res.url);
+          // Сдвигаем курсор
+          window.quillEditor.setSelection(range.index + 1);
+      } catch (e) {
+          alert("Ошибка загрузки картинки: " + e.message);
+      }
+    };
+  };
+
+  // Инициализация
   window.quillEditor = new Quill(selectorId, {
     theme: "snow",
-    placeholder: "Введите текст...",
+    placeholder: "Пишите шедевр здесь...",
     modules: {
-      toolbar: [
-        ["bold", "italic", "underline"],
-        [{ list: "ordered" }, { list: "bullet" }],
-        [{ header: [1, 2, 3, false] }],
-        ["link", "clean"],
-      ],
+      toolbar: {
+        container: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['link', 'image', 'video'], // <-- Добавили кнопки
+            ['clean']
+        ],
+        handlers: {
+            // Перехватываем кнопку 'image'
+            'image': imageHandler
+        }
+      }
     },
   });
 
-  // 4. Вставка контента (ИСПРАВЛЕНО)
-  // Проверяем на null и undefined
   if (content && content !== "null" && content !== "undefined") {
-      // Используем pasteHTML - это самый надежный способ вставить "чужой" HTML
       window.quillEditor.clipboard.dangerouslyPasteHTML(0, content);
   }
+}
+
+// --- БЛОГ ---
+
+export function renderBlogList(posts) {
+    const { listEl } = getElements();
+    const viewTitle = document.getElementById("view-title-container");
+    viewTitle.classList.remove("hidden");
+
+    const addBtn = isAdmin()
+        ? `<button id="create-post-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all"><i data-lucide="plus" class="w-4 h-4"></i> Написать</button>`
+        : "";
+
+    viewTitle.innerHTML = `
+        <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
+            <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <i data-lucide="newspaper" class="w-8 h-8 text-cyan-600"></i>
+                <span>Блог</span>
+            </h2>
+            ${addBtn}
+        </div>
+    `;
+
+    if (posts.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-20 text-gray-400">Статей пока нет</div>';
+        return;
+    }
+
+    const html = posts.map(post => {
+        const date = new Date(post.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        const cover = post.cover_image_url || "/static/img/placeholder.png";
+
+        // Кнопки управления (только для админа)
+        const controls = isAdmin() ? `
+            <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button class="edit-post-btn bg-white p-2 rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-slug="${post.slug}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                <button class="delete-post-btn bg-white p-2 rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${post.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+        ` : "";
+
+        return `
+        <a href="/blog/${post.slug}" data-navigo class="group relative flex flex-col md:flex-row gap-6 bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 mb-6">
+            <div class="w-full md:w-1/3 aspect-video rounded-xl overflow-hidden bg-gray-100">
+                <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            </div>
+            <div class="flex-1 flex flex-col">
+                <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-2">${date}</div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3 group-hover:text-cyan-700 transition-colors">${post.title}</h3>
+                <p class="text-gray-600 leading-relaxed mb-4 line-clamp-3">${post.summary || ""}</p>
+                <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
+                    Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+            ${controls}
+        </a>
+        `;
+    }).join("");
+
+    listEl.innerHTML = `<div class="max-w-4xl mx-auto px-6 pb-10">${html}</div>`;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function renderBlogPost(post) {
+    const { listEl } = getElements();
+    document.getElementById("view-title-container").classList.add("hidden");
+
+    const date = new Date(post.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const cover = post.cover_image_url;
+
+    const header = `
+        <div class="max-w-4xl mx-auto px-6 pt-10">
+            <div class="text-center mb-8">
+                <div class="text-sm font-bold text-cyan-600 uppercase tracking-wider mb-3">${date}</div>
+                <h1 class="text-4xl md:text-5xl font-black text-gray-900 leading-tight mb-6">${post.title}</h1>
+            </div>
+            ${cover ? `<img src="${cover}" class="w-full rounded-2xl shadow-lg mb-10 object-cover max-h-[500px]">` : ""}
+        </div>
+    `;
+
+    const content = `
+        <div class="max-w-3xl mx-auto px-6 pb-20">
+            <div class="prose prose-lg prose-cyan max-w-none text-gray-800 leading-relaxed">
+                ${post.content}
+            </div>
+        </div>
+    `;
+
+    listEl.innerHTML = header + content;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Функция открытия модалки блога
+export function showBlogModal(post = null) {
+    const modal = document.getElementById("blog-modal");
+    modal.classList.remove("hidden");
+
+    // Очистка/Заполнение
+    document.getElementById("blog-post-id").value = post ? post.id : "";
+    const titleInput = document.getElementById("blog-title");
+    const slugInput = document.getElementById("blog-slug");
+
+    titleInput.value = post ? post.title : "";
+    slugInput.value = post ? post.slug : "";
+    document.getElementById("blog-summary").value = post ? post.summary : "";
+    document.getElementById("blog-cover").value = "";
+    document.getElementById("blog-modal-title").textContent = post ? "Редактировать статью" : "Новая статья";
+    document.getElementById("blog-meta-desc").value = post ? post.meta_description : "";
+    document.getElementById("blog-keywords").value = post ? post.meta_keywords : "";
+
+    // Init Quill
+    initQuill("#blog-content", post ? post.content : "");
+
+    // === АВТО-ГЕНЕРАЦИЯ SLUG ===
+    // Только для новых статей, чтобы не ломать ссылки старых
+    titleInput.oninput = (e) => {
+        if (!post) {
+            slugInput.value = slugify(e.target.value);
+        }
+    };
+    // ==========================
+
+    const closeBtn = modal.querySelector(".close-button");
+    const newClose = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newClose, closeBtn);
+    newClose.onclick = () => modal.classList.add("hidden");
 }
 

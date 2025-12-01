@@ -227,8 +227,17 @@ def update_composer(db: Session, db_obj: models.music.Composer,
 
 def update_work(db: Session, db_obj: models.music.Work, obj_in: schemas.music.WorkUpdate) -> models.music.Work:
     update_data = obj_in.dict(exclude_unset=True)
+
+    # === ЛОГИКА: Если поставили "б/н" произведению, ставим и всем частям ===
+    if update_data.get("is_no_catalog") is True:
+        for comp in db_obj.compositions:
+            comp.is_no_catalog = True
+            comp.catalog_number = None  # Очищаем старый номер, если был
+    # =======================================================================
+
     for field, value in update_data.items():
         setattr(db_obj, field, value)
+
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)

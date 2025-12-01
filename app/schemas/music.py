@@ -23,6 +23,7 @@ class WorkBase(BaseModel):
     tonality: Optional[str] = None
     genre: Optional[str] = None
     nickname: Optional[str] = None
+    is_no_catalog: Optional[bool] = False
     # ==================
 
     publication_year: Optional[int] = None
@@ -34,6 +35,7 @@ class CompositionBase(BaseModel):
     # === НОВЫЕ ПОЛЯ ===
     sort_order: Optional[int] = 0
     tonality: Optional[str] = None
+    is_no_catalog: Optional[bool] = False
     # ==================
 
     title: Optional[str] = None

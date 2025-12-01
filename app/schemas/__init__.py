@@ -1,5 +1,3 @@
-# app/schemas/__init__.py
-
 from .user import User, UserCreate, UserUpdate
 from .music import (
     Composer, ComposerCreate, ComposerUpdate, ComposerSimple,
@@ -11,4 +9,5 @@ from .music import (
 from .playlist import Playlist, PlaylistCreate, PlaylistUpdate
 from .token import Token, TokenData
 from .dashboard import DashboardSummary, DashboardStats
-from . import search # <-- ДОБАВИТЬ ЭТУ СТРОКУ
+from . import search
+from .blog import Post, PostCreate, PostUpdate
