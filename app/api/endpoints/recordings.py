@@ -3,8 +3,8 @@ import uuid
 from typing import List, Any, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Response
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload, contains_eager
+from sqlalchemy import func, or_
 import os
 import shutil
 from pathlib import Path
@@ -230,19 +230,87 @@ def get_comp_recordings(slug: str, db: Session = Depends(get_db)):
     if not c: raise HTTPException(404, "Composition not found")
     return db.query(models.music.Recording).filter(models.music.Recording.composition_id == c.id).all()
 
+
+# app/api/endpoints/recordings.py
+
+from typing import Optional, Literal  # Добавьте Literal в импорты
+
+
 @router.get("/", response_model=schemas.music.RecordingPage)
-def list_recordings(skip: int = 0, limit: int = 20, q: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(models.music.Recording).options(
-        joinedload(models.music.Recording.composition).joinedload(models.music.Composition.work).joinedload(
-            models.music.Work.composer)
+def list_recordings(
+        skip: int = 0,
+        limit: int = 20,
+        q: Optional[str] = None,
+        media_type: Optional[Literal["audio", "video"]] = None,
+        composer_id: Optional[int] = None,
+        genre: Optional[str] = None,
+        sort_by: Optional[Literal["newest", "oldest"]] = "newest",
+        db: Session = Depends(get_db)
+):
+    # 1. Жестко соединяем все таблицы.
+    # Это гарантирует, что у нас есть доступ к полям Композитора и Произведения.
+    query = (
+        db.query(models.music.Recording)
+        .join(models.music.Composition, models.music.Recording.composition_id == models.music.Composition.id)
+        .join(models.music.Work, models.music.Composition.work_id == models.music.Work.id)
+        .join(models.music.Composer, models.music.Work.composer_id == models.music.Composer.id)
     )
+
+    # 2. Оптимизация загрузки (чтобы при выдаче JSON не было доп. запросов)
+    query = query.options(
+        contains_eager(models.music.Recording.composition)
+        .contains_eager(models.music.Composition.work)
+        .contains_eager(models.music.Work.composer)
+    )
+
+    # 3. Фильтр по типу
+    if media_type == "audio":
+        query = query.filter(models.music.Recording.duration > 0)
+    elif media_type == "video":
+        query = query.filter(models.music.Recording.duration == 0)
+
+    # 4. ПОИСК (ИСПРАВЛЕННЫЙ)
     if q:
-        st = f"%{q.lower()}%"
-        query = query.join(models.music.Composition).filter(
-            or_(models.music.Recording.performers.ilike(st), models.music.Composition.title_ru.ilike(st))
+        search_term = q.lower()  # Приводим запрос к нижнему регистру в Python
+
+        # Используем нашу кастомную функцию lower_utf8 для полей базы
+        query = query.filter(
+            or_(
+                # Ищем в исполнителях
+                func.lower_utf8(models.music.Recording.performers).contains(search_term),
+
+                # Ищем в названии части (например, "Фуга")
+                func.lower_utf8(models.music.Composition.title_ru).contains(search_term),
+                func.lower_utf8(models.music.Composition.title_original).contains(search_term),
+
+                # Ищем в названии произведения (например, "Багатель", "Симфония")
+                func.lower_utf8(models.music.Work.name_ru).contains(search_term),
+                func.lower_utf8(models.music.Work.original_name).contains(search_term),
+                func.lower_utf8(models.music.Work.nickname).contains(search_term),  # Прозвища ("Лунная")
+
+                # Ищем в имени композитора (например, "Бах", "Вивальди")
+                func.lower_utf8(models.music.Composer.name_ru).contains(search_term),
+                func.lower_utf8(models.music.Composer.original_name).contains(search_term)
+            )
         )
+
+    # 5. Фильтр по Композитору
+    if composer_id:
+        query = query.filter(models.music.Work.composer_id == composer_id)
+
+    # 6. Фильтр по Жанру
+    if genre:
+        query = query.filter(models.music.Work.genre == genre)
+
+    # 7. Сортировка
+    if sort_by == "newest":
+        query = query.order_by(models.music.Recording.id.desc())
+    elif sort_by == "oldest":
+        query = query.order_by(models.music.Recording.id.asc())
+
     total = query.count()
-    items = query.order_by(models.music.Recording.id.desc()).offset(skip).limit(limit).all()
+    items = query.offset(skip).limit(limit).all()
+
     return {"total": total, "recordings": items}
 
 

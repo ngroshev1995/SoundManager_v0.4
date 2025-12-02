@@ -202,7 +202,7 @@ function getElements() {
   };
 }
 
-function formatDuration(seconds) {
+export function formatDuration(seconds) {
   if (isNaN(seconds) || seconds === null) return "0:00";
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
@@ -1250,49 +1250,49 @@ export async function renderCompositionGrid(work, lang = "ru") {
     const list = movementParts
       .map((c) => {
         const metaParts = [];
-        if (c.tonality)
-          metaParts.push(
-            `<span class="font-medium text-gray-600">${c.tonality}</span>`
-          );
+        if (c.tonality) metaParts.push(`<span class="font-medium text-gray-600">${c.tonality}</span>`);
 
-        // Логика каталога части
         if (c.is_no_catalog) {
           metaParts.push(`<span class="text-gray-400">б/н</span>`);
         } else if (c.catalog_number) {
           metaParts.push(`<span>${c.catalog_number}</span>`);
         }
 
-        if (c.composition_year)
-          metaParts.push(`<span>${c.composition_year}</span>`);
-        const metaHtml =
-          metaParts.length > 0
-            ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join(
-                '<span class="text-gray-300">•</span>'
-              )}</div>`
+        if (c.composition_year) metaParts.push(`<span>${c.composition_year}</span>`);
+
+        const metaHtml = metaParts.length > 0
+            ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join('<span class="text-gray-300">•</span>')}</div>`
             : "";
 
-        return `
-            <!-- ДОБАВЛЕНО: draggable, класс, data-id -->
-            <a href="/compositions/${
-              c.slug || c.id
-            }" data-navigo draggable="true" data-comp-id="${c.id}"
-               class="comp-sortable-item flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 cursor-move">
+        // === ПРОВЕРКА ПРАВ АДМИНА ===
+        const isUserAdmin = isAdmin();
 
-                <div class="flex items-center gap-4 pointer-events-none"> <!-- pointer-events-none чтобы не мешало драгу -->
-                    <!-- ДОБАВЛЕНО: класс comp-sort-number для обновления цифры -->
+        // 1. Атрибут draggable ставим только админу
+        const draggableAttr = isUserAdmin ? 'draggable="true"' : '';
+
+        // 2. Курсор move только админу
+        const cursorClass = isUserAdmin ? 'cursor-move' : 'cursor-pointer';
+
+        // 3. Иконку хваталки рисуем только админу
+        const gripIcon = isUserAdmin
+            ? `<i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500 ml-4"></i>`
+            : ``;
+
+        return `
+            <a href="/compositions/${c.slug || c.id}" data-navigo ${draggableAttr} data-comp-id="${c.id}"
+               class="comp-sortable-item flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
+
+                <div class="flex items-center gap-4 pointer-events-none">
                     <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm">
                         ${c.sort_order || "#"}
                     </div>
                     <div>
-                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors">${getLocalizedText(
-                          c,
-                          "title",
-                          lang
-                        )}</span>
+                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors">${getLocalizedText(c, "title", lang)}</span>
                         ${metaHtml}
                     </div>
                 </div>
-                <i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500"></i> <!-- Иконка хваталки -->
+
+                ${gripIcon} <!-- Вставляем иконку только админу -->
             </a>
         `;
       })
@@ -3119,5 +3119,297 @@ export function showBlogModal(post = null) {
   const newClose = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
   newClose.onclick = () => modal.classList.add("hidden");
+}
+
+
+export function renderLibraryPageStructure(title, composers) {
+    const { listEl } = getElements();
+    const viewTitle = document.getElementById("view-title-container");
+    // Скрываем старый заголовок, мы его перенесем внутрь сетки
+    viewTitle.classList.add("hidden");
+
+    // Генерация опций для селекта (для мобильных и топ-бара)
+    const composerOptions = composers.map(c => `<option value="${c.id}">${c.name_ru}</option>`).join("");
+
+    // Хардкод популярных жанров для сайдбара
+    const quickGenres = [
+        { label: "Симфонии", value: "Symphony", icon: "music-2" },
+        { label: "Концерты", value: "Concerto", icon: "mic-2" }, // mic используем как метафору солиста
+        { label: "Сонаты", value: "Sonata", icon: "book-open" },
+        { label: "Опера", value: "Opera", icon: "mic" },
+        { label: "Камерная", value: "Chamber", icon: "users" },
+        { label: "Фортепиано", value: "Piano", icon: "music" }, // Нужно будет добавить фильтр по инструменту, пока используем это как жанр
+        { label: "Духовная", value: "Mass", icon: "church" },
+    ];
+
+    // Генерируем HTML для ссылок в сайдбаре
+    const sidebarGenresHtml = quickGenres.map(g => `
+        <button onclick="window.applyLibraryFilter('genre', '${g.value}')"
+                class="w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex items-center gap-3 text-sm font-medium">
+            <i data-lucide="${g.icon}" class="w-4 h-4"></i>
+            ${g.label}
+        </button>
+    `).join("");
+
+    // Берем первые 8 композиторов для "Быстрого доступа"
+    const sidebarComposersHtml = composers.slice(0, 8).map(c => `
+        <button onclick="window.applyLibraryFilter('composerId', '${c.id}')"
+                class="w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex items-center gap-3 text-sm font-medium group">
+            <div class="w-6 h-6 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                <img src="${c.portrait_url || '/static/img/placeholder.png'}" class="w-full h-full object-cover opacity-70 group-hover:opacity-100">
+            </div>
+            <span class="truncate">${c.name_ru}</span>
+        </button>
+    `).join("");
+
+    // === ГЛАВНЫЙ МАКЕТ ===
+    const layoutHtml = `
+    <div class="max-w-[1600px] mx-auto px-6 pb-20"> <!-- Увеличили max-w для десктопа -->
+
+        <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+            <!-- === ЛЕВЫЙ САЙДБАР (Навигация) === -->
+            <aside class="hidden lg:block w-64 flex-shrink-0 sticky top-4 space-y-8">
+
+                <!-- Заголовок раздела -->
+                <div class="px-2">
+                    <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1">
+                        <i data-lucide="${title === 'Видеозал' ? 'youtube' : 'disc'}" class="w-6 h-6 ${title === 'Видеозал' ? 'text-red-600' : 'text-cyan-600'}"></i>
+                        <span>${title}</span>
+                    </h2>
+                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Библиотека</p>
+                </div>
+
+                <!-- Блок: Жанры -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Категории</h3>
+                    <div class="space-y-1">
+                        <button onclick="window.applyLibraryFilter('genre', '')"
+                                class="w-full text-left px-3 py-2 rounded-lg bg-gray-100 text-gray-900 font-bold flex items-center gap-3 text-sm">
+                            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                            Все записи
+                        </button>
+                        ${sidebarGenresHtml}
+                    </div>
+                </div>
+
+                <!-- Блок: Композиторы -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Композиторы</h3>
+                    <div class="space-y-1">
+                        ${sidebarComposersHtml}
+                        <a href="/composers" data-navigo class="w-full text-left px-3 py-2 rounded-lg text-cyan-600 hover:underline transition-colors flex items-center gap-3 text-xs font-bold mt-2">
+                            Все композиторы...
+                        </a>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- === ЦЕНТРАЛЬНАЯ ЧАСТЬ (Список) === -->
+            <div class="flex-1 w-full min-w-0">
+
+                <!-- 1. Верхняя панель (Поиск и сортировка) -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 sticky top-0 z-20 mb-6">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <!-- Поиск (Широкий) -->
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                            <input type="text" placeholder="Поиск произведения, исполнителя..."
+                                   class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-400 outline-none transition-all"
+                                   onchange="window.applyLibraryFilter('search', this.value)">
+                        </div>
+
+                        <!-- Фильтры (Для мобильных они важны, для десктопа дублируют сайдбар, но нужны для тонкой настройки) -->
+                        <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+                            <select class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer lg:hidden"
+                                    onchange="window.applyLibraryFilter('composerId', this.value)">
+                                <option value="">Все композиторы</option>
+                                ${composerOptions}
+                            </select>
+
+                            <select class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
+                                    onchange="window.applyLibraryFilter('sortBy', this.value)">
+                                <option value="newest">Сначала новые</option>
+                                <option value="oldest">Сначала старые</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Панель действий (Play All / Shuffle / Count) -->
+                <div id="library-action-bar" class="flex items-center justify-between mb-4 px-2 hidden">
+                    <div class="text-sm text-gray-500">
+                        <span id="library-total-count" class="text-gray-900 font-bold text-lg">0</span> записей
+                    </div>
+                    <div class="flex gap-2">
+                        ${title !== 'Видеозал' ? `
+                        <button id="library-play-all-btn" class="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i> <span class="hidden sm:inline">Слушать всё</span>
+                        </button>
+                        <button id="library-shuffle-btn" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-bold shadow-sm hover:shadow transition-all active:scale-95">
+                            <i data-lucide="shuffle" class="w-4 h-4"></i> <span class="hidden sm:inline">Перемешать</span>
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- 3. Список результатов -->
+                <div id="library-results-container" class="min-h-[200px]"></div>
+
+                <!-- 4. Кнопка загрузки -->
+                <div id="library-load-more" class="mt-8 text-center hidden">
+                    <button onclick="window.loadMoreLibrary()" class="px-8 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-full hover:bg-gray-50 hover:shadow-md transition-all">
+                        Загрузить ещё
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    `;
+
+    listEl.innerHTML = layoutHtml;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function renderLibraryContent(recordings, type = 'list', favs, reset = false) {
+
+    const actionBar = document.getElementById("library-action-bar");
+    const totalCountEl = document.getElementById("library-total-count");
+
+    if (actionBar && totalCountEl) {
+        if (recordings.length > 0) {
+            actionBar.classList.remove("hidden");
+            // Если это сброс, то длина массива = общее кол-во загруженного
+            // (В идеале нужно брать total с сервера, но пока покажем сколько загружено)
+            totalCountEl.textContent = recordings.length + (window.state.libraryFilters.hasMore ? "+" : "");
+        } else {
+            actionBar.classList.add("hidden");
+        }
+    }
+
+    const container = document.getElementById("library-results-container");
+    if (!container) return;
+
+    if (recordings.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                <i data-lucide="filter" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+                <h3 class="text-lg font-medium text-gray-900">Ничего не найдено</h3>
+                <p class="text-gray-500">Попробуйте изменить параметры фильтрации</p>
+            </div>`;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+
+    let html = "";
+
+    // --- ЛОГИКА ДЛЯ СПИСКА (АУДИО) ---
+    if (type === 'list') {
+        const rows = recordings.map((r, i) => {
+            const isFav = favs.has(r.id);
+            const compTitle = r.composition.title_ru || r.composition.title;
+            const workTitle = r.composition.work.name_ru;
+            const composerName = r.composition.work.composer.name_ru;
+            const isSelected = window.state && window.state.selectedRecordingIds.has(r.id);
+
+            // ВОТ ОНА, РОДНАЯ. ЛОГИКА НАСЛЕДОВАНИЯ ОБЛОЖКИ:
+            // 1. Обложка части -> 2. Обложка произведения -> 3. Заглушка
+            const cover = r.composition.cover_art_url || r.composition.work.cover_art_url || "/static/img/placeholder.png";
+
+            return `
+            <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${isSelected ? 'bg-cyan-50 border-cyan-200' : 'border-b border-gray-100'} bg-white last:border-0 transition-colors cursor-pointer"
+                 data-recording-id="${r.id}" data-index="${i}">
+
+                 <div class="w-10 flex justify-center items-center">
+                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${r.id}" ${isSelected ? 'checked' : ''}>
+                 </div>
+
+                 <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${r.id}">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                 </div>
+
+                 <!-- ВОТ СЮДА Я ВЕРНУЛ КАРТИНКУ -->
+                 <div class="flex-shrink-0 mx-4">
+                    <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
+                 </div>
+
+                 <div class="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div>
+                         <div class="font-bold text-gray-800 text-sm truncate flex items-center gap-2">
+                            ${compTitle}
+                         </div>
+                         <div class="text-xs text-gray-500 truncate">${workTitle} • ${composerName}</div>
+                     </div>
+                     <div class="hidden md:block">
+                         <div class="text-sm text-gray-700 truncate">${r.performers || "Исполнитель не указан"}</div>
+                         <div class="text-xs text-gray-400">${r.recording_year || ""}</div>
+                     </div>
+                 </div>
+
+                 <button class="favorite-btn p-2 mr-2 ${isFav ? 'text-red-500' : 'text-gray-300 hover:text-red-400'}" data-recording-id="${r.id}">
+                     <i data-lucide="heart" class="w-4 h-4 ${isFav ? 'fill-current' : ''}"></i>
+                 </button>
+
+                 <div class="w-16 text-right text-xs text-gray-500 font-mono">
+                    ${formatDuration(r.duration)}
+                 </div>
+            </div>`;
+        }).join("");
+
+        html = `<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">${rows}</div>`;
+    }
+    // --- ЛОГИКА ДЛЯ СЕТКИ (ВИДЕО) ---
+    else {
+        const cards = recordings.map(r => {
+             const compTitle = r.composition.title_ru;
+             const composerName = r.composition.work.composer.name_ru;
+
+             return `
+             <div class="bg-white rounded-xl border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all p-4 flex flex-col h-full group">
+                 <div class="relative aspect-video rounded-lg bg-gray-100 mb-4 overflow-hidden">
+                     <!-- Можно вставить превью с ютуба, если распарсить URL, пока заглушка -->
+                     <div class="absolute inset-0 flex items-center justify-center text-red-500 bg-red-50">
+                        <i data-lucide="youtube" class="w-12 h-12"></i>
+                     </div>
+                     <a href="${r.youtube_url}" target="_blank" class="absolute inset-0 z-10"></a>
+                 </div>
+
+                 <div class="mb-2">
+                    <h3 class="font-bold text-gray-800 line-clamp-2 text-sm group-hover:text-red-600 transition-colors">${compTitle}</h3>
+                    <p class="text-xs text-gray-500 mt-1">${composerName}</p>
+                 </div>
+
+                 <div class="mt-auto pt-3 border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
+                    <span class="truncate max-w-[70%]">${r.performers || "Unknown"}</span>
+                    <span>${r.recording_year || ""}</span>
+                 </div>
+
+                 <!-- Кнопки управления (удалить/ред) можно добавить сюда при желании -->
+             </div>
+             `;
+        }).join("");
+
+        html = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">${cards}</div>`;
+    }
+
+    if (reset) {
+        container.innerHTML = html;
+    } else {
+        // Если это дозагрузка (infinite scroll), добавляем к существующему.
+        // В случае со списком (list) это сложнее, так как там обертка div.
+        // Для простоты в этом примере всегда перерисовываем весь список из state.
+        container.innerHTML = html;
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function updateLoadMoreButton(hasMore) {
+    const btn = document.getElementById("library-load-more");
+    if (btn) {
+        if (hasMore) btn.classList.remove("hidden");
+        else btn.classList.add("hidden");
+    }
 }
 

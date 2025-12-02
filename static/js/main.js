@@ -33,6 +33,17 @@ let state = {
   displayLanguage: "ru",
   selectedRecordingIds: new Set(), // <--- ДОБАВИТЬ ЭТО
   lastSelectedId: null, // Для Shift+Click
+  libraryFilters: {
+    page: 1,
+    limit: 20,
+    mediaType: null, // 'audio' или 'video'
+    composerId: "",
+    genre: "",
+    sortBy: "newest",
+    search: "",
+    hasMore: true
+  },
+  composersList: [],
 };
 
 window.state = state;
@@ -351,43 +362,42 @@ async function loadCurrentView() {
         break;
 
       case "library_audio":
-        // Загружаем ВСЕ записи (можно оптимизировать на бэкенде, но пока фильтруем на фронте)
-        const rAudio = await apiRequest(`/api/recordings/?skip=0&limit=100`); // Увеличил лимит
-        // Фильтруем: оставляем только те, где есть файл (duration > 0)
-        const onlyAudio = rAudio.recordings.filter((r) => r.duration > 0);
+        // 1. Получаем список композиторов для фильтра (если еще нет)
+        if (state.composersList.length === 0) {
+             state.composersList = await apiRequest("/api/recordings/composers?limit=100");
+        }
 
-        state.currentViewRecordings = onlyAudio; // Для плеера
+        // 2. Сбрасываем фильтры
+        state.libraryFilters.mediaType = 'audio';
+        state.libraryFilters.composerId = "";
+        state.libraryFilters.genre = "";
+        state.libraryFilters.search = "";
 
-        // Рендерим список. Функция renderRecordingList сама поймет, что видео нет, и не нарисует блок видео.
-        ui.renderRecordingList(
-          onlyAudio,
-          "Аудиоархив",
-          0,
-          {},
-          state.favoriteRecordingIds
-        );
+        // 3. Рисуем каркас страницы (шапку с фильтрами)
+        ui.renderLibraryPageStructure("Аудиоархив", state.composersList);
+
+        // 4. Грузим данные
+        await loadLibraryWithFilters(true);
         break;
 
       case "library_video":
-        const rVideo = await apiRequest(`/api/recordings/?skip=0&limit=100`);
-        // Фильтруем: оставляем только те, где duration === 0
-        const onlyVideo = rVideo.recordings.filter((r) => r.duration === 0);
+        if (state.composersList.length === 0) {
+             state.composersList = await apiRequest("/api/recordings/composers?limit=100");
+        }
+        state.libraryFilters.mediaType = 'video';
+        state.libraryFilters.composerId = "";
+        state.libraryFilters.genre = "";
+        state.libraryFilters.search = "";
 
-        state.currentViewRecordings = onlyVideo;
-
-        ui.renderRecordingList(
-          onlyVideo,
-          "Видеозал",
-          0,
-          {},
-          state.favoriteRecordingIds
-        );
+        ui.renderLibraryPageStructure("Видеозал", state.composersList);
+        await loadLibraryWithFilters(true);
         break;
-        case "blog_list":
-          const posts = await apiRequest("/api/blog/");
-          ui.renderBlogList(posts);
-          break;
-        case "blog_post":
+       // === ВСТАВИТЬ ЭТОТ КУСОК ===
+      case "blog_list":
+        const posts = await apiRequest("/api/blog/");
+        ui.renderBlogList(posts);
+        break;
+      case "blog_post":
         const post = await apiRequest(`/api/blog/${state.view.blogSlug}`);
         ui.renderBlogPost(post);
         break;
@@ -518,6 +528,46 @@ function addEventListeners() {
              }
         }
         return;
+    }
+
+    // --- КНОПКИ БИБЛИОТЕКИ (Слушать всё / Перемешать) ---
+
+    // 1. Слушать всё (текущие результаты фильтра)
+    if (target.closest("#library-play-all-btn")) {
+        const list = state.currentViewRecordings;
+        if (!list || list.length === 0) return ui.showNotification("Список пуст", "info");
+
+        // Запускаем первый трек, а список передаем плееру
+        // (Плеер сам построит очередь из этого списка)
+        player.handleTrackClick(list[0].id, 0, list);
+        ui.showNotification(`Воспроизведение ${list.length} треков`, "success");
+    }
+
+    // 2. Перемешать (Shuffle)
+    if (target.closest("#library-shuffle-btn")) {
+        // Берем текущие загруженные записи
+        // Важно: создаем копию массива, чтобы не ломать порядок в state.currentViewRecordings
+        let shuffledList = [...state.currentViewRecordings];
+
+        if (!shuffledList || shuffledList.length === 0) return ui.showNotification("Список пуст", "info");
+
+        // Алгоритм тасования (мешаем копию)
+        for (let i = shuffledList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledList[i], shuffledList[j]] = [shuffledList[j], shuffledList[i]];
+        }
+
+        // МЫ НЕ ПЕРЕРИСОВЫВАЕМ ИНТЕРФЕЙС!
+        // Список на экране остается старым (упорядоченным).
+
+        // Но в плеер мы отдаем перемешанную версию.
+        // Плеер будет играть треки в порядке из shuffledList.
+
+        // Запускаем первый трек из перемешанного списка
+        // 0 - это индекс в shuffledList, а не в визуальном списке
+        player.handleTrackClick(shuffledList[0].id, 0, shuffledList);
+
+        ui.showNotification("Воспроизведение в случайном порядке", "success");
     }
 
     // --- КОНТЕКСТНОЕ МЕНЮ ---
@@ -1801,3 +1851,65 @@ async function loadMoreComposers() {
     ui.showNotification("Ошибка загрузки: " + e.message, "error");
   }
 }
+// Функция для загрузки библиотеки с учетом фильтров
+async function loadLibraryWithFilters(reset = false) {
+    if (reset) {
+        state.libraryFilters.page = 1;
+        state.currentViewRecordings = [];
+        state.libraryFilters.hasMore = true;
+        // Очищаем список визуально
+        const list = document.getElementById("library-results-container");
+        if(list) list.innerHTML = '<div class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div></div>';
+    }
+
+    const { page, limit, mediaType, composerId, genre, sortBy, search } = state.libraryFilters;
+    const skip = (page - 1) * limit;
+
+    // Строим URL
+    let url = `/api/recordings/?skip=${skip}&limit=${limit}`;
+    if (mediaType) url += `&media_type=${mediaType}`;
+    if (composerId) url += `&composer_id=${composerId}`;
+    if (genre) url += `&genre=${genre}`;
+    if (sortBy) url += `&sort_by=${sortBy}`;
+    if (search) url += `&q=${encodeURIComponent(search)}`;
+
+    try {
+        const data = await apiRequest(url);
+
+        if (data.recordings.length < limit) {
+            state.libraryFilters.hasMore = false;
+        }
+
+        if (reset) {
+            state.currentViewRecordings = data.recordings;
+        } else {
+            state.currentViewRecordings = [...state.currentViewRecordings, ...data.recordings];
+        }
+
+        // Рендерим результат
+        ui.renderLibraryContent(
+            state.currentViewRecordings,
+            mediaType === 'audio' ? 'list' : 'grid', // Аудио списком, Видео сеткой
+            state.favoriteRecordingIds,
+            reset
+        );
+
+        // Обновляем кнопку "Показать еще"
+        ui.updateLoadMoreButton(state.libraryFilters.hasMore);
+
+    } catch (e) {
+        console.error(e);
+        ui.showNotification("Ошибка загрузки: " + e.message, "error");
+    }
+}
+
+// Экспортируем функцию в window, чтобы вызывать из ui.js (onchange)
+window.applyLibraryFilter = (key, value) => {
+    state.libraryFilters[key] = value;
+    loadLibraryWithFilters(true); // true = сброс и новая загрузка
+};
+
+window.loadMoreLibrary = () => {
+    state.libraryFilters.page += 1;
+    loadLibraryWithFilters(false); // false = дозагрузка
+};
