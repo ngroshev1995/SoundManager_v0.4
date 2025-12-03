@@ -1260,20 +1260,30 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
         if (c.composition_year) metaParts.push(`<span>${c.composition_year}</span>`);
 
-        const metaHtml = metaParts.length > 0
-            ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join('<span class="text-gray-300">•</span>')}</div>`
+        const metaHtml =
+          metaParts.length > 0
+            ? `<div class="text-xs text-gray-400 mt-1 flex gap-2 items-center">${metaParts.join(
+                '<span class="text-gray-300">•</span>'
+              )}</div>`
             : "";
 
-        // === ПРОВЕРКА ПРАВ АДМИНА ===
+        // === НОВАЯ ЛОГИКА ИКОНОК ===
+        let iconsHtml = '';
+        if (c.has_audio) {
+            iconsHtml += `<i data-lucide="disc" class="w-5 h-5 text-cyan-500" title="Есть аудиозаписи"></i>`;
+        }
+        if (c.has_video) {
+            iconsHtml += `<i data-lucide="youtube" class="w-5 h-5 text-red-500" title="Есть видеозаписи"></i>`;
+        }
+
+        const iconsContainer = iconsHtml
+            ? `<div class="flex items-center gap-2 ml-4">${iconsHtml}</div>`
+            : '';
+        // ============================
+
         const isUserAdmin = isAdmin();
-
-        // 1. Атрибут draggable ставим только админу
         const draggableAttr = isUserAdmin ? 'draggable="true"' : '';
-
-        // 2. Курсор move только админу
         const cursorClass = isUserAdmin ? 'cursor-move' : 'cursor-pointer';
-
-        // 3. Иконку хваталки рисуем только админу
         const gripIcon = isUserAdmin
             ? `<i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500 ml-4"></i>`
             : ``;
@@ -1282,17 +1292,20 @@ export async function renderCompositionGrid(work, lang = "ru") {
             <a href="/compositions/${c.slug || c.id}" data-navigo ${draggableAttr} data-comp-id="${c.id}"
                class="comp-sortable-item flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
 
-                <div class="flex items-center gap-4 pointer-events-none">
-                    <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm">
+                <div class="flex items-center gap-4 pointer-events-none min-w-0">
+                    <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0">
                         ${c.sort_order || "#"}
                     </div>
-                    <div>
-                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors">${getLocalizedText(c, "title", lang)}</span>
+                    <div class="min-w-0">
+                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors truncate">${getLocalizedText(c, "title", lang)}</span>
                         ${metaHtml}
                     </div>
                 </div>
 
-                ${gripIcon} <!-- Вставляем иконку только админу -->
+                <div class="flex items-center flex-shrink-0">
+                    ${iconsContainer} <!-- Вставляем контейнер с иконками -->
+                    ${gripIcon}
+                </div>
             </a>
         `;
       })
@@ -2149,6 +2162,9 @@ export function showEditEntityModal(type, data, onSave) {
 
   // --- СОХРАНЕНИЕ ---
   newBtn.onclick = async () => {
+
+    const originalText = newBtn.textContent;
+
     newBtn.disabled = true;
     newBtn.textContent = "Сохранение...";
 
@@ -2255,8 +2271,11 @@ export function showEditEntityModal(type, data, onSave) {
       }
     } catch (e) {
       window.showNotification("Ошибка: " + e.message, "error");
+
+    } finally {
+      // А блок finally ВСЕГДА возвращает кнопку в исходное состояние
       newBtn.disabled = false;
-      newBtn.textContent = "Сохранить";
+      newBtn.textContent = originalText;
     }
   };
 
@@ -3280,8 +3299,6 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
     if (actionBar && totalCountEl) {
         if (recordings.length > 0) {
             actionBar.classList.remove("hidden");
-            // Если это сброс, то длина массива = общее кол-во загруженного
-            // (В идеале нужно брать total с сервера, но пока покажем сколько загружено)
             totalCountEl.textContent = recordings.length + (window.state.libraryFilters.hasMore ? "+" : "");
         } else {
             actionBar.classList.add("hidden");
@@ -3312,9 +3329,6 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
             const workTitle = r.composition.work.name_ru;
             const composerName = r.composition.work.composer.name_ru;
             const isSelected = window.state && window.state.selectedRecordingIds.has(r.id);
-
-            // ВОТ ОНА, РОДНАЯ. ЛОГИКА НАСЛЕДОВАНИЯ ОБЛОЖКИ:
-            // 1. Обложка части -> 2. Обложка произведения -> 3. Заглушка
             const cover = r.composition.cover_art_url || r.composition.work.cover_art_url || "/static/img/placeholder.png";
 
             return `
@@ -3329,7 +3343,6 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                  </div>
 
-                 <!-- ВОТ СЮДА Я ВЕРНУЛ КАРТИНКУ -->
                  <div class="flex-shrink-0 mx-4">
                     <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
                  </div>
@@ -3351,8 +3364,13 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
                      <i data-lucide="heart" class="w-4 h-4 ${isFav ? 'fill-current' : ''}"></i>
                  </button>
 
-                 <div class="w-16 text-right text-xs text-gray-500 font-mono">
-                    ${formatDuration(r.duration)}
+                 <div class="flex flex-col items-end justify-center w-20 ml-auto">
+                    <div class="text-xs text-gray-500 font-mono">${formatDuration(r.duration)}</div>
+                    ${
+                      isAdmin()
+                        ? `<div class="text-[10px] text-gray-300 font-mono mt-0.5 select-all cursor-copy hover:text-cyan-600 transition-colors" title="ID: ${r.id}">#${r.id}</div>`
+                        : ""
+                    }
                  </div>
             </div>`;
         }).join("");
@@ -3363,29 +3381,48 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
     else {
         const cards = recordings.map(r => {
              const compTitle = r.composition.title_ru;
+             const workTitle = r.composition.work.name_ru;
              const composerName = r.composition.work.composer.name_ru;
+             const youtubeId = r.youtube_url.split('v=')[1]?.split('&')[0];
+
+             const controls = isAdmin()
+                ? `
+                <div class="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm p-1.5 rounded-lg shadow-md z-10">
+                    <span class="text-[10px] text-gray-400 font-mono select-all cursor-copy hover:text-cyan-600 transition-colors px-1">#${r.id}</span>
+                    <button class="edit-video-btn p-1.5 text-gray-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-md transition-colors" data-recording-id="${r.id}" title="Редактировать">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-video-btn p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" data-recording-id="${r.id}" title="Удалить">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                `
+                : "";
 
              return `
-             <div class="bg-white rounded-xl border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all p-4 flex flex-col h-full group">
-                 <div class="relative aspect-video rounded-lg bg-gray-100 mb-4 overflow-hidden">
-                     <!-- Можно вставить превью с ютуба, если распарсить URL, пока заглушка -->
-                     <div class="absolute inset-0 flex items-center justify-center text-red-500 bg-red-50">
-                        <i data-lucide="youtube" class="w-12 h-12"></i>
+             <div class="relative bg-white rounded-xl border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all p-4 flex flex-col h-full group">
+                 ${controls}
+                 <div class="relative aspect-video rounded-lg bg-gray-100 mb-4 overflow-hidden cursor-pointer"
+                      onclick="window.playYouTubeVideo('${youtubeId}')">
+
+                     <img src="https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+
+                     <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div class="bg-white/80 backdrop-blur-sm p-4 rounded-full text-red-600 shadow-lg">
+                            <i data-lucide="play" class="w-8 h-8 fill-current"></i>
+                        </div>
                      </div>
-                     <a href="${r.youtube_url}" target="_blank" class="absolute inset-0 z-10"></a>
                  </div>
 
                  <div class="mb-2">
-                    <h3 class="font-bold text-gray-800 line-clamp-2 text-sm group-hover:text-red-600 transition-colors">${compTitle}</h3>
-                    <p class="text-xs text-gray-500 mt-1">${composerName}</p>
+                    <h3 class="font-bold text-gray-800 line-clamp-2 text-sm">${compTitle}</h3>
+                    <p class="text-xs text-gray-500 mt-1">${workTitle} • ${composerName}</p>
                  </div>
 
                  <div class="mt-auto pt-3 border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
-                    <span class="truncate max-w-[70%]">${r.performers || "Unknown"}</span>
-                    <span>${r.recording_year || ""}</span>
+                    <span class="pr-2">${r.performers || "Unknown"}</span>
+                    <span class="flex-shrink-0">${r.recording_year || ""}</span>
                  </div>
-
-                 <!-- Кнопки управления (удалить/ред) можно добавить сюда при желании -->
              </div>
              `;
         }).join("");
@@ -3396,9 +3433,6 @@ export function renderLibraryContent(recordings, type = 'list', favs, reset = fa
     if (reset) {
         container.innerHTML = html;
     } else {
-        // Если это дозагрузка (infinite scroll), добавляем к существующему.
-        // В случае со списком (list) это сложнее, так как там обертка div.
-        // Для простоты в этом примере всегда перерисовываем весь список из state.
         container.innerHTML = html;
     }
 

@@ -623,6 +623,26 @@
     </div>
 </div>
 
+<!-- === ВИДЕОПЛЕЕР (МОДАЛЬНОЕ ОКНО) === -->
+<div id="video-player-modal"
+     class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0">
+
+    <div class="bg-black rounded-xl shadow-2xl w-full max-w-4xl transform scale-95 transition-all duration-200" id="video-modal-content">
+
+        <!-- Верхняя панель с кнопкой закрытия -->
+        <div class="h-10 flex justify-end items-center pr-4">
+            <button class="close-button text-gray-400 hover:text-white transition-colors" title="Закрыть">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- Контейнер для встраивания плеера -->
+        <div class="aspect-video" id="youtube-player-container">
+            <!-- Сюда JS вставит iframe -->
+        </div>
+    </div>
+</div>
+
 <!-- File Inputs -->
 <input type="file" id="cover-art-upload-input" class="hidden"/>
 <input type="file" id="composition-upload-input" class="hidden"/>

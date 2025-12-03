@@ -665,11 +665,18 @@ function addEventListeners() {
     }
 
     // --- МОДАЛЬНЫЕ ОКНА (Закрытие) ---
-    if (target.closest(".close-button")) {
-      document
-        .querySelectorAll(".modal")
-        .forEach((m) => m.classList.add("hidden"));
+    const closeBtn = target.closest(".close-button");
+    if (closeBtn) {
+        const modal = closeBtn.closest(".modal");
+        if (modal) {
+            if (modal.id === 'video-player-modal') {
+                closeYouTubeVideo();
+            } else {
+                modal.classList.add("hidden");
+            }
+        }
     }
+
 
     // --- СОЗДАНИЕ СУЩНОСТЕЙ (Кнопки внутри модалок) ---
     // 1. Композитор (СОЗДАНИЕ)
@@ -1913,3 +1920,45 @@ window.loadMoreLibrary = () => {
     state.libraryFilters.page += 1;
     loadLibraryWithFilters(false); // false = дозагрузка
 };
+
+// main.js
+
+// === ЛОГИКА YOUTUBE ПЛЕЕРА ===
+
+window.playYouTubeVideo = (videoId) => {
+    if (!videoId) return;
+
+    const modal = document.getElementById('video-player-modal');
+    const container = document.getElementById('youtube-player-container');
+
+    // Встраиваем iframe с видео
+    container.innerHTML = `
+        <iframe class="w-full h-full"
+                src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+        </iframe>`;
+
+    // Показываем модалку с анимацией
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        document.getElementById('video-modal-content').classList.remove('scale-95');
+    }, 10); // Небольшая задержка для CSS-анимации
+};
+
+function closeYouTubeVideo() {
+    const modal = document.getElementById('video-player-modal');
+    const container = document.getElementById('youtube-player-container');
+
+    // Прячем модалку
+    modal.classList.add('opacity-0');
+    document.getElementById('video-modal-content').classList.add('scale-95');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        // Очищаем iframe, чтобы остановить воспроизведение
+        container.innerHTML = '';
+    }, 200); // Ждем завершения анимации
+}

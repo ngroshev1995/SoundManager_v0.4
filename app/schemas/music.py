@@ -152,6 +152,8 @@ class WorkSimple(WorkBase):
 class CompositionSimple(CompositionBase):
     id: int
     slug: Optional[str] = None
+    has_audio: bool = False
+    has_video: bool = False
     class Config:
         from_attributes = True
 
