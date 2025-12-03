@@ -2,5 +2,9 @@
 venv/
 .env
 __pycache__/
+music/
+covers/
+music_manager.db
 *.pyc
 alembic.ini
+make_admin.py
