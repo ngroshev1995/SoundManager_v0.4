@@ -1,7 +1,7 @@
 import app.utils as utils
 import uuid
-from typing import List, Any, Optional
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Response
+from typing import List, Any, Optional, Literal
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Response, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, contains_eager
 from sqlalchemy import func, or_
@@ -183,7 +183,6 @@ def delete_recording(rid: int, db: Session = Depends(get_db), u: models.User = D
 
 
 # --- ЧТЕНИЕ (ПУБЛИЧНОЕ) ---
-# Убрана зависимость от get_current_user
 
 @router.get("/composers", response_model=List[schemas.music.Composer])
 def get_composers(
@@ -207,12 +206,26 @@ def get_composer_works(slug: str, db: Session = Depends(get_db)):
     if not c: raise HTTPException(404, "Composer not found")
     return db.query(models.music.Work).filter(models.music.Work.composer_id == c.id).order_by(models.music.Work.name_ru).all()
 
+
 @router.get("/works/{slug}", response_model=schemas.music.Work)
 def get_work(slug: str, db: Session = Depends(get_db)):
     w = crud.music.get_work_by_slug(db, slug)
-    if not w and slug.isdigit(): w = db.query(models.music.Work).get(int(slug))
-    if not w: raise HTTPException(404, "Not found")
-    return db.query(models.music.Work).options(joinedload(models.music.Work.compositions)).filter(models.music.Work.id == w.id).first()
+    if not w and slug.isdigit():
+        w = db.query(models.music.Work).get(int(slug))
+    if not w:
+        raise HTTPException(404, "Not found")
+
+    # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем .joinedload(models.music.Composition.recordings)
+    # Эта строка говорит SQLAlchemy подгрузить записи для каждой части.
+    return (
+        db.query(models.music.Work)
+        .options(
+            joinedload(models.music.Work.compositions)
+            .joinedload(models.music.Composition.recordings)
+        )
+        .filter(models.music.Work.id == w.id)
+        .first()
+    )
 
 @router.get("/compositions/{slug}", response_model=schemas.music.Composition)
 def get_composition(slug: str, db: Session = Depends(get_db)):
@@ -231,9 +244,60 @@ def get_comp_recordings(slug: str, db: Session = Depends(get_db)):
     return db.query(models.music.Recording).filter(models.music.Recording.composition_id == c.id).all()
 
 
-# app/api/endpoints/recordings.py
+@router.get("/random-playable", response_model=schemas.music.Work)
+def get_random_playable_work(
+        db: Session = Depends(get_db),
+        exclude_ids: Optional[List[int]] = Query(None)  # <--- НОВЫЙ ПАРАМЕТР
+):
+    """
+    Возвращает одно случайное произведение, у которого есть хотя бы одна аудиозапись,
+    исключая произведения из списка exclude_ids.
+    """
+    random_func = func.random()
+    if db.bind.dialect.name == 'mysql':
+        random_func = func.rand()
 
-from typing import Optional, Literal  # Добавьте Literal в импорты
+    query = (
+        db.query(models.music.Work)
+        .join(models.music.Work.compositions)
+        .join(models.music.Composition.recordings)
+        .filter(models.music.Recording.duration > 0)
+    )
+
+    # === ЛОГИКА ИСКЛЮЧЕНИЯ ===
+    if exclude_ids:
+        query = query.filter(models.music.Work.id.notin_(exclude_ids))
+    # ========================
+
+    work = query.order_by(random_func).first()
+
+    # Если с учетом исключений ничего не найдено, пробуем найти любое без исключений
+    if not work:
+        # Это сработает, когда все произведения проиграны и мы начинаем заново
+        work = (
+            db.query(models.music.Work)
+            .join(models.music.Work.compositions)
+            .join(models.music.Composition.recordings)
+            .filter(models.music.Recording.duration > 0)
+            .order_by(random_func)
+            .first()
+        )
+
+    if not work:
+        raise HTTPException(status_code=404, detail="No playable works found")
+
+    # "Жадно" загружаем все части и их записи для найденного произведения
+    result = (
+        db.query(models.music.Work)
+        .options(
+            joinedload(models.music.Work.compositions)
+            .joinedload(models.music.Composition.recordings)
+        )
+        .filter(models.music.Work.id == work.id)
+        .first()
+    )
+
+    return result
 
 
 @router.get("/", response_model=schemas.music.RecordingPage)
@@ -377,3 +441,5 @@ def reorder_work_compositions(
 ):
     crud.music.reorder_compositions(db, work_id, payload.composition_ids)
     return {"status": "ok"}
+
+

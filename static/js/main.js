@@ -445,6 +445,51 @@ function addEventListeners() {
       ui.showAuthView();
     }
 
+    // --- ВОСПРОИЗВЕДЕНИЕ ВСЕГО ПРОИЗВЕДЕНИЯ ---
+    if (target.closest("#work-play-all-btn")) {
+        const work = window.state.view.currentWork;
+        if (!work || !work.compositions) return;
+
+        // ШАГ 1: Собираем плейлист из ВСЕХ аудиозаписей этого произведения.
+        const playlist = work.compositions
+            .flatMap(comp => {
+                // Для каждой записи добавляем полную информацию о ее "родителях"
+                return comp.recordings
+                    .filter(r => r.duration > 0)
+                    .map(rec => ({
+                        ...rec,
+                        composition: {
+                            ...comp,
+                            work: work // <-- ВОТ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ
+                        }
+                    }));
+            })
+            .sort((a, b) => a.composition.sort_order - b.composition.sort_order);
+
+        if (playlist.length === 0) {
+            return ui.showNotification("В этом произведении нет аудиозаписей", "info");
+        }
+
+        // ШАГ 2: Запускаем первый трек, передавая в плеер ПОЛНОСТЬЮ собранный плейлист.
+        player.handleTrackClick(playlist[0].id, 0, playlist);
+        ui.showNotification(`Воспроизведение ${playlist.length} треков`, "success");
+    }
+
+    // === УПРАВЛЕНИЕ ОЧЕРЕДЬЮ ===
+
+    // 1. Полная очистка очереди
+    if (target.closest("#clear-queue-btn")) {
+        e.preventDefault(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+        player.clearFullQueue();
+    }
+
+    // 2. Удаление одного трека из очереди
+    const removeBtn = target.closest(".remove-from-queue-btn");
+    if (removeBtn) {
+        const index = parseInt(removeBtn.dataset.index, 10);
+        player.removeFromQueueByIndex(index);
+    }
+
     // --- БЛОГ ---
     if (target.closest("#create-post-btn")) {
         ui.showBlogModal();
@@ -1597,12 +1642,17 @@ function showRecordingContextMenu(x, y, rid) {
          ${isMulti ? `Выбрано: ${count}` : "Действия"}
        </div>`;
 
+  // Кнопки "Далее" и "В очередь" показываем ВСЕГДА
+  html += `
+    <li data-action="play-next" class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"><i data-lucide="corner-down-right" class="w-4 h-4"></i> Играть следующим</li>
+    <li data-action="add-to-queue" class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"><i data-lucide="list-plus" class="w-4 h-4"></i> Добавить в очередь</li>
+  `;
+
+  // Кнопку "Редактировать" показываем ТОЛЬКО если выделен ОДИН трек
   if (!isMulti) {
     html += `
-       <li data-action="play-next" class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"><i data-lucide="list-start" class="w-4 h-4"></i> Далее</li>
-       <li data-action="add-to-queue" class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"><i data-lucide="list-plus" class="w-4 h-4"></i> В очередь</li>
        <li data-action="edit-recording" class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"><i data-lucide="edit" class="w-4 h-4"></i> Редактировать</li>
-     `;
+    `;
   }
 
   // Вставляем "В плейлист" ТОЛЬКО если мы не в плейлисте
@@ -1631,6 +1681,30 @@ async function handleContextMenuAction(li) {
 
   const act = li.dataset.action;
 
+  const unselectItems = () => {
+      // 1. Проходимся по ID, которые были выделены (это источник правды)
+      for (const id of state.selectedRecordingIds) {
+          // 2. Находим соответствующий элемент на странице
+          const row = document.querySelector(`.recording-item[data-recording-id="${id}"]`);
+          if (row) {
+              // 3. Убираем стили выделения
+              row.classList.remove("bg-cyan-50", "border-cyan-200");
+              row.classList.add("border-gray-100"); // Возвращаем стандартную границу
+
+              // 4. Снимаем галочку с чекбокса
+              const checkbox = row.querySelector(`.recording-checkbox[data-id="${id}"]`);
+              if (checkbox) {
+                  checkbox.checked = false;
+              }
+          }
+      }
+      // 5. Очищаем сам массив ID
+      state.selectedRecordingIds.clear();
+      // 6. Скрываем панель
+      ui.updateSelectionBar(0);
+  };
+
+
   // Преобразуем ID записи и плейлиста в числа сразу
   const contextRid = parseInt(m.dataset.recordingId);
   const contextPid = parseInt(m.dataset.playlistId);
@@ -1658,14 +1732,12 @@ async function handleContextMenuAction(li) {
 
   if (act === "play-next") {
     player.playNextInQueue(targetRecordings);
-    state.selectedRecordingIds.clear();
-    loadCurrentView(); // Чтобы снять галочки
+    unselectItems(); // <-- ИСПРАВЛЕНИЕ
   }
 
   if (act === "add-to-queue") {
     player.addToQueue(targetRecordings);
-    state.selectedRecordingIds.clear();
-    loadCurrentView();
+    unselectItems(); // <-- ИСПРАВЛЕНИЕ
   }
 
   if (act === "edit-recording") {
@@ -1708,15 +1780,7 @@ async function handleContextMenuAction(li) {
       ui.showNotification(`Добавлено треков: ${successCount}`, "success");
     }
 
-    state.selectedRecordingIds.clear();
-    // Перерисовываем, чтобы убрать выделение
-    ui.renderRecordingList(
-      state.currentViewRecordings,
-      document.getElementById("view-title-container").textContent,
-      0,
-      {},
-      state.favoriteRecordingIds
-    );
+    unselectItems();
   }
 
   // УБРАТЬ ИЗ ТЕКУЩЕГО ПЛЕЙЛИСТА
@@ -1742,7 +1806,8 @@ async function handleContextMenuAction(li) {
       state.currentViewRecordings = state.currentViewRecordings.filter(
         (r) => !targetIds.includes(r.id)
       );
-      state.selectedRecordingIds.clear();
+
+      unselectItems();
 
       // Перерисовываем список
       ui.renderRecordingList(
@@ -1783,8 +1848,7 @@ async function handleContextMenuAction(li) {
         }
         ui.showNotification(`Удалено файлов: ${deletedCount}`, "success");
         document.getElementById("delete-modal").classList.add("hidden");
-
-        state.selectedRecordingIds.clear();
+        unselectItems();
         loadCurrentView();
       },
     });

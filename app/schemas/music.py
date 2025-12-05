@@ -149,11 +149,20 @@ class WorkSimple(WorkBase):
     class Config:
         from_attributes = True
 
+
+class RecordingSimple(RecordingBase):
+    id: int
+    duration: int
+    file_path: str
+    class Config:
+        from_attributes = True
+
 class CompositionSimple(CompositionBase):
     id: int
     slug: Optional[str] = None
     has_audio: bool = False
     has_video: bool = False
+    recordings: List[RecordingSimple] = []
     class Config:
         from_attributes = True
 

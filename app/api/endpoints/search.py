@@ -38,7 +38,8 @@ def universal_search(q: str, db: Session = Depends(get_db)):
     found_works = [
                       w for w in all_works
                       if is_match(w.name_ru, search_term) or
-                         is_match(w.original_name, search_term)
+                         is_match(w.original_name, search_term) or
+                         is_match(w.nickname, search_term)
                   ][:20]
 
     # 3. Части (Compositions) - Ищем по названию части

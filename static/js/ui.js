@@ -28,6 +28,8 @@ const GENRE_OPTIONS = [
   { value: "Overture", label: "Увертюра" },
   { value: "Motet", label: "Мотет" },
   { value: "Fanfare", label: "Фанфары" },
+  { value: "Cantata", label: "Кантата" },
+
 ];
 
 // 2. АВТОМАТИЧЕСКИЙ СЛОВАРЬ ПЕРЕВОДОВ
@@ -973,23 +975,38 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
   const composerLink = `/composers/${work.composer.slug || work.composer.id}`;
 
-  const adminControls = isAdmin()
-    ? `
+  // === 1. Проверяем, есть ли что играть ===
+  // Проходим по всем частям (compositions) и смотрим, есть ли у них хоть одна аудиозапись (duration > 0)
+  const hasPlayableRecordings = work.compositions.some(comp =>
+      comp.recordings && comp.recordings.some(r => r.duration > 0)
+  );
+
+  // === 2. Создаем HTML для кнопки, если есть что играть ===
+  const playButton = hasPlayableRecordings ? `
+    <button id="work-play-all-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2">
+        <i data-lucide="play" class="w-5 h-5"></i> <span>Слушать всё</span>
+    </button>
+  ` : '';
+
+  // === 3. Собираем все кнопки вместе ===
+  const allControls = `
     <div class="flex flex-wrap gap-3 mt-6 md:mt-0 w-full md:w-auto">
-        <button id="direct-upload-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2" data-work-id="${work.id}">
-            <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить запись</span>
-        </button>
-        <button id="add-composition-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i> <span>Часть</span>
-        </button>
-        <button id="edit-work-btn" class="border border-gray-300 text-gray-700 px-3 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors" title="Редактировать">
-            <i data-lucide="edit-2" class="w-5 h-5"></i>
-        </button>
-        <button id="delete-work-btn" class="border border-red-200 text-red-500 px-3 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors" title="Удалить">
-            <i data-lucide="trash-2" class="w-5 h-5"></i>
-        </button>
-    </div>`
-    : "";
+        ${playButton}
+        ${isAdmin() ? `
+            <button id="direct-upload-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2" data-work-id="${work.id}">
+                <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить запись</span>
+            </button>
+            <button id="add-composition-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> <span>Часть</span>
+            </button>
+            <button id="edit-work-btn" class="border border-gray-300 text-gray-700 px-3 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors" title="Редактировать">
+                <i data-lucide="edit-2" class="w-5 h-5"></i>
+            </button>
+            <button id="delete-work-btn" class="border border-red-200 text-red-500 px-3 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors" title="Удалить">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+        ` : ""}
+    </div>`;
 
   const bgImage = work.cover_art_url || "/static/img/placeholder.png";
 
@@ -1038,7 +1055,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
                     </div>
 
                     <div class="mt-4">
-                        ${adminControls}
+                        ${allControls}
                     </div>
                 </div>
             </div>
@@ -1588,17 +1605,44 @@ export function renderCompositionDetailView(
 
 // --- STUBS & UTILS ---
 export function updatePlayerInfo(rec) {
-  const el = document.getElementById("player-title");
-  if (el) el.textContent = getLocalizedText(rec.composition, "title", "ru");
-  const ar = document.getElementById("player-artist");
-  if (ar) ar.textContent = rec.performers || "Исполнитель не указан";
-  const im = document.getElementById("player-cover-art");
-  if (im)
-    im.src =
-      rec.composition.cover_art_url ||
-      rec.composition.work.cover_art_url ||
-      "/static/img/placeholder.png";
+  const titleEl = document.getElementById("player-title");
+  const artistEl = document.getElementById("player-artist");
+  const coverEl = document.getElementById("player-cover-art");
+
+  if (!rec) {
+    if (titleEl) titleEl.textContent = "Выберите трек";
+    if (artistEl) artistEl.textContent = "...";
+    if (coverEl) coverEl.src = "/static/img/placeholder.png";
+    return;
+  }
+
+  const comp = rec.composition;
+  const work = comp.work;
+  const composer = work.composer;
+
+  const partTitle = getLocalizedText(comp, "title", "ru");
+  const workTitle = getLocalizedText(work, "name", "ru");
+  const composerName = getLocalizedText(composer, "name", "ru");
+
+  if (titleEl) {
+    titleEl.textContent = partTitle;
+    // Убираем класс truncate, чтобы текст переносился
+    titleEl.classList.remove("truncate");
+  }
+  if (artistEl) {
+    artistEl.innerHTML = `
+      <span class="font-semibold">${composerName}</span>
+      <span class="text-gray-400 mx-1">•</span>
+      <span>${workTitle}</span>
+    `;
+    // Убираем класс truncate
+    artistEl.classList.remove("truncate");
+  }
+  if (coverEl) {
+    coverEl.src = comp.cover_art_url || work.cover_art_url || "/static/img/placeholder.png";
+  }
 }
+
 export function updatePlayPauseIcon(isPlaying) {
   const p = document.getElementById("play-icon");
   const pp = document.getElementById("pause-icon");
@@ -3447,3 +3491,91 @@ export function updateLoadMoreButton(hasMore) {
     }
 }
 
+// static/js/ui.js -> renderQueue
+
+export function renderQueue(nowPlaying, queue) {
+    const container = document.getElementById("queue-list");
+    if (!container) return;
+    let html = '';
+
+    // Блок "Сейчас играет"
+    if (nowPlaying) {
+        // Объявляем переменные для блока "Сейчас играет"
+        const comp = nowPlaying.composition;
+        const work = comp.work;
+        const composer = work.composer;
+        const partTitle = getLocalizedText(comp, "title", "ru");
+        const workTitle = getLocalizedText(work, "name", "ru");
+        const composerName = getLocalizedText(composer, "name", "ru");
+
+        html += `
+            <div class="mb-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Сейчас играет</h3>
+                <div class="flex items-center gap-3 p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
+                    <img src="${comp.cover_art_url || work.cover_art_url || '/static/img/placeholder.png'}" class="w-10 h-10 rounded-md object-cover flex-shrink-0">
+                    <div class="min-w-0">
+                        <div class="font-bold text-cyan-800 text-sm leading-tight">${partTitle}</div>
+                        <div class="text-xs text-gray-500 mt-1">${workTitle} • ${composerName}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Блок "Далее в очереди" и "Очистить"
+    if (nowPlaying || (queue && queue.length > 0)) {
+        html += `
+            <div class="flex justify-between items-center mb-2 mt-6">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    ${(queue && queue.length > 0) ? "Далее" : ""}
+                </h3>
+                ${(queue && queue.length > 0) ? '<button id="clear-queue-btn" class="text-xs text-cyan-600 hover:underline font-bold">Очистить</button>' : ''}
+            </div>
+        `;
+
+        if (queue && queue.length > 0) {
+            const queueItems = queue.map((rec, index) => {
+                // === ИСПРАВЛЕНИЕ: ПЕРЕМЕННЫЕ ОБЪЯВЛЯЮТСЯ ЗДЕСЬ, ВНУТРИ MAP ===
+                const comp = rec.composition;
+                const work = comp.work;
+                const composer = work.composer;
+                const partTitle = getLocalizedText(comp, "title", "ru");
+                const workTitle = getLocalizedText(work, "name", "ru");
+                const composerName = getLocalizedText(composer, "name", "ru");
+
+                return `
+                <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group">
+                    <span class="text-xs text-gray-400 w-5 text-center">${index + 1}.</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium text-gray-800 text-sm leading-tight">${partTitle}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">${workTitle} • ${composerName}</div>
+                    </div>
+                    <button class="remove-from-queue-btn p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-index="${index}" title="Удалить из очереди">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `}).join('');
+
+            html += `
+                <div class="border rounded-lg bg-white overflow-hidden">
+                    <div class="max-h-[60vh] overflow-y-auto">
+                        ${queueItems}
+                    </div>
+                </div>
+            `;
+
+        } else if (nowPlaying) {
+            html += `
+                <div class="text-center text-xs text-gray-400 mt-2 p-4 bg-gray-50 rounded-lg">
+                    <p class="font-bold mb-1">Очередь пуста</p>
+                    <p>После текущего трека начнётся воспроизведение случайного произведения.</p>
+                </div>
+            `;
+        }
+    } else {
+        html += '<p class="text-center text-sm text-gray-400 mt-8">Начните воспроизведение, чтобы увидеть очередь</p>';
+    }
+
+    container.innerHTML = html;
+    if (window.lucide) window.lucide.createIcons();
+}
