@@ -202,6 +202,13 @@ function setupRouter() {
         state.view.blogSlug = data.slug;
         loadCurrentView();
       },
+      "/map": async () => {
+        state.view.current = "map";
+        // Грузим ВСЕХ композиторов (limit=1000), чтобы карта была полной
+        // Если база огромная, нужно делать кластеризацию, но для классики 100-200 человек — норм.
+        const composers = await apiRequest("/api/recordings/composers?limit=1000");
+        ui.renderComposersMap(composers);
+      },
     })
     .resolve();
 
@@ -726,6 +733,9 @@ function addEventListeners() {
     // --- СОЗДАНИЕ СУЩНОСТЕЙ (Кнопки внутри модалок) ---
     // 1. Композитор (СОЗДАНИЕ)
     const createComposerBtn = target.closest("#create-composer-btn");
+    const place = document.getElementById("add-composer-city").value.trim();
+    const lat = parseFloat(document.getElementById("add-composer-lat").value);
+    const lng = parseFloat(document.getElementById("add-composer-lng").value);
     if (createComposerBtn) {
       e.preventDefault();
 
@@ -749,6 +759,9 @@ function addEventListeners() {
         year_died:
           parseInt(document.getElementById("add-composer-died").value) || null,
         notes: bioContent,
+        place_of_birth: place || null,
+        latitude: isNaN(lat) ? null : lat,
+        longitude: isNaN(lng) ? null : lng,
       };
 
       createComposerBtn.disabled = true;

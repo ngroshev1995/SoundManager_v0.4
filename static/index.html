@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="/static/img/favicon.png">
     <!-- Plyr Player -->
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css"/>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <!-- Стили для Plyr, чтобы он был бирюзовым -->
     <style>
@@ -49,6 +49,12 @@
             padding: 10px;
         }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
 </head>
 <body class="text-gray-800 h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-100 via-white to-cyan-100">
 
@@ -130,7 +136,12 @@
                        class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2">
                         <i data-lucide="list-music" class="w-4 h-4"></i> Мои плейлисты
                     </a>
-                    <a href="/blog" data-navigo class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium">Блог</a>
+                    <a href="/blog" data-navigo
+                       class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium">Блог</a>
+                    <a href="/map" data-navigo
+                       class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2">
+                        <i data-lucide="map" class="w-4 h-4"></i> Карта
+                    </a>
                 </nav>
             </div>
             <div class="flex items-center space-x-4" id="header-auth-block"></div>
@@ -292,6 +303,29 @@
                             placeholder="YYYY"/></div>
                 </div>
             </div>
+
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Место рождения</label>
+                <input type="text" id="add-composer-city" placeholder="Например: Зальцбург, Австрия"
+                       class="w-full px-3 py-2 border rounded-lg mb-2 outline-none">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Широта (Lat)</label>
+                        <input type="number" step="any" id="add-composer-lat" placeholder="47.8095"
+                               class="w-full px-3 py-2 border rounded-lg outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Долгота (Lng)</label>
+                        <input type="number" step="any" id="add-composer-lng" placeholder="13.0550"
+                               class="w-full px-3 py-2 border rounded-lg outline-none">
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">
+                    Подсказка: В Google Maps нажмите правой кнопкой на город -> выберите цифры сверху.
+                </p>
+            </div>
+
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткая биография</label>
                 <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
                     <div id="add-composer-bio" class="h-64"></div>
@@ -566,7 +600,8 @@
 </div>
 
 <!-- BLOG MODAL -->
-<div id="blog-modal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+<div id="blog-modal"
+     class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10">
             <h2 class="text-xl font-bold text-gray-800" id="blog-modal-title">Новая статья</h2>
@@ -578,22 +613,28 @@
 
             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка</label>
-                <input type="file" id="blog-cover" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
+                <input type="file" id="blog-cover" accept="image/*"
+                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Заголовок</label>
-                <input type="text" id="blog-title" class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-lg" placeholder="Заголовок статьи..."/>
+                <input type="text" id="blog-title"
+                       class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-lg"
+                       placeholder="Заголовок статьи..."/>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Slug (URL)</label>
-                <input type="text" id="blog-slug" class="w-full px-3 py-2 border rounded-lg outline-none font-mono text-sm" placeholder="my-awesome-article"/>
+                <input type="text" id="blog-slug"
+                       class="w-full px-3 py-2 border rounded-lg outline-none font-mono text-sm"
+                       placeholder="my-awesome-article"/>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткое описание</label>
-                <textarea id="blog-summary" class="w-full px-3 py-2 border rounded-lg outline-none h-20 resize-none"></textarea>
+                <textarea id="blog-summary"
+                          class="w-full px-3 py-2 border rounded-lg outline-none h-20 resize-none"></textarea>
             </div>
 
             <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
@@ -602,11 +643,15 @@
                 <div class="grid grid-cols-1 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">Meta Description (для Google)</label>
-                        <textarea id="blog-meta-desc" class="w-full px-3 py-2 border rounded-lg outline-none h-16 text-sm resize-none" placeholder="О чем эта статья в двух предложениях..."></textarea>
+                        <textarea id="blog-meta-desc"
+                                  class="w-full px-3 py-2 border rounded-lg outline-none h-16 text-sm resize-none"
+                                  placeholder="О чем эта статья в двух предложениях..."></textarea>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">Keywords (через запятую)</label>
-                        <input type="text" id="blog-keywords" class="w-full px-3 py-2 border rounded-lg outline-none text-sm" placeholder="бетховен, симфония, история"/>
+                        <input type="text" id="blog-keywords"
+                               class="w-full px-3 py-2 border rounded-lg outline-none text-sm"
+                               placeholder="бетховен, симфония, история"/>
                     </div>
                 </div>
             </div>
@@ -618,7 +663,10 @@
         </div>
 
         <div class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50 flex justify-end">
-            <button id="save-blog-btn" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors">Опубликовать</button>
+            <button id="save-blog-btn"
+                    class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors">
+                Опубликовать
+            </button>
         </div>
     </div>
 </div>
@@ -627,7 +675,8 @@
 <div id="video-player-modal"
      class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0">
 
-    <div class="bg-black rounded-xl shadow-2xl w-full max-w-4xl transform scale-95 transition-all duration-200" id="video-modal-content">
+    <div class="bg-black rounded-xl shadow-2xl w-full max-w-4xl transform scale-95 transition-all duration-200"
+         id="video-modal-content">
 
         <!-- Верхняя панель с кнопкой закрытия -->
         <div class="h-10 flex justify-end items-center pr-4">

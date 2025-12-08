@@ -1,6 +1,6 @@
 # app/models/music.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean, select, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean, select, func, Float
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.ext.associationproxy import association_proxy
 from app.db.base import Base, recording_favorites_association
@@ -18,6 +18,11 @@ class Composer(Base):
     year_died = Column(Integer, nullable=True)
     portrait_url = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
+
+    place_of_birth = Column(String, nullable=True)  # Название города (например, "Вена, Австрия")
+    latitude = Column(Float, nullable=True)  # Широта (например, 48.2082)
+    longitude = Column(Float, nullable=True)  # Долгота (например, 16.3738)
+
     works = relationship("Work", back_populates="composer", cascade="all, delete-orphan")
 
 

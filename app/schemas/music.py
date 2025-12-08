@@ -11,6 +11,9 @@ class ComposerBase(BaseModel):
     year_born: Optional[int] = None
     year_died: Optional[int] = None
     notes: Optional[str] = None
+    place_of_birth: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class WorkBase(BaseModel):
