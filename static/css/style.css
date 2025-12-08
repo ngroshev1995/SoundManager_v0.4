@@ -65,3 +65,78 @@ input[type=range]::-webkit-slider-thumb {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+/* --- Стили для Progress Bar (Плеера) --- */
+
+input[type=range] {
+    -webkit-appearance: none; /* Убираем стандартный вид Webkit */
+    appearance: none;
+    width: 100%;
+    height: 4px; /* Высота самой полосы */
+    background: #e2e8f0; /* Цвет "пустой" части по умолчанию (серый) */
+    border-radius: 2px;
+    cursor: pointer;
+    /* Свойство background будет перезаписываться JS-ом на градиент */
+}
+
+input[type=range]:focus {
+    outline: none;
+}
+
+/* --- ПОЛЗУНОК (Thumb) --- */
+
+/* WebKit (Chrome, Safari, Edge) */
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    background: #06b6d4; /* cyan-500 */
+    cursor: pointer;
+    /* Выравнивание по центру относительно высоты дорожки (4px):
+       (12px - 4px) / 2 = 4px. Значит, поднимаем на -4px, если margin считается от верха контента */
+    margin-top: -4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s;
+}
+
+/* Firefox */
+input[type=range]::-moz-range-thumb {
+    height: 12px;
+    width: 12px;
+    border: none;
+    border-radius: 50%;
+    background: #06b6d4;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s;
+}
+
+/* Эффект при наведении на ползунок */
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+input[type=range]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* --- ДОРОЖКА (Track) --- */
+
+/* WebKit */
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: transparent; /* <--- ВАЖНО: Делаем прозрачным, чтобы видеть градиент с Input */
+    border-radius: 2px;
+    border: none;
+}
+
+/* Firefox */
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: transparent; /* <--- ВАЖНО */
+    border-radius: 2px;
+    border: none;
+}

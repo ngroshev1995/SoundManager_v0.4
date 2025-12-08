@@ -3,43 +3,33 @@
 import * as ui from "./ui.js";
 
 // === ОСНОВНЫЕ ПЕРЕМЕННЫЕ ===
-let currentRecordingList = []; // Основной плейлист (например, из произведения)
-let currentRecordingIndex = -1;  // Индекс текущего трека в `currentRecordingList`
-
-let queueNext = []; // Треки для "Играть следующим"
-let queueLast = []; // Треки для "Добавить в очередь"
-
-let currentRecordingId = null; // ID трека, который играет сейчас
+let currentRecordingList = [];
+let currentRecordingIndex = -1;
+let queueNext = [];
+let queueLast = [];
+let currentRecordingId = null;
 let isPlaying = false;
-let fullQueueForUI = []; // Единый массив для отрисовки в UI
+let fullQueueForUI = [];
 let playedWorkIds = new Set();
 
 // === ОСНОВНЫЕ ФУНКЦИИ УПРАВЛЕНИЯ ПЛЕЕРОМ ===
 
-/**
- * Главная функция запуска трека. 
- * @param {object} recording - Полный объект записи для воспроизведения.
- */
 function playRecordingObject(recording) {
-  if (!recording) {
-    console.error("playRecordingObject called with null recording");
-    return;
-  }
+  if (!recording) return;
   const audioPlayer = document.getElementById("audio-player");
-  
+
   currentRecordingId = recording.id;
   audioPlayer.src = `/api/recordings/stream/${recording.id}`;
   audioPlayer.play();
 
+  // УДАЛЕНО: audioPlayer.ontimeupdate = ... (перенесено в единый обработчик updateProgress)
+
   ui.updatePlayerInfo(recording);
   updateIcons();
   ui.openPlayer();
-  updateFullQueueAndRender(); // Перерисовываем очередь с новым "текущим" треком
+  updateFullQueueAndRender();
 }
 
-/**
- * Переключает Play/Pause
- */
 function togglePlayPause() {
   const audioPlayer = document.getElementById("audio-player");
   if (!audioPlayer || currentRecordingId === null) return;
@@ -47,55 +37,59 @@ function togglePlayPause() {
   else audioPlayer.pause();
 }
 
-/**
- * Основная логика перехода к следующему треку.
- */
 async function playNext() {
-  // Приоритет 1: треки "Играть следующим"
+  // 1. ПРИОРИТЕТ: Треки "Играть следующим" (Queue Next)
+  // Если они есть, мы ВНЕДРЯЕМ их в текущий список сразу после текущей позиции.
   if (queueNext.length > 0) {
     const nextRecording = queueNext.shift();
-    // Этот трек становится "основным"
-    currentRecordingList = [nextRecording];
-    currentRecordingIndex = 0;
-    playRecordingObject(nextRecording);
+
+    if (currentRecordingIndex === -1) {
+        // Если список был пуст
+        currentRecordingList = [nextRecording];
+        currentRecordingIndex = 0;
+    } else {
+        // Вставляем трек в currentRecordingList сразу после текущего (index + 1)
+        // splice(index, deleteCount, item)
+        currentRecordingList.splice(currentRecordingIndex + 1, 0, nextRecording);
+        currentRecordingIndex++;
+    }
+
+    playRecordingObject(currentRecordingList[currentRecordingIndex]);
     return;
   }
 
-  // Приоритет 2: треки из основного плейлиста
+  // 2. ПРИОРИТЕТ: Продолжаем играть текущий список (Основное произведение)
   if (currentRecordingIndex < currentRecordingList.length - 1) {
     currentRecordingIndex++;
     playRecordingObject(currentRecordingList[currentRecordingIndex]);
     return;
   }
 
-  // Приоритет 3: треки "Добавить в очередь"
+  // 3. ПРИОРИТЕТ: Треки "Добавить в очередь" (Queue Last)
+  // Если основной список кончился, берем из хвоста очереди и ДОБАВЛЯЕМ в текущий список.
   if (queueLast.length > 0) {
     const nextRecording = queueLast.shift();
-    // Этот трек становится "основным"
-    currentRecordingList = [nextRecording];
-    currentRecordingIndex = 0;
-    playRecordingObject(nextRecording);
+
+    // Добавляем в конец текущего списка истории
+    currentRecordingList.push(nextRecording);
+    currentRecordingIndex++;
+
+    playRecordingObject(currentRecordingList[currentRecordingIndex]);
     return;
   }
 
-  // Приоритет 4: АВТОПЛЕЙ ("Радио")
+  // 4. ПРИОРИТЕТ: АВТОПЛЕЙ ("Радио")
   console.log("Queue finished, starting autoplay...");
   try {
-    // Собираем ID для исключения в строку, понятную FastAPI
     const excludeQuery = Array.from(playedWorkIds).map(id => `exclude_ids=${id}`).join('&');
     const url = `/api/recordings/random-playable?${excludeQuery}`;
 
     const work = await window.apiRequest(url);
 
-    // Если сервер вернул произведение (даже если оно уже было, потому что других нет)
     if (work) {
-        // Если это произведение уже было, значит, мы начали круг заново, очищаем историю
         if (playedWorkIds.has(work.id)) {
-            console.log("Autoplay cycle finished. Restarting history.");
             playedWorkIds.clear();
         }
-
-        // Добавляем ID нового произведения в историю
         playedWorkIds.add(work.id);
 
         const newPlaylist = work.compositions
@@ -106,6 +100,8 @@ async function playNext() {
 
         if (newPlaylist.length > 0) {
             ui.showNotification(`Далее: ${work.name_ru}`, "info");
+
+            // Здесь мы заменяем список, так как это логическое начало нового "альбома"
             currentRecordingList = newPlaylist;
             currentRecordingIndex = 0;
             playRecordingObject(currentRecordingList[currentRecordingIndex]);
@@ -113,7 +109,11 @@ async function playNext() {
     }
   } catch (e) {
     console.error("Autoplay failed:", e);
-    clearFullQueue(false);
+    // Останавливаем плеер, но не очищаем UI, чтобы было видно, что играло последним
+    const audioPlayer = document.getElementById("audio-player");
+    if(audioPlayer) audioPlayer.pause();
+    isPlaying = false;
+    forceUpdateIcons();
   }
 }
 
@@ -131,12 +131,8 @@ function playPrev() {
   }
 }
 
+// === EXPORTED FUNCTIONS ===
 
-// === ФУНКЦИИ УПРАВЛЕНИЯ ОЧЕРЕДЬЮ ===
-
-/**
- * Обрабатывает клик по треку. Запускает новый плейлист.
- */
 export function handleTrackClick(recordingId, index, recordingList) {
   if (recordingId === currentRecordingId) {
     togglePlayPause();
@@ -150,39 +146,21 @@ export function handleTrackClick(recordingId, index, recordingList) {
   }
 }
 
-/**
- * Добавляет треки в КОНЕЦ очереди.
- */
 export function addToQueue(recordings) {
   queueLast.push(...recordings);
   updateFullQueueAndRender();
-  ui.showNotification(`${recordings.length} ${recordings.length > 1 ? "треков добавлены" : "трек добавлен"} в конец очереди.`, "success");
-  
-  // РЕШЕНИЕ ПРОБЛЕМЫ 3: Если плеер был пуст, запускаем воспроизведение
-  if (currentRecordingId === null) {
-      playNext();
-  }
+  ui.showNotification(`${recordings.length} трек(ов) добавлено в очередь`, "success");
+  if (currentRecordingId === null) playNext();
 }
 
-/**
- * Добавляет треки в НАЧАЛО очереди ("Играть следующим").
- */
 export function playNextInQueue(recordings) {
   queueNext.unshift(...recordings);
   updateFullQueueAndRender();
-  ui.showNotification(`${recordings.length} ${recordings.length > 1 ? "трека" : "трек"} будут сыграны следующими.`, "success");
-  
-  // РЕШЕНИЕ ПРОБЛЕМЫ 1 и 2: Если плеер был пуст, запускаем воспроизведение
-  if (currentRecordingId === null) {
-      playNext();
-  }
+  ui.showNotification(`${recordings.length} трек(ов) сыграют следующими`, "success");
+  if (currentRecordingId === null) playNext();
 }
 
-/**
- * Полностью очищает все очереди и останавливает плеер.
- */
 export function clearFullQueue(stopPlayer = true) {
-    console.log("Clearing full queue..."); // Добавим лог для отладки
     queueNext = [];
     queueLast = [];
     currentRecordingList = [];
@@ -191,36 +169,28 @@ export function clearFullQueue(stopPlayer = true) {
     if (stopPlayer) {
         const audioPlayer = document.getElementById("audio-player");
         if (audioPlayer) {
-            if (!audioPlayer.paused) {
-                audioPlayer.pause();
-            }
-            audioPlayer.src = ""; // Сбрасываем источник в любом случае
+            audioPlayer.pause();
+            audioPlayer.src = "";
         }
-        currentRecordingId = null; // Сбрасываем ID
-        isPlaying = false; // Устанавливаем флаг проигрывания в false
-
-        // Очищаем информацию в самом плеере
+        currentRecordingId = null;
+        isPlaying = false;
         ui.updatePlayerInfo(null);
 
-        // Сбрасываем полосу прогресса
+        // Сброс прогресс бара
         const progressBar = document.getElementById("progress-bar");
-        const currentTimeEl = document.getElementById("current-time");
-        const totalTimeEl = document.getElementById("total-time");
-        if(progressBar) progressBar.value = 0;
-        if(currentTimeEl) currentTimeEl.textContent = "0:00";
-        if(totalTimeEl) totalTimeEl.textContent = "0:00";
+        if(progressBar) {
+            progressBar.value = 0;
+            progressBar.style.background = '#e2e8f0'; // Сброс цвета
+        }
+        document.getElementById("current-time").textContent = "0:00";
+        document.getElementById("total-time").textContent = "0:00";
     }
-
-    updateFullQueueAndRender(); // Перерисовываем (теперь пустую) очередь
-    updateIcons(); // <-- ВОТ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ВСЕ ИКОНКИ
+    updateFullQueueAndRender();
+    updateIcons();
 }
 
-/**
- * Удаляет один трек из очереди по его индексу в UI.
- */
 export function removeFromQueueByIndex(index) {
     if (index < 0 || index >= fullQueueForUI.length) return;
-
     const queueNextLength = queueNext.length;
     const remainingInList = currentRecordingIndex > -1 ? currentRecordingList.slice(currentRecordingIndex + 1) : [];
     const remainingLength = remainingInList.length;
@@ -234,30 +204,18 @@ export function removeFromQueueByIndex(index) {
         const lastIndexToRemove = index - queueNextLength - remainingLength;
         queueLast.splice(lastIndexToRemove, 1);
     }
-    
     updateFullQueueAndRender();
 }
 
-
-// === ВСПОМОГАТЕЛЬНЫЕ И UI ФУНКЦИИ ===
-
-/**
- * Собирает единый массив для отображения и вызывает отрисовку.
- */
 function updateFullQueueAndRender() {
     const nowPlaying = currentRecordingList[currentRecordingIndex];
     const remainingInList = currentRecordingIndex > -1 ? currentRecordingList.slice(currentRecordingIndex + 1) : [];
-    
-    fullQueueForUI = [
-        ...queueNext,
-        ...remainingInList,
-        ...queueLast
-    ];
-    
+    fullQueueForUI = [...queueNext, ...remainingInList, ...queueLast];
     ui.renderQueue(nowPlaying, fullQueueForUI);
 }
 
-// Функции ниже остаются без изменений, просто копируем их
+// === ИНИЦИАЛИЗАЦИЯ ===
+
 export function initPlayer() {
   const audioPlayer = document.getElementById("audio-player");
   const playPauseBtn = document.getElementById("play-pause-btn");
@@ -270,7 +228,7 @@ export function initPlayer() {
   if (prevBtn) prevBtn.addEventListener("click", playPrev);
 
   if (audioPlayer) {
-    audioPlayer.addEventListener("timeupdate", updateProgress);
+    audioPlayer.addEventListener("timeupdate", updateProgress); // Обновление прогресса
     audioPlayer.addEventListener("loadedmetadata", updateTimeDisplay);
     audioPlayer.addEventListener("ended", playNext);
     audioPlayer.addEventListener("play", () => { isPlaying = true; updateIcons(); });
@@ -293,14 +251,27 @@ function updateIcons() {
   });
 }
 
+// === ЛОГИКА ПРОГРЕСС БАРА ===
+
 function updateProgress() {
   const audioPlayer = document.getElementById("audio-player");
   const progressBar = document.getElementById("progress-bar");
   const currentTimeEl = document.getElementById("current-time");
+
   if (!audioPlayer || !progressBar || !currentTimeEl) return;
+
   const { duration, currentTime } = audioPlayer;
+
   if (duration) {
-    progressBar.value = (currentTime / duration) * 100;
+    // 1. Обновляем значение ползунка
+    const percent = (currentTime / duration) * 100;
+    progressBar.value = percent;
+
+    // 2. Визуальный трюк для закрашивания левой части (Gradient)
+    // #06b6d4 - это цвет cyan-500, #e2e8f0 - серый фон
+    progressBar.style.background = `linear-gradient(to right, #06b6d4 ${percent}%, #e2e8f0 ${percent}%)`;
+
+    // 3. Обновляем текст времени
     currentTimeEl.textContent = formatTime(currentTime);
   }
 }
@@ -316,8 +287,15 @@ function seek() {
   const audioPlayer = document.getElementById("audio-player");
   const progressBar = document.getElementById("progress-bar");
   if (!audioPlayer || !progressBar || isNaN(audioPlayer.duration)) return;
+
   const { duration } = audioPlayer;
-  audioPlayer.currentTime = (progressBar.value / 100) * duration;
+  const seekTime = (progressBar.value / 100) * duration;
+
+  audioPlayer.currentTime = seekTime;
+
+  // Обновляем градиент сразу при перетаскивании (для плавности)
+  const percent = progressBar.value;
+  progressBar.style.background = `linear-gradient(to right, #06b6d4 ${percent}%, #e2e8f0 ${percent}%)`;
 }
 
 function formatTime(seconds) {
