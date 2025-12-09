@@ -145,8 +145,12 @@ function getYoutubeIcon(url) {
 
 export function updateHeaderAuth() {
   const container = document.getElementById("header-auth-block");
+  // Десктопные ссылки
   const plLink = document.getElementById("nav-playlists-link");
-  const favLink = document.getElementById("nav-favorites-link"); // <--- НОВОЕ
+  const favLink = document.getElementById("nav-favorites-link");
+  // Мобильные ссылки
+  const mobilePlLink = document.getElementById("mobile-nav-playlists-link");
+  const mobileFavLink = document.getElementById("mobile-nav-favorites-link");
 
   if (!container) return;
 
@@ -157,23 +161,30 @@ export function updateHeaderAuth() {
                 Войти
             </button>
         `;
-    // Скрываем личные разделы
+    // Скрываем личные разделы везде
     if (plLink) plLink.classList.add("hidden");
     if (favLink) favLink.classList.add("hidden");
+    if (mobilePlLink) mobilePlLink.classList.add("hidden");
+    if (mobileFavLink) mobileFavLink.classList.add("hidden");
   } else {
-    // ПОЛЬЗОВАТЕЛЬ (АДМИН ИЛИ ОБЫЧНЫЙ)
+    // ПОЛЬЗОВАТЕЛЬ
     const username =
       localStorage.getItem("user_email")?.split("@")[0] || "User";
     container.innerHTML = `
-            <span class="text-sm font-bold opacity-90">Здравствуйте, ${username}! 👋</span>
-            <button id="logout-btn" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors" title="Выйти">
+            <span class="hidden sm:inline text-sm font-bold opacity-90">Здравствуйте, ${username}!</span>
+            <button id="logout-btn" class="ml-2 bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors" title="Выйти">
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
         `;
-    // Показываем личные разделы
+    // Показываем личные разделы везде
     if (plLink) plLink.classList.remove("hidden");
     if (favLink) favLink.classList.remove("hidden");
+    if (mobilePlLink) mobilePlLink.classList.remove("hidden");
+    if (mobileFavLink) mobileFavLink.classList.remove("hidden");
   }
+
+  // Перерисовываем иконки в шапке
+  if (window.lucide) lucide.createIcons();
 }
 
 function getLocalizedText(entity, field, lang) {
@@ -451,65 +462,83 @@ export function renderRecordingList(
           window.state && window.state.selectedRecordingIds.has(r.id);
 
         return `
-        <div class="recording-item group flex items-center p-3 hover:bg-cyan-50/80 ${
-          isSelected ? "bg-cyan-50 border-cyan-200" : "border-b border-gray-100"
-        } rounded-xl transition-colors cursor-pointer last:border-0"
-             data-recording-id="${r.id}" data-index="${i}">
+          <div class="recording-item group flex items-center p-3 hover:bg-gray-50 ${
+            isSelected ? "bg-cyan-50" : "border-b border-gray-100"
+          } bg-white last:border-0 transition-colors cursor-pointer relative select-none"
+               data-recording-id="${r.id}" data-index="${i}">
+  
+               <!-- 1. Чекбокс -->
+               <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
+                 window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+               }">
+                 <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                   r.id
+                 }" ${isSelected ? "checked" : ""}>
+               </div>
+               ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
+  
+               <!-- 2. Play -->
+               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
+                 r.id
+               }">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+               </div>
+  
+               <!-- 3. Обложка -->
+                <div class="flex-shrink-0 mx-2 md:mx-4">
+                  <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
+               </div>
+  
+               <!-- 4. Информация -->
+               <div class="flex-1 min-w-0">
+                   <div class="font-bold text-gray-800 text-sm leading-tight break-words">
+                        ${compName}
+                   </div>
+                   <div class="text-xs text-gray-500 mt-0.5 break-words">
+                      <span>${r.performers || "Исполнитель не указан"}</span>
+                      ${
+                        !hideComposer
+                          ? `<span class="text-gray-300 mx-1">•</span><span>${compoName}</span>`
+                          : ""
+                      }
+                   </div>
+               </div>
 
-             <div class="w-10 flex justify-center items-center">
-                  <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                    r.id
-                  }" ${isSelected ? "checked" : ""}>
-             </div>
-
-             <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
-               r.id
-             }">
-                  <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-             </div>
-
-             <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm mx-4 border border-gray-100">
-
-             <div class="flex-1 min-w-0 mr-4">
-                 <div class="font-semibold text-gray-800 truncate text-sm flex items-center">
-                      ${compName}
-                      ${getYoutubeIcon(r.youtube_url)}
-                 </div>
-                 <div class="text-xs text-gray-500 truncate">${
-                   r.performers || "Исполнитель не указан"
-                 }</div>
-             </div>
-
-             ${
-               !hideComposer
-                 ? `<div class="hidden md:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>`
-                 : ""
-             }
-             ${
-               !hideWork
-                 ? `<div class="hidden lg:block w-1/4 text-sm text-gray-500 truncate mr-4"><a href="${workLink}" data-navigo class="hover:text-cyan-600 hover:underline">${workName}</a></div>`
-                 : ""
-             }
-
-             <button class="favorite-btn p-2 ${
-               isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
-             }" data-recording-id="${r.id}">
-                 <i data-lucide="heart" class="w-4 h-4 ${
-                   isFav ? "fill-current" : ""
-                 }"></i>
-             </button>
-
-             <div class="flex flex-col items-end justify-center w-16 ml-auto">
-                 <div class="text-xs text-gray-500 font-mono">${formatDuration(
-                   r.duration
-                 )}</div>
-                 ${
-                   isAdmin()
-                     ? `<div class="text-[10px] text-gray-300 font-mono mt-0.5 select-all cursor-copy hover:text-cyan-600 transition-colors" title="ID: ${r.id}">#${r.id}</div>`
-                     : ""
-                 }
-             </div>
-        </div>`;
+               <!-- Колонки для ПК (скрыты на мобильном) -->
+               ${
+                 !hideComposer
+                   ? `<div class="hidden lg:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>`
+                   : ""
+               }
+               ${
+                 !hideWork
+                   ? `<div class="hidden lg:block w-1/4 text-sm text-gray-500 truncate mr-4"><a href="${workLink}" data-navigo class="hover:text-cyan-600 hover:underline">${workName}</a></div>`
+                   : ""
+               }
+  
+               <!-- 5. Правая часть -->
+               <div class="flex items-center ml-auto pl-3 flex-shrink-0">
+                    <div class="hidden md:flex items-center">
+                        ${
+                          isLoggedIn()
+                            ? `
+                            <button class="favorite-btn p-2 mr-2 ${
+                              isFav
+                                ? "text-red-500"
+                                : "text-gray-300 hover:text-red-400"
+                            }" data-recording-id="${r.id}">
+                                <i data-lucide="heart" class="w-4 h-4 ${
+                                  isFav ? "fill-current" : ""
+                                }"></i>
+                            </button>`
+                            : '<div class="w-10"></div>'
+                        }
+                    </div>
+                   <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
+                     r.duration
+                   )}</div>
+               </div>
+          </div>`;
       })
       .join("");
 
@@ -1151,54 +1180,68 @@ export async function renderCompositionGrid(work, lang = "ru") {
               : getLocalizedText(r.composition, "title", lang);
 
           return `
-          <div class="recording-item group flex items-center p-4 hover:bg-cyan-50 ${
-            isSelected
-              ? "bg-cyan-50 border-cyan-200"
-              : "border-b border-gray-100"
-          } bg-white last:border-0 transition-colors cursor-pointer"
-              data-recording-id="${r.id}" data-index="${i}">
-              <div class="w-10 flex justify-center items-center">
-                 <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                   r.id
-                 }" ${isSelected ? "checked" : ""}>
-              </div>
-              <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
-                r.id
-              }">
-                 <i data-lucide="play" class="w-6 h-6 fill-current"></i>
-              </div>
-              <div class="flex-1 ml-4">
-                  <div class="font-bold text-gray-800 text-lg flex items-center">
-                     ${displayTitle}
-                     ${getYoutubeIcon(r.youtube_url)}
+              <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
+                isSelected ? "bg-cyan-50" : "border-b border-gray-100"
+              } bg-white last:border-0 transition-colors cursor-pointer"
+                  data-recording-id="${r.id}" data-index="${i}">
+                  
+                  <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
+                    window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+                  }">
+                    <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                      r.id
+                    }" ${isSelected ? "checked" : ""}>
                   </div>
-                  <div class="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-2">
-                     <span>${r.performers || "Неизвестный исполнитель"}</span>
-                     ${
-                       r.recording_year
-                         ? `<span class="text-gray-300">•</span> <span>${r.recording_year}</span>`
-                         : ""
-                     }
-                  </div>
-              </div>
-              <button class="favorite-btn p-2 mr-4 ${
-                isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
-              }" data-recording-id="${r.id}">
-                  <i data-lucide="heart" class="w-5 h-5 ${
-                    isFav ? "fill-current" : ""
-                  }"></i>
-              </button>
-              <div class="flex flex-col items-end justify-center w-20 ml-auto">
-                  <div class="text-sm text-gray-500 font-mono">${formatDuration(
-                    r.duration
-                  )}</div>
                   ${
-                    isAdmin()
-                      ? `<div class="text-[10px] text-gray-300 font-mono mt-0.5 select-all hover:text-cyan-600 transition-colors" title="ID: ${r.id}">#${r.id}</div>`
+                    !isLoggedIn()
+                      ? '<div class="hidden md:block w-2"></div>'
                       : ""
                   }
-              </div>
-          </div>`;
+    
+                  <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
+                    r.id
+                  }">
+                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                  </div>
+    
+                  <div class="flex-1 min-w-0 ml-4">
+                      <div class="font-bold text-gray-800 text-sm leading-tight break-words">
+                         ${displayTitle}
+                      </div>
+                      <div class="text-xs text-gray-500 mt-0.5 break-words">
+                         <span>${
+                           r.performers || "Неизвестный исполнитель"
+                         }</span>
+                         ${
+                           r.recording_year
+                             ? `<span class="text-gray-300 mx-1">•</span> <span>${r.recording_year}</span>`
+                             : ""
+                         }
+                      </div>
+                  </div>
+    
+                  <div class="flex items-center ml-auto pl-3 flex-shrink-0">
+                    <div class="hidden md:flex items-center">
+                      ${
+                        isLoggedIn()
+                          ? `
+                        <button class="favorite-btn p-2 mr-2 ${
+                          isFav
+                            ? "text-red-500"
+                            : "text-gray-300 hover:text-red-400"
+                        }" data-recording-id="${r.id}">
+                           <i data-lucide="heart" class="w-5 h-5 ${
+                             isFav ? "fill-current" : ""
+                           }"></i>
+                       </button>`
+                          : '<div class="w-10"></div>'
+                      }
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
+                      r.duration
+                    )}</div>
+                  </div>
+              </div>`;
         })
         .join("");
 
@@ -1213,16 +1256,15 @@ export async function renderCompositionGrid(work, lang = "ru") {
          </div>`;
     }
 
-    // 2. БЛОК ВИДЕО
+    // 2. БЛОК ВИДЕО (ИСПРАВЛЕНО: Вертикальная верстка на мобильных)
     if (videoRecs.length > 0) {
       const rows = videoRecs
         .map((r) => {
           const controls = isAdmin()
             ? `
-             <div class="flex items-center gap-2 ml-2 border-l border-gray-200 pl-2 flex-shrink-0">
-                 <span class="text-[10px] text-gray-300 font-mono select-all cursor-copy hover:text-cyan-600 transition-colors">#${r.id}</span>
-                 <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" data-recording-id="${r.id}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                 <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-recording-id="${r.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+             <div class="flex items-center gap-2 border-l border-gray-200 pl-2 ml-2 sm:ml-0">
+                 <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 bg-gray-50 rounded-lg" data-recording-id="${r.id}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                 <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 bg-gray-50 rounded-lg" data-recording-id="${r.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
              </div>`
             : "";
 
@@ -1232,24 +1274,34 @@ export async function renderCompositionGrid(work, lang = "ru") {
               : getLocalizedText(r.composition, "title", lang);
 
           return `
-          <div class="bg-white p-4 flex items-center justify-between group hover:bg-gray-50 border border-gray-100 rounded-xl mb-3 shadow-sm">
-              <div class="flex items-center gap-4 min-w-0 mr-4">
-                  <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0"><i data-lucide="youtube" class="w-5 h-5"></i></div>
-                  <div class="min-w-0">
-                      <div class="font-bold text-gray-800 text-lg mb-0.5">${displayTitle}</div>
-                      <div class="text-sm text-gray-500 font-medium">${
-                        r.performers || "Исполнитель не указан"
-                      }</div>
-                      <div class="text-xs text-gray-400 mt-0.5">${
-                        r.recording_year || ""
-                      }</div>
+          <div class="bg-white p-3 rounded-xl border border-gray-100 mb-3 shadow-sm hover:shadow-md transition-all">
+              <!-- Контейнер: Колонка на мобильном, Ряд на ПК -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+                  <!-- ЛЕВО: Иконка + Текст -->
+                  <div class="flex items-start gap-3 min-w-0 w-full">
+                      <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
+                          <i data-lucide="youtube" class="w-5 h-5"></i>
+                      </div>
+                      <div class="min-w-0 flex-1">
+                          <div class="font-bold text-gray-800 text-sm sm:text-lg leading-snug break-words">${displayTitle}</div>
+                          <div class="text-sm text-gray-500 font-medium truncate mt-0.5">${
+                            r.performers || "Исполнитель не указан"
+                          }</div>
+                          <div class="text-xs text-gray-400">${
+                            r.recording_year || ""
+                          }</div>
+                      </div>
                   </div>
-              </div>
-              <div class="flex items-center flex-shrink-0 ml-6">
-                  <a href="${
-                    r.youtube_url
-                  }" target="_blank" class="text-red-600 hover:text-red-700 text-sm font-bold flex items-center gap-1 px-3 py-1">Смотреть <i data-lucide="external-link" class="w-4 h-4"></i></a>
-                  ${controls}
+
+                  <!-- ПРАВО: Кнопка (На всю ширину на мобильном) -->
+                  <div class="flex items-center w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 mt-1 sm:mt-0">
+                      <a href="${r.youtube_url}" target="_blank"
+                         class="flex-1 sm:flex-none justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 text-sm shadow-sm">
+                          <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
+                      </a>
+                      ${controls}
+                  </div>
               </div>
           </div>`;
         })
@@ -1257,9 +1309,10 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
       videoHtml = `
          <div class="mb-10">
-             <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="video" class="w-5 h-5 text-red-600"></i> Видеозаписи ${
-               hidePartsList ? "" : "(Целиком)"
-             }</h3>
+             <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i data-lucide="video" class="w-5 h-5 text-red-600"></i>
+                Видеозаписи ${hidePartsList ? "" : "(Целиком)"}
+             </h3>
              <div class="space-y-2">
                  ${rows}
              </div>
@@ -1316,31 +1369,35 @@ export async function renderCompositionGrid(work, lang = "ru") {
           : ``;
 
         return `
-            <a href="/compositions/${
-              c.slug || c.id
-            }" data-navigo ${draggableAttr} data-comp-id="${c.id}"
-               class="comp-sortable-item flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
+          <a href="/compositions/${
+            c.slug || c.id
+          }" data-navigo ${draggableAttr} data-comp-id="${c.id}"
+             class="comp-sortable-item flex items-center p-3 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
 
-                <div class="flex items-center gap-4 pointer-events-none min-w-0">
-                    <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0">
-                        ${c.sort_order || "#"}
-                    </div>
-                    <div class="min-w-0">
-                        <span class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors truncate">${getLocalizedText(
-                          c,
-                          "title",
-                          lang
-                        )}</span>
-                        ${metaHtml}
-                    </div>
-                </div>
+              <!-- 1. НОМЕР (Закрепляем ширину flex-shrink-0, чтобы не сжимался) -->
+              <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3">
+                  ${c.sort_order || "#"}
+              </div>
 
-                <div class="flex items-center flex-shrink-0">
-                    ${iconsContainer} <!-- Вставляем контейнер с иконками -->
-                    ${gripIcon}
-                </div>
+              <!-- 2. ТЕКСТ (flex-1 и min-w-0 заставляют блок занимать оставшееся место и переносить текст) -->
+              <div class="flex-1 min-w-0 mr-2">
+                  <div class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors break-words leading-tight">
+                      ${getLocalizedText(c, "title", lang)}
+                  </div>
+                  
+                  <!-- Мета-информация (Тональность, Опус): flex-wrap разрешает перенос на новую строку -->
+                  <div class="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
+                      ${metaParts.join('<span class="text-gray-300">•</span>')}
+                  </div>
+              </div>
+
+              <!-- 3. ИКОНКИ (Справа, закрепляем flex-shrink-0) -->
+              <div class="flex items-center flex-shrink-0 gap-2">
+                  ${iconsContainer}
+                  ${gripIcon}
+              </div>
             </a>
-        `;
+      `;
       })
       .join("");
 
@@ -1504,54 +1561,65 @@ export function renderCompositionDetailView(
             window.state && window.state.selectedRecordingIds.has(r.id);
 
           return `
-          <div class="recording-item group flex items-center p-4 hover:bg-cyan-50 ${
-            isSelected
-              ? "bg-cyan-50 border-cyan-200"
-              : "border-b border-gray-100"
-          } bg-white last:border-0 transition-colors cursor-pointer"
-               data-recording-id="${r.id}" data-index="${i}">
-               
-               <div class="w-10 flex justify-center items-center">
-                  <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                    r.id
-                  }" ${isSelected ? "checked" : ""}>
-               </div>
+            <div class="recording-item group flex items-center p-3 hover:bg-gray-50 ${
+              isSelected ? "bg-cyan-50" : "border-b border-gray-100"
+            } bg-white last:border-0 transition-colors cursor-pointer relative select-none"
+                 data-recording-id="${r.id}" data-index="${i}">
 
-               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
-                 r.id
-               }">
-                  <i data-lucide="play" class="w-6 h-6 fill-current"></i>
-               </div>
-
-               <div class="flex-1 ml-4">
-                   <div class="font-bold text-gray-800 text-lg flex items-center">
-                      ${r.performers || "Исполнитель не указан"}
-                      ${getYoutubeIcon(r.youtube_url)}
-                   </div>
-                   <div class="text-xs text-gray-500 font-mono mt-0.5">${
-                     r.recording_year || ""
-                   }</div>
-               </div>
-               
-               <button class="favorite-btn p-2 mr-4 ${
-                 isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
-               }" data-recording-id="${r.id}">
-                   <i data-lucide="heart" class="w-5 h-5 ${
-                     isFav ? "fill-current" : ""
-                   }"></i>
-               </button>
-               
-               <div class="flex flex-col items-end justify-center w-20 ml-auto">
-                   <div class="text-sm text-gray-500 font-mono">${formatDuration(
-                     r.duration
-                   )}</div>
-                   ${
-                     isAdmin()
-                       ? `<div class="text-[10px] text-gray-300 font-mono mt-0.5 select-all hover:text-cyan-600 transition-colors" title="ID: ${r.id}">#${r.id}</div>`
-                       : ""
-                   }
-               </div>
-          </div>`;
+                 <!-- 1. Чекбокс -->
+                 <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
+                   window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+                 }">
+                      <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                        r.id
+                      }" ${isSelected ? "checked" : ""}>
+                 </div>
+                 ${
+                   !isLoggedIn()
+                     ? '<div class="hidden md:block w-2"></div>'
+                     : ""
+                 }
+  
+                 <!-- 2. Play -->
+                 <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn flex-shrink-0 hover:scale-110 transition-transform" id="list-play-btn-${
+                   r.id
+                 }">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                 </div>
+  
+                 <!-- 3. ИНФОРМАЦИЯ (Без обложки) -->
+                 <div class="flex-1 min-w-0 ml-4">
+                     <div class="font-bold text-gray-800 text-sm leading-tight break-words">
+                        ${r.performers || "Исполнитель не указан"}
+                     </div>
+                     <div class="text-xs text-gray-500 mt-0.5 break-words">
+                       ${r.recording_year || "Год не указан"}
+                     </div>
+                 </div>
+                 
+                 <!-- 4. Правая часть -->
+                 <div class="flex items-center ml-auto pl-3 flex-shrink-0">
+                    <div class="hidden md:flex items-center">
+                     ${
+                       isLoggedIn()
+                         ? `
+                        <button class="favorite-btn p-2 mr-2 ${
+                          isFav
+                            ? "text-red-500"
+                            : "text-gray-300 hover:text-red-400"
+                        }" data-recording-id="${r.id}">
+                               <i data-lucide="heart" class="w-5 h-5 ${
+                                 isFav ? "fill-current" : ""
+                               }"></i>
+                        </button>`
+                         : '<div class="w-10"></div>'
+                     }
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
+                      r.duration
+                    )}</div>
+                 </div>
+            </div>`;
         })
         .join("");
 
@@ -1562,45 +1630,47 @@ export function renderCompositionDetailView(
        </div>`;
     }
 
-    // 2. ВИДЕО
+    // 2. ВИДЕО (ДЛЯ СТРАНИЦЫ КОМПОЗИЦИИ)
     if (videoRecs.length > 0) {
       const videoRows = videoRecs
         .map((r) => {
           const controls = isAdmin()
             ? `
-             <div class="flex items-center gap-2 ml-3 border-l border-gray-200 pl-3 flex-shrink-0">
-                 <span class="text-[10px] text-gray-300 font-mono select-all cursor-copy hover:text-cyan-600 transition-colors">#${r.id}</span>
-                 <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" data-recording-id="${r.id}">
-                     <i data-lucide="edit-2" class="w-4 h-4"></i>
-                 </button>
-                 <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-recording-id="${r.id}">
-                     <i data-lucide="trash-2" class="w-4 h-4"></i>
-                 </button>
+             <div class="flex items-center gap-2 ml-2 border-l border-gray-200 pl-2">
+                 <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" data-recording-id="${r.id}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                 <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" data-recording-id="${r.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
              </div>`
             : "";
 
           return `
-           <div class="bg-white p-5 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all flex items-center justify-between group">
-                <div class="flex items-center gap-5 min-w-0 mr-4">
-                    <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="youtube" class="w-6 h-6"></i>
+           <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all mb-3 shadow-sm">
+                <!-- Адаптивный контейнер: Колонка на мобиле, Строка на ПК -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+                    <!-- Левая часть: Иконка и Текст -->
+                    <div class="flex items-start gap-4 min-w-0 w-full">
+                        <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
+                            <i data-lucide="youtube" class="w-6 h-6"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-gray-800 text-lg leading-snug break-words">${
+                              r.performers || "Исполнитель не указан"
+                            }</div>
+                            <div class="text-sm text-gray-500 font-mono mt-1">${
+                              r.recording_year || "Год не указан"
+                            }</div>
+                        </div>
                     </div>
-                    <div>
-                        <div class="font-bold text-gray-800 text-lg truncate">${
-                          r.performers || "Исполнитель не указан"
-                        }</div>
-                        <div class="text-sm text-gray-500 font-mono">${
-                          r.recording_year || "Год не указан"
-                        }</div>
+
+                    <!-- Правая часть: Кнопка (на мобиле снизу и на всю ширину) -->
+                    <div class="flex items-center w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-0 border-gray-100 mt-1 sm:mt-0">
+                        <a href="${
+                          r.youtube_url
+                        }" target="_blank" class="flex-1 sm:flex-none justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm active:scale-95">
+                            <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
+                        </a>
+                        ${controls}
                     </div>
-                </div>
-                <div class="flex items-center flex-shrink-0">
-                    <a href="${
-                      r.youtube_url
-                    }" target="_blank" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap">
-                        <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
-                    </a>
-                    ${controls}
                 </div>
            </div>
         `;
@@ -1608,9 +1678,11 @@ export function renderCompositionDetailView(
         .join("");
 
       finalHtml += `
-      <div>
-         <h3 class="text-lg font-bold mb-4 text-gray-700">Видеозаписи</h3>
-         <div class="grid grid-cols-1 gap-4">${videoRows}</div>
+      <div class="mt-8">
+         <h3 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2">
+            <i data-lucide="video" class="w-5 h-5 text-red-600"></i> Видеозаписи
+         </h3>
+         <div class="space-y-3">${videoRows}</div>
       </div>`;
     }
 
@@ -1624,39 +1696,65 @@ export function updatePlayerInfo(rec) {
   const titleEl = document.getElementById("player-title");
   const artistEl = document.getElementById("player-artist");
   const coverEl = document.getElementById("player-cover-art");
+  const favBtnContainer = document.getElementById(
+    "player-favorite-btn-container"
+  );
 
+  // Сценарий 1: Ничего не играет
   if (!rec) {
     if (titleEl) titleEl.textContent = "Выберите трек";
     if (artistEl) artistEl.textContent = "...";
     if (coverEl) coverEl.src = "/static/img/placeholder.png";
+    if (favBtnContainer) favBtnContainer.innerHTML = "";
     return;
   }
 
+  // Сценарий 2: Трек играет, обновляем основную информацию
   const comp = rec.composition;
   const work = comp.work;
   const composer = work.composer;
-
   const partTitle = getLocalizedText(comp, "title", "ru");
   const workTitle = getLocalizedText(work, "name", "ru");
   const composerName = getLocalizedText(composer, "name", "ru");
 
-  if (titleEl) {
-    titleEl.textContent = partTitle;
-    // Убираем класс truncate, чтобы текст переносился
-    titleEl.classList.remove("truncate");
-  }
+  if (titleEl) titleEl.textContent = partTitle;
   if (artistEl) {
     artistEl.innerHTML = `
       <span class="font-semibold">${composerName}</span>
       <span class="text-gray-400 mx-1">•</span>
-      <span>${workTitle}</span>
-    `;
-    // Убираем класс truncate
-    artistEl.classList.remove("truncate");
+      <span>${workTitle}</span>`;
   }
   if (coverEl) {
     coverEl.src =
       comp.cover_art_url || work.cover_art_url || "/static/img/placeholder.png";
+  }
+
+  // === ИСПРАВЛЕННАЯ ЛОГИКА КНОПКИ "ИЗБРАННОЕ" ===
+  if (favBtnContainer) {
+    // ШАГ 1: Проверяем, что пользователь вошел В ПРИНЦИПЕ
+    if (isLoggedIn()) {
+      // ШАГ 2: ПРОВЕРЯЕМ, что данные об избранном УЖЕ ЗАГРУЖЕНЫ
+      // Это защищает от сбоя при первой загрузке страницы.
+      if (window.state && window.state.favoritesLoaded) {
+        const isFav = window.state.favoriteRecordingIds.has(rec.id);
+        favBtnContainer.innerHTML = `
+          <button class="favorite-btn p-2 ${
+            isFav ? "text-red-500" : "text-gray-400 hover:text-red-500"
+          } transition-colors" data-recording-id="${rec.id}">
+              <i data-lucide="heart" class="w-5 h-5 ${
+                isFav ? "fill-current" : ""
+              }"></i>
+          </button>
+        `;
+        if (window.lucide) lucide.createIcons();
+      } else {
+        // Если данные еще грузятся, пока ничего не показываем (или можно показать спиннер)
+        favBtnContainer.innerHTML = "";
+      }
+    } else {
+      // Гость -> Контейнер 100% пустой
+      favBtnContainer.innerHTML = "";
+    }
   }
 }
 
@@ -1824,13 +1922,17 @@ export function renderBreadcrumbs() {
     .map((crumb, index) => {
       const isLast = index === crumbs.length - 1;
 
+      // СТИЛИ:
+      // Никаких truncate (не обрезаем)
+      // Никаких whitespace-nowrap (разрешаем перенос внутри текста)
+      // break-words (переносим длинные слова, если они не влезают)
+      const textStyle = "text-sm font-medium leading-snug break-words";
+
       if (isLast) {
-        // Последний элемент - просто текст (жирный/черный)
-        return `<span class="font-semibold text-gray-900 truncate">${crumb.label}</span>`;
+        return `<span class="font-bold text-gray-900 ${textStyle}">${crumb.label}</span>`;
       } else {
-        // Ссылка (серый цвет) + Разделитель
         return `
-            <a href="${crumb.link}" data-navigo class="hover:text-cyan-600 hover:underline transition-colors flex-shrink-0">
+            <a href="${crumb.link}" data-navigo class="hover:text-cyan-600 hover:underline transition-colors ${textStyle} text-gray-600">
                 ${crumb.label}
             </a>
             <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
@@ -1839,9 +1941,14 @@ export function renderBreadcrumbs() {
     })
     .join("");
 
-  container.innerHTML = `<div class="flex items-center gap-2 overflow-hidden whitespace-nowrap">${html}</div>`;
+  // КОНТЕЙНЕР:
+  // flex-wrap: элементы будут переноситься на новую строку, если не влезают в ширину.
+  // w-full: контейнер не шире экрана.
+  container.innerHTML = `<div class="flex flex-wrap items-center gap-x-2 gap-y-1 w-full">${html}</div>`;
+
   if (window.lucide) window.lucide.createIcons();
 }
+
 export function setUserGreeting(email) {
   // Берем имя до знака @
   const username = email.split("@")[0];
@@ -2655,20 +2762,45 @@ export function renderPlaylistsOverview(playlists) {
 export function updateSelectionBar(count, context) {
   const bar = document.getElementById("selection-bar");
   const countEl = document.getElementById("selection-count");
+
+  // Кнопки
+  const playlistBtn = document.getElementById("bulk-add-playlist-btn");
+  const delBtn = document.getElementById("bulk-delete-btn");
   const delText = document.getElementById("bulk-delete-text");
 
   if (!bar) return;
+
+  // Проверка прав
+  const isLoggedIn = !!localStorage.getItem("access_token");
+  const isAdmin = localStorage.getItem("is_admin") === "true";
 
   if (count > 0) {
     bar.classList.remove("translate-y-full");
     countEl.textContent = `${count} выбрано`;
 
-    // Меняем текст кнопки удаления в зависимости от того, где мы
-    if (context === "playlist") {
-      delText.textContent = "Убрать из плейлиста";
+    // 1. ПЛЕЙЛИСТЫ: Показываем только залогиненным
+    if (isLoggedIn) {
+      playlistBtn.classList.remove("hidden");
+      // На мобилках показываем только иконку (класс hidden для span внутри html), на пк текст
     } else {
-      delText.textContent = "Удалить файлы";
+      playlistBtn.classList.add("hidden");
     }
+
+    // 2. УДАЛЕНИЕ: Показываем в плейлисте (всем владельцам) ИЛИ в медиатеке (только админам)
+    if (context === "playlist") {
+      delBtn.classList.remove("hidden");
+      if (delText) delText.textContent = "Убрать";
+    } else {
+      if (isAdmin) {
+        delBtn.classList.remove("hidden");
+        if (delText) delText.textContent = "Удалить";
+      } else {
+        delBtn.classList.add("hidden");
+      }
+    }
+
+    // Обновляем иконки (важно для новых кнопок)
+    if (window.lucide) window.lucide.createIcons();
   } else {
     bar.classList.add("translate-y-full");
   }
@@ -3363,14 +3495,14 @@ export function renderLibraryPageStructure(title, composers) {
                         </div>
 
                         <!-- Фильтры (Для мобильных они важны, для десктопа дублируют сайдбар, но нужны для тонкой настройки) -->
-                        <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-                            <select class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer lg:hidden"
+                        <div class="flex flex-wrap gap-2 pb-1 md:pb-0">
+                            <select class="flex-1 min-w-0 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer lg:hidden"
                                     onchange="window.applyLibraryFilter('composerId', this.value)">
                                 <option value="">Все композиторы</option>
                                 ${composerOptions}
                             </select>
 
-                            <select class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
+                            <select class="flex-1 min-w-0 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer"
                                     onchange="window.applyLibraryFilter('sortBy', this.value)">
                                 <option value="newest">Сначала новые</option>
                                 <option value="oldest">Сначала старые</option>
@@ -3460,8 +3592,8 @@ export function renderLibraryContent(
       .map((r, i) => {
         const isFav = favs.has(r.id);
         const compTitle = r.composition.title_ru || r.composition.title;
-        const workTitle = r.composition.work.name_ru;
         const composerName = r.composition.work.composer.name_ru;
+        const performerText = r.performers || "Исполнитель не указан";
         const isSelected =
           window.state && window.state.selectedRecordingIds.has(r.id);
         const cover =
@@ -3470,65 +3602,75 @@ export function renderLibraryContent(
           "/static/img/placeholder.png";
 
         return `
-            <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
-              isSelected
-                ? "bg-cyan-50 border-cyan-200"
-                : "border-b border-gray-100"
-            } bg-white last:border-0 transition-colors cursor-pointer"
-                 data-recording-id="${r.id}" data-index="${i}">
+          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
+            isSelected ? "bg-cyan-50" : "border-b border-gray-100"
+          } bg-white last:border-0 transition-colors cursor-pointer"
+               data-recording-id="${r.id}" data-index="${i}">
 
-                 <div class="w-10 flex justify-center items-center">
-                    <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                      r.id
-                    }" ${isSelected ? "checked" : ""}>
-                 </div>
-
-                 <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+               <!-- 1. Чекбокс -->
+               <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
+                 window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+               }">
+                 <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
                    r.id
-                 }">
-                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                 </div>
+                 }" ${isSelected ? "checked" : ""}>
+               </div>
+               
+               <!-- Пустышка для гостей -->
+               ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
 
-                 <div class="flex-shrink-0 mx-4">
-                    <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
-                 </div>
+               <!-- 2. Кнопка Play -->
+               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
+                 r.id
+               }">
+                  <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+               </div>
 
-                 <div class="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                         <div class="font-bold text-gray-800 text-sm truncate flex items-center gap-2">
-                            ${compTitle}
-                         </div>
-                         <div class="text-xs text-gray-500 truncate">${workTitle} • ${composerName}</div>
-                     </div>
-                     <div class="hidden md:block">
-                         <div class="text-sm text-gray-700 truncate">${
-                           r.performers || "Исполнитель не указан"
-                         }</div>
-                         <div class="text-xs text-gray-400">${
-                           r.recording_year || ""
-                         }</div>
-                     </div>
-                 </div>
+               <!-- 3. Обложка -->
+               <div class="flex-shrink-0 mx-2 md:mx-4">
+                  <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
+               </div>
 
-                 <button class="favorite-btn p-2 mr-2 ${
-                   isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"
-                 }" data-recording-id="${r.id}">
-                     <i data-lucide="heart" class="w-4 h-4 ${
-                       isFav ? "fill-current" : ""
-                     }"></i>
-                 </button>
+               <!-- 4. НОВАЯ, КРАСИВАЯ ИНФОРМАЦИЯ -->
+               <div class="flex-1 min-w-0">
+                   <!-- Строка 1: НАЗВАНИЕ (жирным) -->
+                   <div class="font-bold text-gray-800 text-sm leading-tight break-words">
+                      ${compTitle}
+                   </div>
+                   <!-- Строка 2: МЕТАДАННЫЕ (серым) -->
+                   <div class="text-xs text-gray-500 mt-0.5 break-words">
+                      <span>${performerText}</span>
+                      <span class="text-gray-300 mx-1">•</span>
+                      <span>${composerName}</span>
+                   </div>
+               </div>
 
-                 <div class="flex flex-col items-end justify-center w-20 ml-auto">
-                    <div class="text-xs text-gray-500 font-mono">${formatDuration(
+               <!-- 5. Правая часть (Лайк и Длительность) -->
+               <div class="flex items-center ml-auto pl-3 flex-shrink-0">
+                    
+                    <!-- === ИЗМЕНЕНИЕ ЗДЕСЬ: Оборачиваем кнопку в div, который скрывается на мобильных === -->
+                    <div class="hidden md:flex items-center">
+                        ${
+                          isLoggedIn()
+                            ? `
+                            <button class="favorite-btn p-2 mr-2 ${
+                              isFav
+                                ? "text-red-500"
+                                : "text-gray-300 hover:text-red-400"
+                            }" data-recording-id="${r.id}">
+                                <i data-lucide="heart" class="w-4 h-4 ${
+                                  isFav ? "fill-current" : ""
+                                }"></i>
+                            </button>`
+                            : '<div class="w-10"></div>' // Пустышка для выравнивания
+                        }
+                    </div>
+                    
+                    <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
                       r.duration
                     )}</div>
-                    ${
-                      isAdmin()
-                        ? `<div class="text-[10px] text-gray-300 font-mono mt-0.5 select-all cursor-copy hover:text-cyan-600 transition-colors" title="ID: ${r.id}">#${r.id}</div>`
-                        : ""
-                    }
-                 </div>
-            </div>`;
+               </div>
+          </div>`;
       })
       .join("");
 
@@ -3611,11 +3753,10 @@ export function updateLoadMoreButton(hasMore) {
 export function renderQueue(nowPlaying, queue) {
   const container = document.getElementById("queue-list");
   if (!container) return;
-  let html = "";
 
-  // Блок "Сейчас играет"
+  // Создаем внутреннюю структуру с помощью Flexbox
+  let nowPlayingHtml = "";
   if (nowPlaying) {
-    // Объявляем переменные для блока "Сейчас играет"
     const comp = nowPlaying.composition;
     const work = comp.work;
     const composer = work.composer;
@@ -3623,90 +3764,84 @@ export function renderQueue(nowPlaying, queue) {
     const workTitle = getLocalizedText(work, "name", "ru");
     const composerName = getLocalizedText(composer, "name", "ru");
 
-    html += `
-            <div class="mb-4">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Сейчас играет</h3>
-                <div class="flex items-center gap-3 p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
-                    <img src="${
-                      comp.cover_art_url ||
-                      work.cover_art_url ||
-                      "/static/img/placeholder.png"
-                    }" class="w-10 h-10 rounded-md object-cover flex-shrink-0">
-                    <div class="min-w-0">
-                        <div class="font-bold text-cyan-800 text-sm leading-tight">${partTitle}</div>
-                        <div class="text-xs text-gray-500 mt-1">${workTitle} • ${composerName}</div>
-                    </div>
-                </div>
-            </div>
-        `;
+    nowPlayingHtml = `
+      <div class="mb-4 flex-shrink-0">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Сейчас играет</h3>
+          <div class="flex items-center gap-3 p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
+              <img src="${
+                comp.cover_art_url ||
+                work.cover_art_url ||
+                "/static/img/placeholder.png"
+              }" class="w-10 h-10 rounded-md object-cover flex-shrink-0">
+              <div class="min-w-0">
+                  <div class="font-bold text-cyan-800 text-sm leading-tight">${partTitle}</div>
+                  <div class="text-xs text-gray-500 mt-1">${workTitle} • ${composerName}</div>
+              </div>
+          </div>
+      </div>
+    `;
   }
 
-  // Блок "Далее в очереди" и "Очистить"
-  if (nowPlaying || (queue && queue.length > 0)) {
-    html += `
-            <div class="flex justify-between items-center mb-2 mt-6">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    ${queue && queue.length > 0 ? "Далее" : ""}
-                </h3>
-                ${
-                  queue && queue.length > 0
-                    ? '<button id="clear-queue-btn" class="text-xs text-cyan-600 hover:underline font-bold">Очистить</button>'
-                    : ""
-                }
+  let queueHtml = "";
+  if (queue && queue.length > 0) {
+    const queueItems = queue
+      .map((rec, index) => {
+        const comp = rec.composition;
+        const work = comp.work;
+        const composer = work.composer;
+        const partTitle = getLocalizedText(comp, "title", "ru");
+        const workTitle = getLocalizedText(work, "name", "ru");
+        const composerName = getLocalizedText(composer, "name", "ru");
+        return `
+            <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group">
+                <span class="text-xs text-gray-400 w-5 text-center">${
+                  index + 1
+                }.</span>
+                <div class="min-w-0 flex-1">
+                    <div class="font-medium text-gray-800 text-sm leading-tight">${partTitle}</div>
+                    <div class="text-xs text-gray-500 mt-0.5">${workTitle} • ${composerName}</div>
+                </div>
+                <button class="remove-from-queue-btn p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-index="${index}" title="Удалить из очереди">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
         `;
+      })
+      .join("");
 
-    if (queue && queue.length > 0) {
-      const queueItems = queue
-        .map((rec, index) => {
-          // === ИСПРАВЛЕНИЕ: ПЕРЕМЕННЫЕ ОБЪЯВЛЯЮТСЯ ЗДЕСЬ, ВНУТРИ MAP ===
-          const comp = rec.composition;
-          const work = comp.work;
-          const composer = work.composer;
-          const partTitle = getLocalizedText(comp, "title", "ru");
-          const workTitle = getLocalizedText(work, "name", "ru");
-          const composerName = getLocalizedText(composer, "name", "ru");
-
-          return `
-                <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group">
-                    <span class="text-xs text-gray-400 w-5 text-center">${
-                      index + 1
-                    }.</span>
-                    <div class="min-w-0 flex-1">
-                        <div class="font-medium text-gray-800 text-sm leading-tight">${partTitle}</div>
-                        <div class="text-xs text-gray-500 mt-0.5">${workTitle} • ${composerName}</div>
-                    </div>
-                    <button class="remove-from-queue-btn p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-index="${index}" title="Удалить из очереди">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `;
-        })
-        .join("");
-
-      html += `
-                <div class="border rounded-lg bg-white overflow-hidden">
-                    <div class="max-h-[60vh] overflow-y-auto">
-                        ${queueItems}
-                    </div>
-                </div>
-            `;
-    } else if (nowPlaying) {
-      html += `
-                <div class="text-center text-xs text-gray-400 mt-2 p-4 bg-gray-50 rounded-lg">
-                    <p class="font-bold mb-1">Очередь пуста</p>
-                    <p>После текущего трека начнётся воспроизведение случайного произведения.</p>
-                </div>
-            `;
-    }
+    queueHtml = `
+      <div class="flex justify-between items-center mb-2 flex-shrink-0">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Далее</h3>
+          <button id="clear-queue-btn" class="text-xs text-cyan-600 hover:underline font-bold">Очистить</button>
+      </div>
+      <!-- Этот div будет растягиваться и скроллиться -->
+      <div class="flex-1 overflow-y-auto border rounded-lg bg-white pr-1">
+        ${queueItems}
+      </div>
+    `;
+  } else if (nowPlaying) {
+    queueHtml = `
+      <div class="text-center text-xs text-gray-400 mt-2 p-4 bg-gray-50 rounded-lg flex-shrink-0">
+          <p class="font-bold mb-1">Очередь пуста</p>
+          <p>Далее начнётся воспроизведение случайного произведения.</p>
+      </div>
+    `;
   } else {
-    html +=
+    queueHtml =
       '<p class="text-center text-sm text-gray-400 mt-8">Начните воспроизведение, чтобы увидеть очередь</p>';
   }
 
-  container.innerHTML = html;
+  // Собираем всё вместе в Flexbox контейнер
+  container.innerHTML = `
+    <div class="flex flex-col h-full">
+      ${nowPlayingHtml}
+      ${queueHtml}
+    </div>
+  `;
+
   if (window.lucide) window.lucide.createIcons();
 }
+
 export function renderComposersMap(composers) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
@@ -3807,4 +3942,30 @@ export function renderComposersMap(composers) {
 
     if (window.lucide) window.lucide.createIcons();
   }, 100);
+}
+export function updateSelectionStyles() {
+  document.querySelectorAll(".recording-item").forEach((row) => {
+    const id = parseInt(row.dataset.recordingId);
+    if (isNaN(id)) return;
+
+    const checkbox = row.querySelector(".recording-checkbox");
+    const isSelected =
+      window.state && window.state.selectedRecordingIds.has(id);
+
+    // Сброс классов конфликтующих фонов
+    row.classList.remove(
+      "bg-white",
+      "bg-cyan-50",
+      "hover:bg-gray-50",
+      "bg-cyan-100/60"
+    );
+
+    if (isSelected) {
+      row.classList.add("bg-cyan-50");
+      if (checkbox) checkbox.checked = true;
+    } else {
+      row.classList.add("bg-white", "hover:bg-gray-50");
+      if (checkbox) checkbox.checked = false;
+    }
+  });
 }
