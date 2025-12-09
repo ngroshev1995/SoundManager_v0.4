@@ -1,6 +1,25 @@
 // static/js/ui.js
 
 let selectedRecordingFile = null;
+let quillLoadingPromise = null;
+
+async function loadAndInitQuill(selectorId, content) {
+  // Если Quill еще не загружен, начинаем его загрузку
+  if (!window.Quill && !quillLoadingPromise) {
+      quillLoadingPromise = new Promise(resolve => {
+          const check = () => window.Quill ? resolve() : setTimeout(check, 50);
+          check();
+      });
+  }
+
+  // Ждем завершения загрузки
+  if (quillLoadingPromise) {
+      await quillLoadingPromise;
+  }
+  
+  initQuill(selectorId, content);
+}
+
 window.quillEditor = null;
 let mapInstance = null;
 
@@ -263,6 +282,7 @@ export function renderDashboard(data, lang = "ru") {
             muted
             loop
             playsinline
+            preload="metadata"
             poster="/static/img/hero.jpg"
             class="w-full h-full object-cover transition-transform duration-[20000ms] ease-linear transform group-hover:scale-105"
           >
@@ -348,14 +368,18 @@ export function renderDashboard(data, lang = "ru") {
         const cover = item.cover_art_url || "/static/img/placeholder.png";
         // ССЫЛКА ПО ID
         return `
-            <a href="/works/${item.slug || item.id}" data-navigo
-               class="bg-white rounded-xl p-4 shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:border-cyan-200 group flex flex-col h-full">
-                <div class="relative aspect-square mb-4 overflow-hidden rounded-lg bg-gray-100">
-                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div class="bg-white p-3 rounded-full shadow-lg text-cyan-600"><i data-lucide="arrow-right" class="w-5 h-5"></i></div>
-                    </div>
-                </div>
+    <a href="/works/${item.slug || item.id}" data-navigo
+       class="bg-white rounded-xl p-4 shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:border-cyan-200 group flex flex-col h-full">
+        <div class="relative aspect-square mb-4 overflow-hidden rounded-lg bg-gray-100">
+            <img src="${cover}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" alt="${getLocalizedText(
+          item,
+          "name",
+          lang
+        )}">
+            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div class="bg-white p-3 rounded-full shadow-lg text-cyan-600"><i data-lucide="arrow-right" class="w-5 h-5"></i></div>
+            </div>
+        </div>
                 <h4 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors line-clamp-1">${getLocalizedText(
                   item,
                   "name",
@@ -486,8 +510,8 @@ export function renderRecordingList(
   
                <!-- 3. Обложка -->
                 <div class="flex-shrink-0 mx-2 md:mx-4">
-                  <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
-               </div>
+              <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy" alt="Обложка">
+                </div>
   
                <!-- 4. Информация -->
                <div class="flex-1 min-w-0">
@@ -670,12 +694,16 @@ export function renderComposerList(
         : "";
 
       return `
-      <a href="/composers/${c.slug || c.id}" data-navigo
-         class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl transition-all flex items-center gap-4 border border-gray-100 hover:border-cyan-200 group animate-fade-in">
-          <img src="${
-            c.portrait_url || "/static/img/placeholder.png"
-          }" class="w-16 h-16 rounded-full object-cover border-2 border-gray-100 group-hover:border-cyan-100 transition-colors shadow-sm flex-shrink-0">
-          <div class="min-w-0">
+        <a href="/composers/${c.slug || c.id}" data-navigo
+           class="bg-white rounded-2xl p-5 shadow-sm hover:shadow-xl transition-all flex items-center gap-4 border border-gray-100 hover:border-cyan-200 group animate-fade-in">
+            <img src="${
+              c.portrait_url || "/static/img/placeholder.png"
+            }" class="w-16 h-16 rounded-full object-cover border-2 border-gray-100 group-hover:border-cyan-100 transition-colors shadow-sm flex-shrink-0" loading="lazy" alt="Портрет ${getLocalizedText(
+        c,
+        "name",
+        lang
+      )}">
+            <div class="min-w-0">
               <h3 class="font-bold text-gray-800 group-hover:text-cyan-600 transition-colors truncate">${getLocalizedText(
                 c,
                 "name",
@@ -754,10 +782,14 @@ export function renderWorkList(works, composer, lang = "ru") {
 
             <!-- === КОНТЕНТ (Поверх фона) === -->
             <div class="relative z-10 p-8 flex flex-col md:flex-row gap-8 items-start">
-                <div class="flex-shrink-0">
-                    <img src="${bgImage}"
-                         class="w-40 h-40 md:w-48 md:h-48 rounded-2xl object-cover shadow-2xl transform group-hover:scale-105 transition-transform duration-500">
-                </div>
+            <div class="flex-shrink-0">
+                <img src="${bgImage}"
+                     class="w-40 h-40 md:w-48 md:h-48 rounded-2xl object-cover shadow-2xl transform group-hover:scale-105 transition-transform duration-500" loading="lazy" alt="Портрет ${getLocalizedText(
+                       composer,
+                       "name",
+                       lang
+                     )}">
+            </div>
 
                 <div class="flex-1 w-full text-left pt-2">
                     <div>
@@ -890,12 +922,16 @@ export function renderWorkList(works, composer, lang = "ru") {
             .join(" • ");
 
           return `
-                <a href="${link}" data-navigo
-                   class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-cyan-400 hover:shadow-lg transition-all group flex flex-col h-full"
-                   title="${w.original_name || ""}">
-                    <div class="aspect-square bg-gray-100 relative overflow-hidden">
-                        <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+            <a href="${link}" data-navigo
+               class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-cyan-400 hover:shadow-lg transition-all group flex flex-col h-full"
+               title="${w.original_name || ""}">
+                <div class="aspect-square bg-gray-100 relative overflow-hidden">
+                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" alt="Обложка ${getLocalizedText(
+            w,
+            "name",
+            lang
+          )}">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                             <span class="text-white text-sm font-bold flex items-center gap-1"><i data-lucide="corner-down-right" class="w-4 h-4"></i> Открыть</span>
                         </div>
                     </div>
@@ -1964,19 +2000,15 @@ export function updateSelectedRecordingFile(f) {
 }
 
 // MODALS OPEN
-export function showAddComposerModal() {
+export async function showAddComposerModal() {
   const modal = document.getElementById("add-composer-modal");
   modal.classList.remove("hidden");
 
-  // Очистка полей
-  document
-    .querySelectorAll("#add-composer-modal input")
-    .forEach((i) => (i.value = ""));
+  document.querySelectorAll("#add-composer-modal input").forEach((i) => (i.value = ""));
 
-  // Инициализация Quill (пустой)
-  initQuill("#add-composer-bio", "");
+  // Используем новую асинхронную функцию
+  await loadAndInitQuill("#add-composer-bio", "");
 
-  // Закрытие
   const closeBtn = modal.querySelector(".close-button");
   const newClose = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
@@ -1985,7 +2017,7 @@ export function showAddComposerModal() {
     modal.classList.add("hidden");
   };
 }
-export function showAddWorkModal() {
+export async function showAddWorkModal() {
   const modal = document.getElementById("add-work-modal");
   modal.classList.remove("hidden");
 
@@ -2021,8 +2053,8 @@ export function showAddWorkModal() {
     });
   }
 
-  // 5. Инициализация Quill (пустой)
-  initQuill("#add-work-notes", "");
+  // 5. +++ ИЗМЕНЕНИЕ: Динамическая загрузка и инициализация Quill +++
+  await loadAndInitQuill("#add-work-notes", "");
 
   // 6. Закрытие
   const closeBtn = modal.querySelector(".close-button");
@@ -2088,7 +2120,7 @@ export function showAddRecordingModal(id) {
     "Выберите файл...";
 }
 
-export function showEditEntityModal(type, data, onSave) {
+export async function showEditEntityModal(type, data, onSave) {
   const modal = document.getElementById("edit-modal");
   const content = document.getElementById("edit-modal-content");
   const title = document.getElementById("edit-modal-title");
@@ -2367,7 +2399,8 @@ export function showEditEntityModal(type, data, onSave) {
   // --- ИНИЦИАЛИЗАЦИЯ QUILL ---
   if (type === "composer" || type === "work") {
     const selectorId = type === "work" ? "#edit-work-notes" : "#edit-notes";
-    initQuill(selectorId, data.notes);
+    // +++ ИЗМЕНЕНИЕ: Используем новую асинхронную функцию +++
+    await loadAndInitQuill(selectorId, data.notes);
   }
 
   // --- СОХРАНЕНИЕ ---
@@ -3281,7 +3314,7 @@ export function renderBlogList(posts) {
   if (window.lucide) window.lucide.createIcons();
 }
 
-export function renderBlogPost(post) {
+export async function renderBlogPost(post) {
   const { listEl } = getElements();
   document.getElementById("view-title-container").classList.add("hidden");
 
@@ -3323,10 +3356,22 @@ export function renderBlogPost(post) {
 
   listEl.innerHTML = header + content;
 
-  // === ИНИЦИАЛИЗАЦИЯ PLYR ===
-  // Находим все теги <audio> в статье и превращаем их в красивые плееры
-  if (window.Plyr) {
-    const players = Array.from(document.querySelectorAll(".prose audio")).map(
+  // === ИНИЦИАЛИЗАЦИЯ PLYR (С ДИНАМИЧЕСКОЙ ЗАГРУЗКОЙ) ===
+  // Находим все теги <audio> в статье
+  const audioElements = Array.from(document.querySelectorAll(".prose audio"));
+
+  // Если на странице есть аудио и библиотека Plyr еще не загружена
+  if (audioElements.length > 0) {
+    if (typeof Plyr === 'undefined') {
+      // Ждем, пока defer-скрипт из index.html загрузит и исполнит Plyr
+      await new Promise(resolve => {
+        const check = () => (window.Plyr ? resolve() : setTimeout(check, 50));
+        check();
+      });
+    }
+    
+    // Когда Plyr точно доступен, инициализируем все плееры
+    const players = audioElements.map(
       (p) =>
         new Plyr(p, {
           controls: ["play", "progress", "current-time", "mute", "volume"], // Настройка кнопок
@@ -3339,7 +3384,7 @@ export function renderBlogPost(post) {
 }
 
 // Функция открытия модалки блога
-export function showBlogModal(post = null) {
+export async function showBlogModal(post = null) {
   const modal = document.getElementById("blog-modal");
   modal.classList.remove("hidden");
 
@@ -3362,8 +3407,8 @@ export function showBlogModal(post = null) {
     ? post.meta_keywords
     : "";
 
-  // Init Quill
-  initQuill("#blog-content", post ? post.content : "");
+  // +++ ИЗМЕНЕНИЕ: Динамическая загрузка и инициализация Quill +++
+  await loadAndInitQuill("#blog-content", post ? post.content : "");
 
   // === АВТО-ГЕНЕРАЦИЯ SLUG ===
   // Только для новых статей, чтобы не ломать ссылки старых
@@ -3379,6 +3424,7 @@ export function showBlogModal(post = null) {
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
   newClose.onclick = () => modal.classList.add("hidden");
 }
+
 
 export function renderLibraryPageStructure(title, composers) {
   const { listEl } = getElements();

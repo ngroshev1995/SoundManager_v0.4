@@ -134,7 +134,7 @@ function setupRouter() {
           mobileMenuPanel.classList.add("hidden");
         }
         done(); // Разрешаем роутеру продолжить переход.
-      }
+      },
     })
 
     .on({
@@ -218,12 +218,34 @@ function setupRouter() {
       },
       "/map": async () => {
         state.view.current = "map";
-        // Грузим ВСЕХ композиторов (limit=1000), чтобы карта была полной
-        // Если база огромная, нужно делать кластеризацию, но для классики 100-200 человек — норм.
-        const composers = await apiRequest(
-          "/api/recordings/composers?limit=1000"
-        );
-        ui.renderComposersMap(composers);
+
+        // +++ НОВЫЙ КОД С ДИНАМИЧЕСКИМ ИМПОРТОМ +++
+        // Показываем спиннер, пока грузится библиотека и данные
+        const listEl = document.getElementById("composition-list");
+        if (listEl) {
+          listEl.innerHTML =
+            '<div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600"></div></div>';
+        }
+
+        try {
+          // Проверяем, загружен ли Leaflet (L)
+          if (typeof L === "undefined") {
+            // Динамически импортируем скрипт Leaflet, если его еще нет
+            await import("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
+          }
+
+          // Загружаем данные композиторов
+          const composers = await apiRequest(
+            "/api/recordings/composers?limit=1000"
+          );
+
+          // Рендерим карту
+          ui.renderComposersMap(composers);
+        } catch (error) {
+          console.error("Failed to load map:", error);
+          ui.showNotification("Не удалось загрузить карту", "error");
+          if (listEl) listEl.innerHTML = ""; // Очищаем спиннер в случае ошибки
+        }
       },
     })
     .resolve();
@@ -461,7 +483,6 @@ async function loadCurrentView() {
 // static/js/main.js
 
 function addEventListeners() {
-
   // --- ЛОГИКА МОБИЛЬНОГО МЕНЮ ---
   const mobileMenuBtn = document.getElementById("mobile-menu-btn");
   const mobileMenuPanel = document.getElementById("mobile-menu-panel");
@@ -695,7 +716,7 @@ function addEventListeners() {
       // Это самое надежное место.
       const mobileMenuPanel = document.getElementById("mobile-menu-panel");
       if (mobileMenuPanel) {
-          mobileMenuPanel.classList.add("hidden");
+        mobileMenuPanel.classList.add("hidden");
       }
       // ======================================
 
