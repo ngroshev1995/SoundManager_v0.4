@@ -8,3 +8,5 @@ music_manager.db
 *.pyc
 alembic.ini
 make_admin.py
+/tailwindcss.exe
+/input.css
