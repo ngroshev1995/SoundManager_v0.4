@@ -219,8 +219,11 @@ function setupRouter() {
       "/map": async () => {
         state.view.current = "map";
 
-        // +++ НОВЫЙ КОД С ДИНАМИЧЕСКИМ ИМПОРТОМ +++
-        // Показываем спиннер, пока грузится библиотека и данные
+        const contentHeader = document.getElementById("content-header");
+        if (contentHeader) {
+          contentHeader.classList.remove("hidden");
+        }
+
         const listEl = document.getElementById("composition-list");
         if (listEl) {
           listEl.innerHTML =
@@ -241,6 +244,8 @@ function setupRouter() {
 
           // Рендерим карту
           ui.renderComposersMap(composers);
+
+          ui.renderBreadcrumbs();
         } catch (error) {
           console.error("Failed to load map:", error);
           ui.showNotification("Не удалось загрузить карту", "error");
@@ -511,6 +516,12 @@ function addEventListeners() {
 
     if (target.closest("#show-login-modal-btn")) {
       ui.showAuthView();
+    }
+
+    // --- ЗАКРЫТИЕ ОКНА АВТОРИЗАЦИИ ---
+    if (target.closest("#auth-close-btn")) {
+      ui.showMainApp(); // Эта функция скрывает auth-view и показывает main-view
+      return;
     }
 
     // --- ВОСПРОИЗВЕДЕНИЕ ВСЕГО ПРОИЗВЕДЕНИЯ ---

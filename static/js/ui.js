@@ -6,17 +6,17 @@ let quillLoadingPromise = null;
 async function loadAndInitQuill(selectorId, content) {
   // Если Quill еще не загружен, начинаем его загрузку
   if (!window.Quill && !quillLoadingPromise) {
-      quillLoadingPromise = new Promise(resolve => {
-          const check = () => window.Quill ? resolve() : setTimeout(check, 50);
-          check();
-      });
+    quillLoadingPromise = new Promise((resolve) => {
+      const check = () => (window.Quill ? resolve() : setTimeout(check, 50));
+      check();
+    });
   }
 
   // Ждем завершения загрузки
   if (quillLoadingPromise) {
-      await quillLoadingPromise;
+    await quillLoadingPromise;
   }
-  
+
   initQuill(selectorId, content);
 }
 
@@ -1729,81 +1729,86 @@ export function renderCompositionDetailView(
 
 // --- STUBS & UTILS ---
 export function updatePlayerInfo(rec) {
-  const titleEl = document.getElementById("player-title");
-  const artistEl = document.getElementById("player-artist");
-  const coverEl = document.getElementById("player-cover-art");
-  const favBtnContainer = document.getElementById(
-    "player-favorite-btn-container"
+  // Определяем данные
+  let title = "Выберите трек";
+  let artist = "ClassicaLib";
+  let cover = "/static/img/placeholder.png";
+  let recId = null;
+
+  if (rec) {
+    recId = rec.id;
+    title = getLocalizedText(rec.composition, "title", "ru");
+    const composer = getLocalizedText(
+      rec.composition.work.composer,
+      "name",
+      "ru"
+    );
+    const work = getLocalizedText(rec.composition.work, "name", "ru");
+    const performer = rec.performers || "Неизвестный исполнитель";
+
+    artist = `${composer} • ${work} • ${performer}`;
+    cover =
+      rec.composition.cover_art_url ||
+      rec.composition.work.cover_art_url ||
+      cover;
+  }
+
+  // --- ОБНОВЛЕНИЕ МОБИЛЬНОЙ ВЕРСИИ (Бегущая строка) ---
+  const mobTitleEl = document.getElementById("player-title-mobile");
+  const mobArtistEl = document.getElementById("player-artist-mobile");
+  const mobCover = document.getElementById("player-cover-art-mobile");
+  const mobFavContainer = document.getElementById(
+    "player-favorite-btn-container-mobile"
   );
 
-  // Сценарий 1: Ничего не играет
-  if (!rec) {
-    if (titleEl) titleEl.textContent = "Выберите трек";
-    if (artistEl) artistEl.textContent = "...";
-    if (coverEl) coverEl.src = "/static/img/placeholder.png";
-    if (favBtnContainer) favBtnContainer.innerHTML = "";
-    return;
+  if (mobTitleEl) {
+    mobTitleEl.textContent = title;
+    mobArtistEl.textContent = artist;
+    mobCover.src = cover;
+
+    // Логика бегущей строки
+    checkMarquee(document.getElementById("marquee-title-mobile"), mobTitleEl);
+    checkMarquee(document.getElementById("marquee-artist-mobile"), mobArtistEl);
+
+    // Лайк
+    renderLikeButton(mobFavContainer, recId);
   }
 
-  // Сценарий 2: Трек играет, обновляем основную информацию
-  const comp = rec.composition;
-  const work = comp.work;
-  const composer = work.composer;
-  const partTitle = getLocalizedText(comp, "title", "ru");
-  const workTitle = getLocalizedText(work, "name", "ru");
-  const composerName = getLocalizedText(composer, "name", "ru");
+  // --- ОБНОВЛЕНИЕ ДЕСКТОПНОЙ ВЕРСИИ (Статика) ---
+  const deskTitleEl = document.getElementById("player-title-desktop");
+  const deskArtistEl = document.getElementById("player-artist-desktop");
+  const deskCover = document.getElementById("player-cover-art-desktop");
+  const deskFavContainer = document.getElementById(
+    "player-favorite-btn-container-desktop"
+  );
 
-  if (titleEl) titleEl.textContent = partTitle;
-  if (artistEl) {
-    artistEl.innerHTML = `
-      <span class="font-semibold">${composerName}</span>
-      <span class="text-gray-400 mx-1">•</span>
-      <span>${workTitle}</span>`;
-  }
-  if (coverEl) {
-    coverEl.src =
-      comp.cover_art_url || work.cover_art_url || "/static/img/placeholder.png";
-  }
+  if (deskTitleEl) {
+    deskTitleEl.textContent = title;
+    deskTitleEl.title = title; // Тултип при наведении
+    deskArtistEl.textContent = artist;
+    deskArtistEl.title = artist;
+    deskCover.src = cover;
 
-  // === ИСПРАВЛЕННАЯ ЛОГИКА КНОПКИ "ИЗБРАННОЕ" ===
-  if (favBtnContainer) {
-    // ШАГ 1: Проверяем, что пользователь вошел В ПРИНЦИПЕ
-    if (isLoggedIn()) {
-      // ШАГ 2: ПРОВЕРЯЕМ, что данные об избранном УЖЕ ЗАГРУЖЕНЫ
-      // Это защищает от сбоя при первой загрузке страницы.
-      if (window.state && window.state.favoritesLoaded) {
-        const isFav = window.state.favoriteRecordingIds.has(rec.id);
-        favBtnContainer.innerHTML = `
-          <button class="favorite-btn p-2 ${
-            isFav ? "text-red-500" : "text-gray-400 hover:text-red-500"
-          } transition-colors" data-recording-id="${rec.id}">
-              <i data-lucide="heart" class="w-5 h-5 ${
-                isFav ? "fill-current" : ""
-              }"></i>
-          </button>
-        `;
-        if (window.lucide) lucide.createIcons();
-      } else {
-        // Если данные еще грузятся, пока ничего не показываем (или можно показать спиннер)
-        favBtnContainer.innerHTML = "";
-      }
-    } else {
-      // Гость -> Контейнер 100% пустой
-      favBtnContainer.innerHTML = "";
-    }
+    renderLikeButton(deskFavContainer, recId);
   }
 }
 
 export function updatePlayPauseIcon(isPlaying) {
-  const p = document.getElementById("play-icon");
-  const pp = document.getElementById("pause-icon");
-  if (isPlaying) {
-    p.classList.add("hidden");
-    pp.classList.remove("hidden");
-  } else {
-    p.classList.remove("hidden");
-    pp.classList.add("hidden");
-  }
+  // Массив суффиксов
+  ["-mobile", "-desktop"].forEach((suffix) => {
+    const playIcon = document.getElementById("play-icon" + suffix);
+    const pauseIcon = document.getElementById("pause-icon" + suffix);
+
+    if (playIcon && pauseIcon) {
+      if (isPlaying) {
+        playIcon.classList.add("hidden");
+        pauseIcon.classList.remove("hidden");
+      } else {
+        playIcon.classList.remove("hidden");
+        pauseIcon.classList.add("hidden");
+      }
+    }
+  });
 }
 export function renderPlaylistList(playlists) {
   const m = document.getElementById("playlists-dropdown-menu");
@@ -1951,6 +1956,10 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: "Поиск" });
       crumbs.push({ label: `"${window.state.view.searchQuery}"` });
       break;
+
+    case "map":
+      crumbs.push({ label: "Карта" });
+      break;
   }
 
   // 4. Генерируем HTML
@@ -2004,7 +2013,9 @@ export async function showAddComposerModal() {
   const modal = document.getElementById("add-composer-modal");
   modal.classList.remove("hidden");
 
-  document.querySelectorAll("#add-composer-modal input").forEach((i) => (i.value = ""));
+  document
+    .querySelectorAll("#add-composer-modal input")
+    .forEach((i) => (i.value = ""));
 
   // Используем новую асинхронную функцию
   await loadAndInitQuill("#add-composer-bio", "");
@@ -2645,92 +2656,74 @@ export function hideContextMenu(menu) {
   menu.style.display = "none";
   menu.classList.add("hidden");
 }
+
 export function initPlayerToggle() {
-  const footer = document.getElementById("music-player");
-  const btn = document.getElementById("player-toggle-btn");
-  const icon = document.getElementById("player-toggle-icon");
-  const mainContent = document.getElementById("main-content"); // <--- Находим контейнер
+  const player = document.getElementById("music-player");
 
-  if (!footer || !btn) return;
+  // Кнопки закрытия (Desktop и Mobile)
+  const closeBtnDesktop = document.getElementById("player-toggle-btn");
+  const closeBtnMobile = document.getElementById("player-toggle-btn-mobile");
 
-  // Проверяем сохраненное состояние
-  const isCollapsed = localStorage.getItem("player_collapsed") === "true";
-
-  if (isCollapsed) {
-    footer.classList.add("translate-y-full");
-    icon.classList.add("rotate-180");
-    mainContent?.classList.remove("pb-24"); // <--- Убираем отступ, если свернут
-  } else {
-    mainContent?.classList.add("pb-24"); // <--- Добавляем, если развернут
-  }
-
-  btn.onclick = () => {
-    const collapsed = footer.classList.toggle("translate-y-full");
-
-    if (collapsed) {
-      icon.classList.add("rotate-180");
-      mainContent?.classList.remove("pb-24"); // <--- Убираем отступ
-    } else {
-      icon.classList.remove("rotate-180");
-      mainContent?.classList.add("pb-24"); // <--- Возвращаем отступ
-    }
-
-    localStorage.setItem("player_collapsed", collapsed);
-  };
-}
-
-// Вспомогательная функция: принудительно открыть плеер (например, при старте трека)
-export function openPlayer() {
-  const footer = document.getElementById("music-player");
-  const icon = document.getElementById("player-toggle-icon");
+  const restoreBtn = document.getElementById("restore-player-btn");
   const mainContent = document.getElementById("main-content");
 
-  if (!footer) return;
+  if (!player) return;
 
-  footer.classList.remove("translate-y-full");
-  if (icon) icon.classList.remove("rotate-180");
+  // Общая функция закрытия
+  const closePlayer = () => {
+    player.classList.remove("player-expanded");
+    player.classList.add("player-collapsed");
 
-  // Возвращаем отступ, чтобы плеер не перекрывал контент
-  mainContent?.classList.add("pb-24");
+    if (mainContent) mainContent.classList.remove("pb-32");
 
-  localStorage.setItem("player_collapsed", "false");
-}
-
-export function updateTrackRowIcon(recordingId, isPlaying) {
-  // 1. Сначала сбрасываем ВСЕ иконки на Play
-  document.querySelectorAll(".recording-play-pause-btn").forEach((btn) => {
-    // Проверяем размер иконки (в списке композиций она больше)
-    const size =
-      btn.querySelector("svg")?.getAttribute("width") === "24"
-        ? "w-6 h-6"
-        : "w-5 h-5";
-    btn.innerHTML = `<i data-lucide="play" class="${size} fill-current"></i>`;
-  });
-
-  // 2. Если ничего не играет, просто обновляем иконки и уходим
-  if (!recordingId) {
-    if (window.lucide) window.lucide.createIcons();
-    return;
-  }
-
-  // 3. Находим кнопку текущего трека
-  const currentBtn = document.getElementById(`list-play-btn-${recordingId}`);
-
-  if (currentBtn) {
-    const size = currentBtn.closest(".recording-item").querySelector(".text-lg")
-      ? "w-6 h-6"
-      : "w-5 h-5"; // Хак для определения размера
-
-    if (isPlaying) {
-      currentBtn.innerHTML = `<i data-lucide="pause" class="${size} fill-current"></i>`;
-    } else {
-      currentBtn.innerHTML = `<i data-lucide="play" class="${size} fill-current"></i>`;
+    if (restoreBtn) {
+      restoreBtn.classList.remove(
+        "opacity-0",
+        "translate-y-20",
+        "pointer-events-none"
+      );
+      if (window.lucide) window.lucide.createIcons();
     }
+  };
+
+  // Вешаем обработчики на обе кнопки
+  if (closeBtnDesktop) closeBtnDesktop.onclick = closePlayer;
+  if (closeBtnMobile) closeBtnMobile.onclick = closePlayer;
+
+  // Логика разворачивания
+  if (restoreBtn) {
+    restoreBtn.onclick = () => {
+      openPlayer();
+    };
+  }
+}
+
+export function openPlayer() {
+  const player = document.getElementById("music-player");
+  const mainContent = document.getElementById("main-content");
+  const restoreBtn = document.getElementById("restore-player-btn");
+
+  if (!player) return;
+
+  // Разворачиваем плеер
+  player.classList.remove("player-collapsed");
+  player.classList.add("player-expanded");
+
+  // Добавляем отступ контенту
+  if (mainContent) {
+    mainContent.classList.add("pb-32");
   }
 
-  // Перерисовываем иконки
-  if (window.lucide) window.lucide.createIcons();
+  // ПРЯЧЕМ кнопку разворачивания (она больше не нужна)
+  if (restoreBtn) {
+    restoreBtn.classList.add(
+      "opacity-0",
+      "translate-y-20",
+      "pointer-events-none"
+    );
+  }
 }
+
 export function renderPlaylistsOverview(playlists) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
@@ -3362,14 +3355,14 @@ export async function renderBlogPost(post) {
 
   // Если на странице есть аудио и библиотека Plyr еще не загружена
   if (audioElements.length > 0) {
-    if (typeof Plyr === 'undefined') {
+    if (typeof Plyr === "undefined") {
       // Ждем, пока defer-скрипт из index.html загрузит и исполнит Plyr
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         const check = () => (window.Plyr ? resolve() : setTimeout(check, 50));
         check();
       });
     }
-    
+
     // Когда Plyr точно доступен, инициализируем все плееры
     const players = audioElements.map(
       (p) =>
@@ -3424,7 +3417,6 @@ export async function showBlogModal(post = null) {
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
   newClose.onclick = () => modal.classList.add("hidden");
 }
-
 
 export function renderLibraryPageStructure(title, composers) {
   const { listEl } = getElements();
@@ -3838,20 +3830,24 @@ export function renderQueue(nowPlaying, queue) {
         const partTitle = getLocalizedText(comp, "title", "ru");
         const workTitle = getLocalizedText(work, "name", "ru");
         const composerName = getLocalizedText(composer, "name", "ru");
+        const cover =
+          comp.cover_art_url ||
+          work.cover_art_url ||
+          "/static/img/placeholder.png";
         return `
-            <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group">
-                <span class="text-xs text-gray-400 w-5 text-center">${
-                  index + 1
-                }.</span>
-                <div class="min-w-0 flex-1">
-                    <div class="font-medium text-gray-800 text-sm leading-tight">${partTitle}</div>
-                    <div class="text-xs text-gray-500 mt-0.5">${workTitle} • ${composerName}</div>
-                </div>
-                <button class="remove-from-queue-btn p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" data-index="${index}" title="Удалить из очереди">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-        `;
+    <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group hover:bg-gray-50 transition-colors">
+        <!-- Вот что мы добавили: -->
+        <img src="${cover}" class="w-10 h-10 rounded-md object-cover flex-shrink-0">
+        
+        <div class="min-w-0 flex-1">
+            <div class="font-medium text-gray-800 text-sm leading-tight truncate">${partTitle}</div>
+            <div class="text-xs text-gray-500 mt-0.5 truncate">${workTitle} • ${composerName}</div>
+        </div>
+        <button class="remove-from-queue-btn p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" data-index="${index}" title="Удалить из очереди">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+`;
       })
       .join("");
 
@@ -3861,7 +3857,7 @@ export function renderQueue(nowPlaying, queue) {
           <button id="clear-queue-btn" class="text-xs text-cyan-600 hover:underline font-bold">Очистить</button>
       </div>
       <!-- Этот div будет растягиваться и скроллиться -->
-      <div class="flex-1 overflow-y-auto border rounded-lg bg-white pr-1">
+      <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg bg-white pr-1">
         ${queueItems}
       </div>
     `;
@@ -3892,15 +3888,15 @@ export function renderComposersMap(composers) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
 
-  // 1. Рисуем шапку
+  // 1. Рисуем шапку (ПО ЦЕНТРУ)
   viewTitle.classList.remove("hidden");
   viewTitle.innerHTML = `
-        <div class="w-full mb-6 border-b border-gray-200 pb-4">
+        <div class="w-full mb-6 border-b border-gray-200 pb-4 flex flex-col items-center text-center">
             <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <i data-lucide="map-pin" class="w-8 h-8 text-cyan-600"></i>
                 <span>География классики</span>
             </h2>
-            <p class="text-gray-500 mt-1">Где родились великие композиторы</p>
+            <p class="text-gray-500 mt-1">Где родились великие композиторы.</p>
         </div>
     `;
 
@@ -4014,4 +4010,87 @@ export function updateSelectionStyles() {
       if (checkbox) checkbox.checked = false;
     }
   });
+}
+function renderLikeButton(container, recId) {
+  if (!container) return;
+
+  if (recId && isLoggedIn() && window.state && window.state.favoritesLoaded) {
+    const isFav = window.state.favoriteRecordingIds.has(recId);
+    container.innerHTML = `
+        <button class="favorite-btn p-1.5 rounded-full hover:bg-gray-100 transition-colors ${
+          isFav ? "text-red-500" : "text-gray-400 hover:text-red-500"
+        }" data-recording-id="${recId}">
+            <i data-lucide="heart" class="w-5 h-5 ${
+              isFav ? "fill-current" : ""
+            }"></i>
+        </button>
+      `;
+  } else {
+    container.innerHTML = "";
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function checkMarquee(wrapper, contentSpan) {
+  if (!wrapper || !contentSpan) return;
+
+  // Сбрасываем клон, если был
+  const existingClone = wrapper.querySelector(".marquee-clone");
+  if (existingClone) existingClone.remove();
+  wrapper.classList.remove("is-long");
+
+  // Проверяем ширину
+  // Небольшая задержка, чтобы DOM обновился после смены текста
+  setTimeout(() => {
+    if (contentSpan.scrollWidth > wrapper.clientWidth) {
+      wrapper.classList.add("is-long");
+
+      // Создаем клон для бесшовной прокрутки
+      const clone = contentSpan.cloneNode(true);
+      clone.classList.add("marquee-clone");
+      clone.removeAttribute("id"); // ID должен быть уникальным
+      wrapper.appendChild(clone);
+    }
+  }, 50);
+}
+// В файл ui.js (можно в конец)
+
+export function updateTrackRowIcon(recordingId, isPlaying) {
+  // 1. Сначала сбрасываем ВСЕ иконки на Play
+  document.querySelectorAll(".recording-play-pause-btn").forEach((btn) => {
+    // Проверяем размер иконки (в списке композиций она больше)
+    const size =
+      btn.querySelector("svg")?.getAttribute("width") === "24"
+        ? "w-6 h-6"
+        : "w-5 h-5";
+    // Используем data-lucide для статической разметки или innerHTML для динамики
+    btn.innerHTML = `<i data-lucide="play" class="${size} fill-current"></i>`;
+  });
+
+  // 2. Если ничего не играет, просто обновляем иконки и уходим
+  if (!recordingId) {
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  // 3. Находим кнопку текущего трека
+  const currentBtn = document.getElementById(`list-play-btn-${recordingId}`);
+
+  if (currentBtn) {
+    // Определяем размер иконки
+    const size = currentBtn
+      .closest(".recording-item")
+      ?.querySelector(".text-lg")
+      ? "w-6 h-6"
+      : "w-5 h-5";
+
+    if (isPlaying) {
+      currentBtn.innerHTML = `<i data-lucide="pause" class="${size} fill-current"></i>`;
+    } else {
+      currentBtn.innerHTML = `<i data-lucide="play" class="${size} fill-current"></i>`;
+    }
+  }
+
+  // Перерисовываем иконки
+  if (window.lucide) window.lucide.createIcons();
 }

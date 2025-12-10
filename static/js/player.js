@@ -21,9 +21,6 @@ function playRecordingObject(recording) {
   currentRecordingId = recording.id;
   audioPlayer.src = `/api/recordings/stream/${recording.id}`;
   audioPlayer.play();
-
-  // УДАЛЕНО: audioPlayer.ontimeupdate = ... (перенесено в единый обработчик updateProgress)
-
   ui.updatePlayerInfo(recording);
   updateIcons();
   ui.openPlayer();
@@ -176,14 +173,32 @@ export function clearFullQueue(stopPlayer = true) {
         isPlaying = false;
         ui.updatePlayerInfo(null);
 
-        // Сброс прогресс бара
-        const progressBar = document.getElementById("progress-bar");
-        if(progressBar) {
-            progressBar.value = 0;
-            progressBar.style.background = '#e2e8f0'; // Сброс цвета
-        }
-        document.getElementById("current-time").textContent = "0:00";
-        document.getElementById("total-time").textContent = "0:00";
+        // Безопасный сброс времени (Mobile & Desktop)
+        const timeElements = [
+            'current-time-mobile', 'total-time-mobile',
+            'current-time-desktop', 'total-time-desktop'
+        ];
+
+        timeElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = "0:00";
+        });
+
+        // Сброс прогресс баров
+        ['progress-bar-mobile', 'progress-bar-desktop'].forEach(id => {
+            const bar = document.getElementById(id);
+            if(bar) {
+                bar.value = 0;
+                // Сброс градиента (если используется)
+                bar.style.background = '';
+            }
+        });
+
+        // Сброс визуальных полосок (fill)
+        ['progress-fill-mobile', 'progress-fill-desktop'].forEach(id => {
+            const fill = document.getElementById(id);
+            if(fill) fill.style.width = '0%';
+        });
     }
     updateFullQueueAndRender();
     updateIcons();
@@ -218,24 +233,81 @@ function updateFullQueueAndRender() {
 
 export function initPlayer() {
   const audioPlayer = document.getElementById("audio-player");
-  const playPauseBtn = document.getElementById("play-pause-btn");
-  const prevBtn = document.getElementById("prev-btn");
-  const nextBtn = document.getElementById("next-btn");
-  const progressBar = document.getElementById("progress-bar");
 
-  if (playPauseBtn) playPauseBtn.addEventListener("click", togglePlayPause);
-  if (nextBtn) nextBtn.addEventListener("click", playNext);
-  if (prevBtn) prevBtn.addEventListener("click", playPrev);
+  // Массив пар ID (мобильный, десктопный)
+  const controls = [
+      { play: 'play-pause-btn-mobile', prev: 'prev-btn-mobile', next: 'next-btn-mobile', progress: 'progress-bar-mobile' },
+      { play: 'play-pause-btn-desktop', prev: 'prev-btn-desktop', next: 'next-btn-desktop', progress: 'progress-bar-desktop' }
+  ];
+
+  controls.forEach(ids => {
+      const playBtn = document.getElementById(ids.play);
+      const prevBtn = document.getElementById(ids.prev);
+      const nextBtn = document.getElementById(ids.next);
+      const progress = document.getElementById(ids.progress);
+
+      if (playBtn) playBtn.addEventListener("click", togglePlayPause);
+      if (prevBtn) prevBtn.addEventListener("click", playPrev);
+      if (nextBtn) nextBtn.addEventListener("click", playNext);
+      if (progress) progress.addEventListener("input", seek);
+  });
+
+  // Кнопки очереди
+  const queueMobile = document.getElementById("queue-btn-mobile");
+  const queueDesktop = document.getElementById("queue-btn-desktop");
+  const sidebar = document.getElementById("queue-sidebar");
+
+  const toggleQueue = () => {
+      sidebar.classList.toggle("translate-x-full");
+  };
+
+  if (queueMobile) queueMobile.addEventListener("click", toggleQueue);
+  if (queueDesktop) queueDesktop.addEventListener("click", toggleQueue);
+
 
   if (audioPlayer) {
-    audioPlayer.addEventListener("timeupdate", updateProgress); // Обновление прогресса
+    audioPlayer.addEventListener("timeupdate", updateProgress);
     audioPlayer.addEventListener("loadedmetadata", updateTimeDisplay);
     audioPlayer.addEventListener("ended", playNext);
     audioPlayer.addEventListener("play", () => { isPlaying = true; updateIcons(); });
     audioPlayer.addEventListener("pause", () => { isPlaying = false; updateIcons(); });
   }
 
-  if (progressBar) progressBar.addEventListener("input", seek);
+  // --- ЛОГИКА ГРОМКОСТИ ---
+  const volumeSlider = document.getElementById("volume-slider");
+  const volumeFill = document.getElementById("volume-fill");
+  const muteBtn = document.getElementById("mute-btn");
+  let lastVolume = 1;
+
+  if (volumeSlider && audioPlayer) {
+      // Устанавливаем начальную громкость
+      audioPlayer.volume = 1;
+
+      volumeSlider.addEventListener("input", (e) => {
+          const val = parseFloat(e.target.value);
+          audioPlayer.volume = val;
+          if (volumeFill) volumeFill.style.width = `${val * 100}%`;
+
+          // Иконка
+          updateVolumeIcon(val);
+          if (val > 0) lastVolume = val;
+      });
+  }
+
+  if (muteBtn && audioPlayer) {
+      muteBtn.addEventListener("click", () => {
+          if (audioPlayer.volume > 0) {
+              audioPlayer.volume = 0;
+              volumeSlider.value = 0;
+              if (volumeFill) volumeFill.style.width = "0%";
+          } else {
+              audioPlayer.volume = lastVolume || 1;
+              volumeSlider.value = lastVolume || 1;
+              if (volumeFill) volumeFill.style.width = `${(lastVolume || 1) * 100}%`;
+          }
+          updateVolumeIcon(audioPlayer.volume);
+      });
+  }
 }
 
 export function hasActiveTrack() { return currentRecordingId !== null; }
@@ -255,48 +327,77 @@ function updateIcons() {
 
 function updateProgress() {
   const audioPlayer = document.getElementById("audio-player");
-  const progressBar = document.getElementById("progress-bar");
-  const currentTimeEl = document.getElementById("current-time");
-
-  if (!audioPlayer || !progressBar || !currentTimeEl) return;
+  if (!audioPlayer) return;
 
   const { duration, currentTime } = audioPlayer;
+  const percent = duration ? (currentTime / duration) * 100 : 0;
+  const timeStr = formatTime(currentTime);
 
-  if (duration) {
-    // 1. Обновляем значение ползунка
-    const percent = (currentTime / duration) * 100;
-    progressBar.value = percent;
+  // --- MOBILE ---
+  const mobBar = document.getElementById("progress-bar-mobile");
+  const mobFill = document.getElementById("progress-fill-mobile"); // Новый элемент
+  const mobTime = document.getElementById("current-time-mobile");
 
-    // 2. Визуальный трюк для закрашивания левой части (Gradient)
-    // #06b6d4 - это цвет cyan-500, #e2e8f0 - серый фон
-    progressBar.style.background = `linear-gradient(to right, #06b6d4 ${percent}%, #e2e8f0 ${percent}%)`;
+  if (mobBar) mobBar.value = percent;
+  // Красим полоску через ширину div (надежнее, чем градиент)
+  if (mobFill) mobFill.style.width = `${percent}%`;
+  if (mobTime) mobTime.textContent = timeStr;
 
-    // 3. Обновляем текст времени
-    currentTimeEl.textContent = formatTime(currentTime);
+  // --- DESKTOP ---
+  const deskBar = document.getElementById("progress-bar-desktop");
+  const deskFill = document.getElementById("progress-fill-desktop");
+  const deskThumb = document.getElementById("progress-thumb-desktop");
+  const deskTime = document.getElementById("current-time-desktop");
+
+  if (deskBar) deskBar.value = percent;
+  if (deskFill) deskFill.style.width = `${percent}%`;
+  if (deskThumb) deskThumb.style.left = `${percent}%`;
+  if (deskTime) deskTime.textContent = timeStr;
+}
+
+
+function updateTimeDisplay() {
+    const audioPlayer = document.getElementById("audio-player");
+    if (!audioPlayer) return;
+
+    const timeStr = formatTime(audioPlayer.duration);
+
+    // Безопасная проверка: обновляем текст только если элементы существуют в HTML
+    const mobileTimeEl = document.getElementById("total-time-mobile");
+    if (mobileTimeEl) {
+        mobileTimeEl.textContent = timeStr;
+    }
+
+    const desktopTimeEl = document.getElementById("total-time-desktop");
+    if (desktopTimeEl) {
+        desktopTimeEl.textContent = timeStr;
+    }
+}
+
+
+function seek(e) {
+  const audioPlayer = document.getElementById("audio-player");
+  if (!audioPlayer || isNaN(audioPlayer.duration)) return;
+
+  const percent = e.target.value;
+  const seekTime = (percent / 100) * audioPlayer.duration;
+  audioPlayer.currentTime = seekTime;
+
+  // Обновляем визуал мгновенно
+  const isDesktop = e.target.id === "progress-bar-desktop";
+
+  if (isDesktop) {
+      const deskFill = document.getElementById("progress-fill-desktop");
+      const deskThumb = document.getElementById("progress-thumb-desktop");
+      if (deskFill) deskFill.style.width = `${percent}%`;
+      if (deskThumb) deskThumb.style.left = `${percent}%`;
+  } else {
+      // Mobile update
+      const mobFill = document.getElementById("progress-fill-mobile");
+      if (mobFill) mobFill.style.width = `${percent}%`;
   }
 }
 
-function updateTimeDisplay() {
-  const audioPlayer = document.getElementById("audio-player");
-  const totalTimeEl = document.getElementById("total-time");
-  if (!audioPlayer || !totalTimeEl) return;
-  totalTimeEl.textContent = formatTime(audioPlayer.duration);
-}
-
-function seek() {
-  const audioPlayer = document.getElementById("audio-player");
-  const progressBar = document.getElementById("progress-bar");
-  if (!audioPlayer || !progressBar || isNaN(audioPlayer.duration)) return;
-
-  const { duration } = audioPlayer;
-  const seekTime = (progressBar.value / 100) * duration;
-
-  audioPlayer.currentTime = seekTime;
-
-  // Обновляем градиент сразу при перетаскивании (для плавности)
-  const percent = progressBar.value;
-  progressBar.style.background = `linear-gradient(to right, #06b6d4 ${percent}%, #e2e8f0 ${percent}%)`;
-}
 
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds === null) return "0:00";
@@ -304,3 +405,26 @@ function formatTime(seconds) {
   const secs = Math.floor(seconds % 60);
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 }
+
+function updateVolumeIcon(vol) {
+      const icon = muteBtn.querySelector("i") || muteBtn.querySelector("svg");
+      if (!icon) return;
+
+      // Удаляем старую иконку и ставим новую через Lucide API или классы
+      // Для простоты, очистим и вставим SVG или изменим атрибут data-lucide
+      // Примечание: Lucide работает при загрузке. Динамически лучше менять содержимое SVG или пересоздавать.
+
+      // Простой вариант с классами, если бы были разные SVG внутри.
+      // Но так как мы используем data-lucide, проще всего вызвать window.lucide.createIcons()
+      // после смены атрибута, но это дорого.
+
+      // Эффективный способ:
+      if (vol === 0) {
+          muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-5 h-5"></i>';
+      } else if (vol < 0.5) {
+          muteBtn.innerHTML = '<i data-lucide="volume-1" class="w-5 h-5"></i>';
+      } else {
+          muteBtn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
+      }
+      if (window.lucide) window.lucide.createIcons();
+  }

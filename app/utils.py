@@ -8,15 +8,11 @@ import os
 import shutil
 from pathlib import Path
 from fastapi import UploadFile
-from PIL import Image, ImageOps  # <-- Импортируем PIL
+from PIL import Image, ImageOps
 
+# Все картинки будут лежать внутри static/covers
 COVERS_DIR = Path("static/covers")
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Папки для блога создаем тоже, если их нет
-BLOG_IMAGES_DIR = Path("static/blog_images")
-BLOG_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def generate_unique_slug(db: Session, model: Type, base_text: str, old_slug: str = None) -> str:
     """
@@ -43,17 +39,11 @@ def save_upload_file(upload_file: UploadFile, subfolder: str, prefix: str) -> st
     Сохраняет файл с сжатием и изменением размера (через Pillow).
     """
 
-    # Определяем папку назначения
-    # Если subfolder это blog_images, то путь немного другой, но для универсальности:
-    if subfolder == "blog_images":
-        folder = BLOG_IMAGES_DIR
-    else:
-        folder = COVERS_DIR / subfolder
-
+    # ВСЕГДА используем static/covers/{subfolder}
+    folder = COVERS_DIR / subfolder
     folder.mkdir(parents=True, exist_ok=True)
 
     # Генерируем имя. Принудительно ставим .jpg, так как конвертируем всё в JPEG
-    import uuid
     filename = f"{prefix}_{uuid.uuid4()}.jpg"
     file_path = folder / filename
 
@@ -69,30 +59,20 @@ def save_upload_file(upload_file: UploadFile, subfolder: str, prefix: str) -> st
             image = image.convert("RGB")
 
         # 4. Ресайз (Уменьшение размера)
-        # Ограничиваем макс. размер (например, 1200x1200 px).
-        # Пропорции сохраняются. Маленькие картинки не увеличиваются.
         max_size = (1200, 1200)
         image.thumbnail(max_size, Image.Resampling.LANCZOS)
 
         # 5. Сохранение с оптимизацией
-        # quality=80 - "золотая середина" между качеством и весом
-        # optimize=True - включает доп. алгоритмы сжатия
         image.save(file_path, format="JPEG", quality=80, optimize=True)
 
     except Exception as e:
         print(f"Error compressing image: {e}")
-        # Если Pillow не справился (например, файл битый),
-        # можно попробовать сохранить как есть (фоллбэк), или выбросить ошибку.
-        # Для надежности попробуем просто скопировать:
+        # Фоллбэк: просто копируем, если Pillow не справился
         upload_file.file.seek(0)
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(upload_file.file, buffer)
 
     # Возвращаем путь для URL
-    # Если это blog_images, путь другой
-    if subfolder == "blog_images":
-        return f"/static/blog_images/{filename}"
-
     return f"/static/covers/{subfolder}/{filename}"
 
 
