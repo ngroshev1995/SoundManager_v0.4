@@ -10,4 +10,4 @@ from .playlist import Playlist, PlaylistCreate, PlaylistUpdate
 from .token import Token, TokenData
 from .dashboard import DashboardSummary, DashboardStats
 from . import search
-from .blog import Post, PostCreate, PostUpdate
+from .blog import Post, PostCreate, PostUpdate, Tag, TagCreate, TagBase

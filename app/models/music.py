@@ -25,6 +25,28 @@ class Composer(Base):
 
     works = relationship("Work", back_populates="composer", cascade="all, delete-orphan")
 
+    @property
+    def epoch(self) -> str:
+        """Определяет музыкальную эпоху на основе годов жизни."""
+        if not self.year_born and not self.year_died:
+            return "default"
+
+        # За точку отсчета берем середину жизни или одну из известных дат
+        peak_year = 0
+        if self.year_born and self.year_died:
+            peak_year = (self.year_born + self.year_died) // 2
+        else:
+            peak_year = self.year_born or self.year_died
+
+        if peak_year < 1750:
+            return "baroque"
+        if peak_year < 1820:
+            return "classical"
+        if peak_year < 1910:
+            return "romantic"
+
+        return "modern"
+
 
 # --- WORK ---
 class Work(Base):

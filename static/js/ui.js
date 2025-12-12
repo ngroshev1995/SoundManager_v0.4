@@ -3234,7 +3234,7 @@ function initQuill(selectorId, content) {
 
 // --- БЛОГ ---
 
-export function renderBlogList(posts) {
+export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
   viewTitle.classList.remove("hidden");
@@ -3242,6 +3242,22 @@ export function renderBlogList(posts) {
   const addBtn = isAdmin()
     ? `<button id="create-post-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-all"><i data-lucide="plus" class="w-4 h-4"></i> Написать</button>`
     : "";
+
+  let tagsHtml = `
+    <a href="/blog" data-navigo
+       class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${!activeTag ? 'bg-cyan-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+       Все статьи
+    </a>`;
+
+  if (allTags.length > 0) {
+    tagsHtml += allTags.map(tag => `
+      <a href="/blog/tag/${tag.name}" data-navigo
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTag === tag.name ? 'bg-cyan-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+         ${tag.name}
+      </a>
+    `).join('');
+  }
+  const tagsFilterBar = `<div class="flex flex-wrap gap-2 mb-8">${tagsHtml}</div>`;
 
   viewTitle.innerHTML = `
         <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
@@ -3251,61 +3267,96 @@ export function renderBlogList(posts) {
             </h2>
             ${addBtn}
         </div>
+        ${tagsFilterBar}
     `;
 
-  if (posts.length === 0) {
+  if (!posts || posts.length === 0) {
     listEl.innerHTML =
-      '<div class="text-center py-20 text-gray-400">Статей пока нет</div>';
+      '<div class="max-w-4xl mx-auto px-6 text-center py-20 text-gray-400">Статей пока нет</div>';
+    if (window.lucide) window.lucide.createIcons();
     return;
   }
 
-  const html = posts
-    .map((post) => {
-      const date = new Date(post.created_at).toLocaleDateString("ru-RU", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      const cover = post.cover_image_url || "/static/img/placeholder.png";
+  const featuredPost = posts[0];
+  const otherPosts = posts.slice(1);
 
-      // Кнопки управления (только для админа)
-      const controls = isAdmin()
-        ? `
-            <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button class="edit-post-btn bg-white p-2 rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-slug="${post.slug}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                <button class="delete-post-btn bg-white p-2 rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${post.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+  const featuredDate = new Date(featuredPost.created_at).toLocaleDateString("ru-RU", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+  const featuredCover = featuredPost.cover_image_url || "/static/img/placeholder.png";
+  
+  const featuredControls = isAdmin() ? `
+    <div class="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <button class="edit-post-btn bg-white/90 p-3 rounded-xl shadow-lg text-gray-700 hover:text-cyan-600 backdrop-blur-sm" data-slug="${featuredPost.slug}" title="Редактировать">
+            <i data-lucide="edit-2" class="w-5 h-5"></i>
+        </button>
+        <button class="delete-post-btn bg-white/90 p-3 rounded-xl shadow-lg text-red-500 hover:text-red-700 backdrop-blur-sm" data-id="${featuredPost.id}" title="Удалить">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+        </button>
+    </div>
+  ` : "";
+
+  const featuredHtml = `
+    <div class="group relative mb-12 w-full aspect-video md:aspect-[2.4/1] rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
+        <a href="/blog/${featuredPost.slug}" data-navigo class="block absolute inset-0">
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style="background-image: url('${featuredCover}')"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+            <div class="absolute inset-0 p-8 flex flex-col justify-end text-white">
+                <div class="text-xs font-bold uppercase tracking-wider opacity-80 mb-2">${featuredDate}</div>
+                <h2 class="text-3xl md:text-4xl font-bold leading-tight drop-shadow-md mb-2">${featuredPost.title}</h2>
+                <p class="text-base opacity-90 leading-relaxed line-clamp-2 max-w-3xl">${featuredPost.summary || ""}</p>
             </div>
-        `
+        </a>
+        ${featuredControls}
+    </div>
+  `;
+
+  let otherPostsHtml = '';
+  if (otherPosts.length > 0) {
+      const cards = otherPosts.map((post) => {
+        const date = new Date(post.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+        const cover = post.cover_image_url || "/static/img/placeholder.png";
+        const controls = isAdmin() ? `
+              <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button class="edit-post-btn bg-white p-2 rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-slug="${post.slug}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                  <button class="delete-post-btn bg-white p-2 rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${post.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>`
         : "";
 
-      return `
-        <a href="/blog/${
-          post.slug
-        }" data-navigo class="group relative flex flex-col md:flex-row gap-6 bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 mb-6">
-            <div class="w-full md:w-1/3 aspect-video rounded-xl overflow-hidden bg-gray-100">
-                <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-            </div>
-            <div class="flex-1 flex flex-col">
-                <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-2">${date}</div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-3 group-hover:text-cyan-700 transition-colors">${
-                  post.title
-                }</h3>
-                <p class="text-gray-600 leading-relaxed mb-4 line-clamp-3">${
-                  post.summary || ""
-                }</p>
-                <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
-                    Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </div>
-            </div>
-            ${controls}
-        </a>
-        `;
-    })
-    .join("");
+        const postTagsHtml = post.tags.length > 0 
+          ? `<div class="flex flex-wrap gap-1.5 mb-3">${post.tags.map(tag =>
+              `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">${tag.name}</span>`
+            ).join('')}</div>`
+          : '';
 
-  listEl.innerHTML = `<div class="max-w-4xl mx-auto px-6 pb-10">${html}</div>`;
+        return `
+          <a href="/blog/${post.slug}" data-navigo class="group relative flex flex-col bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100">
+              <div class="aspect-video rounded-xl overflow-hidden bg-gray-100 mb-4">
+                  <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+              </div>
+              <div class="flex-1 flex flex-col">
+                  <!-- === ИЗМЕНЕНИЯ ЗДЕСЬ === -->
+                  <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-2">${date}</div>
+                  ${postTagsHtml}
+                  <!-- === КОНЕЦ ИЗМЕНЕНИЙ === -->
+                  
+                  <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-2">${post.title}</h3>
+                  <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">${post.summary || ""}</p>
+                  <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
+                      Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                  </div>
+              </div>
+              ${controls}
+          </a>`;
+      }).join("");
+
+      otherPostsHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">${cards}</div>`;
+  }
+
+  listEl.innerHTML = `<div class="max-w-5xl mx-auto px-6 pb-10">${featuredHtml}${otherPostsHtml}</div>`;
   if (window.lucide) window.lucide.createIcons();
 }
+
 
 export async function renderBlogPost(post) {
   const { listEl } = getElements();
@@ -3317,7 +3368,7 @@ export async function renderBlogPost(post) {
     year: "numeric",
   });
 
-  // 1. ШАПКА (Без картинки)
+  // 1. ШАПКА
   const header = `
         <div class="max-w-4xl mx-auto px-6 pt-10">
             <div class="text-center mb-8">
@@ -3327,21 +3378,13 @@ export async function renderBlogPost(post) {
         </div>
     `;
 
-  // 2. КОНТЕНТ (Расширен до max-w-4xl)
+  // 2. КОНТЕНТ
+  // Исправлено: удалены комментарии /* ... */ внутри class, добавлены стили prose
   const content = `
         <div class="max-w-4xl mx-auto px-6 pb-20">
             <div class="prose prose-lg prose-cyan max-w-none text-gray-800 leading-relaxed
-                        /* СТИЛИ ДЛЯ КАРТИНОК */
-                        [&_img]:rounded-3xl [&_img]:shadow-xl [&_img]:border [&_img]:border-gray-100
-                        [&_img]:w-full [&_img]:mx-auto [&_img]:my-8
-
-                        /* СТИЛИ ДЛЯ ВИДЕО (IFRAME) */
-                        [&_iframe]:w-full
-                        [&_iframe]:aspect-video
-                        [&_iframe]:rounded-2xl
-                        [&_iframe]:shadow-lg
-                        [&_iframe]:mx-auto
-                        [&_iframe]:my-8">
+                        [&_img]:rounded-3xl [&_img]:shadow-xl [&_img]:border [&_img]:border-gray-100 [&_img]:w-full [&_img]:mx-auto [&_img]:my-8
+                        [&_iframe]:w-full [&_iframe]:aspect-video [&_iframe]:rounded-2xl [&_iframe]:shadow-lg [&_iframe]:mx-auto [&_iframe]:my-8">
                 ${post.content}
             </div>
         </div>
@@ -3349,25 +3392,21 @@ export async function renderBlogPost(post) {
 
   listEl.innerHTML = header + content;
 
-  // === ИНИЦИАЛИЗАЦИЯ PLYR (С ДИНАМИЧЕСКОЙ ЗАГРУЗКОЙ) ===
-  // Находим все теги <audio> в статье
+  // === ИНИЦИАЛИЗАЦИЯ PLYR ===
   const audioElements = Array.from(document.querySelectorAll(".prose audio"));
 
-  // Если на странице есть аудио и библиотека Plyr еще не загружена
   if (audioElements.length > 0) {
     if (typeof Plyr === "undefined") {
-      // Ждем, пока defer-скрипт из index.html загрузит и исполнит Plyr
       await new Promise((resolve) => {
         const check = () => (window.Plyr ? resolve() : setTimeout(check, 50));
         check();
       });
     }
 
-    // Когда Plyr точно доступен, инициализируем все плееры
-    const players = audioElements.map(
+    audioElements.map(
       (p) =>
         new Plyr(p, {
-          controls: ["play", "progress", "current-time", "mute", "volume"], // Настройка кнопок
+          controls: ["play", "progress", "current-time", "mute", "volume"],
           seekTime: 10,
         })
     );
@@ -3399,6 +3438,11 @@ export async function showBlogModal(post = null) {
   document.getElementById("blog-keywords").value = post
     ? post.meta_keywords
     : "";
+
+  // Заполнение поля тегов
+  const tagsInput = document.getElementById("blog-tags");
+  tagsInput.value =
+    post && post.tags ? post.tags.map((t) => t.name).join(", ") : "";
 
   // +++ ИЗМЕНЕНИЕ: Динамическая загрузка и инициализация Quill +++
   await loadAndInitQuill("#blog-content", post ? post.content : "");

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app import crud, models, schemas, utils
@@ -9,8 +9,18 @@ router = APIRouter()
 
 # Public routes
 @router.get("/", response_model=List[schemas.Post])
-def read_posts(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    return crud.crud_blog.get_posts(db, skip=skip, limit=limit)
+def read_posts(
+    skip: int = 0,
+    limit: int = 20,
+    tag: Optional[str] = None, # <-- Добавить параметр
+    db: Session = Depends(get_db)
+):
+    return crud.crud_blog.get_posts(db, skip=skip, limit=limit, tag_name=tag)
+
+@router.get("/tags", response_model=List[schemas.Tag])
+def read_all_tags(db: Session = Depends(get_db)):
+    """Возвращает список всех существующих тегов."""
+    return crud.crud_blog.get_all_tags(db)
 
 @router.get("/{slug}", response_model=schemas.Post)
 def read_post(slug: str, db: Session = Depends(get_db)):

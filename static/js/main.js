@@ -32,7 +32,6 @@ let state = {
   isSelectionMode: false,
   pagination: { currentPage: 1, itemsPerPage: 50, totalPages: 1 },
   displayLanguage: "ru",
-  selectedRecordingIds: new Set(), // <--- ДОБАВИТЬ ЭТО
   lastSelectedId: null, // Для Shift+Click
   libraryFilters: {
     page: 1,
@@ -57,6 +56,7 @@ function main() {
   // 1. Инициализация (всегда)
   player.initPlayer();
   addEventListeners();
+  setupDuplicateCheckers();
   if (window.lucide) window.lucide.createIcons();
 
   // 2. Логика успешного входа (вызывается из auth.js)
@@ -113,6 +113,7 @@ async function fetchUserProfile() {
 }
 
 function resetViewState() {
+  document.body.removeAttribute('data-epoch');
   state.view.currentComposer = null;
   state.view.currentWork = null;
   state.view.currentComposition = null;
@@ -147,11 +148,6 @@ function setupRouter() {
         state.view.current = "search";
         resetViewState();
         state.view.searchQuery = decodeURIComponent(data.query);
-        loadCurrentView();
-      },
-      "/recordings": () => {
-        state.view.current = "recordings";
-        resetViewState();
         loadCurrentView();
       },
       "/composers": () => {
@@ -208,8 +204,15 @@ function setupRouter() {
       },
       "/blog": () => {
         state.view.current = "blog_list";
+        state.view.blogTagFilter = null;
         resetViewState();
         loadCurrentView();
+      },
+      "/blog/tag/:tagName": ({ data }) => {
+            state.view.current = "blog_list";
+            state.view.blogTagFilter = data.tagName; // <-- Устанавливаем фильтр
+            resetViewState();
+            loadCurrentView();
       },
       "/blog/:slug": ({ data }) => {
         state.view.current = "blog_post";
@@ -355,6 +358,7 @@ async function loadCurrentView() {
           `/api/recordings/composers/${cId}/works`
         );
         state.view.currentComposer = cFull;
+        document.body.setAttribute('data-epoch', cFull.epoch);
         ui.renderWorkList(works, cFull, state.displayLanguage);
         break;
       case "work_detail":
@@ -362,6 +366,7 @@ async function loadCurrentView() {
         const wFull = await apiRequest(`/api/recordings/works/${wId}`);
         state.view.currentWork = wFull;
         state.view.currentComposer = wFull.composer;
+        document.body.setAttribute('data-epoch', wFull.composer.epoch);
         ui.renderCompositionGrid(wFull, state.displayLanguage);
         break;
       case "composition_detail":
@@ -374,6 +379,7 @@ async function loadCurrentView() {
         state.view.currentWork = cpFull.work;
         state.view.currentComposer = cpFull.work.composer;
         state.currentViewRecordings = recs;
+        document.body.setAttribute('data-epoch', cpFull.work.composer.epoch);
         ui.renderCompositionDetailView(
           cpFull,
           recs,
@@ -447,10 +453,14 @@ async function loadCurrentView() {
         ui.renderLibraryPageStructure("Видеозал", state.composersList);
         await loadLibraryWithFilters(true);
         break;
-      // === ВСТАВИТЬ ЭТОТ КУСОК ===
       case "blog_list":
-        const posts = await apiRequest("/api/blog/");
-        ui.renderBlogList(posts);
+        const activeTag = state.view.blogTagFilter;
+        const apiUrl = activeTag ? `/api/blog/?tag=${encodeURIComponent(activeTag)}` : "/api/blog/";
+        const [posts, allTags] = await Promise.all([
+            apiRequest(apiUrl),
+            apiRequest("/api/blog/tags")
+        ]);
+        ui.renderBlogList(posts, allTags, activeTag);
         break;
       case "blog_post":
         const post = await apiRequest(`/api/blog/${state.view.blogSlug}`);
@@ -600,6 +610,13 @@ function addEventListeners() {
         return ui.showNotification("Введите заголовок статьи", "error");
       if (!slug) return ui.showNotification("URL (Slug) обязателен", "error");
 
+      // Собираем теги из инпута в массив строк
+
+      const tagsValue = document.getElementById("blog-tags").value;
+      const tags = tagsValue
+        ? tagsValue.split(',').map(tag => tag.trim()).filter(Boolean)
+        : [];
+
       const data = {
         title: document.getElementById("blog-title").value,
         slug: document.getElementById("blog-slug").value,
@@ -607,6 +624,7 @@ function addEventListeners() {
         meta_description: document.getElementById("blog-meta-desc").value,
         meta_keywords: document.getElementById("blog-keywords").value,
         content: window.quillEditor.root.innerHTML,
+        tags: tags
       };
 
       try {
@@ -2393,4 +2411,78 @@ function closeYouTubeVideo() {
     // Очищаем iframe, чтобы остановить воспроизведение
     container.innerHTML = "";
   }, 200); // Ждем завершения анимации
+}
+function setupDuplicateCheckers() {
+    let debounceTimer;
+
+    const check = async (entityType, query, warningElId, params = {}) => {
+        const warningEl = document.getElementById(warningElId);
+        if (!query || query.length < 3) {
+            warningEl.classList.add('hidden');
+            return;
+        }
+
+        try {
+            let url = `/api/search/check-duplicates?entity_type=${entityType}&query=${encodeURIComponent(query)}`;
+            if (params.composerId) url += `&composer_id=${params.composerId}`;
+            if (params.workId) url += `&work_id=${params.workId}`;
+
+            const duplicates = await apiRequest(url);
+
+            if (duplicates.length > 0) {
+                const list = duplicates.map(item => `
+                    <li>
+                        <a href="#/works/${item.slug || item.id}" target="_blank" class="font-bold text-red-700 hover:underline">
+                            ${item.name_ru}
+                        </a>
+                    </li>
+                `).join('');
+                warningEl.innerHTML = `<strong>Внимание!</strong> Возможно, такая запись уже существует: <ul class="list-disc pl-5 mt-1">${list}</ul>`;
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
+            }
+        } catch (e) {
+            console.error("Duplicate check failed:", e);
+            warningEl.classList.add('hidden');
+        }
+    };
+
+    const composerInput = document.getElementById('add-composer-name-ru');
+    if (composerInput) {
+        composerInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                check('composer', e.target.value, 'composer-duplicates-warning');
+            }, 500);
+        });
+    }
+
+    const workInput = document.getElementById('add-work-name-ru');
+    if (workInput) {
+        workInput.addEventListener('input', (e) => {
+            console.log("Сработал input для произведения!");
+            const composerId = window.state.view.currentComposer?.id;
+            if (!composerId) return;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                console.log("Вызов check() для произведения:", e.target.value); // Проверяем вызов
+                check('work', e.target.value, 'work-duplicates-warning', { composerId });
+            }, 500);
+        });
+    } else {
+        console.error("КРИТИЧЕСКАЯ ОШИБКА: Элемент #add-work-name-ru не найден в DOM!");
+    }
+
+    const compInput = document.getElementById('add-composition-title-ru');
+    if (compInput) {
+        compInput.addEventListener('input', (e) => {
+            const workId = window.state.view.currentWork?.id;
+            if (!workId) return;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                check('composition', e.target.value, 'composition-duplicates-warning', { workId });
+            }, 500);
+        });
+    }
 }

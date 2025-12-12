@@ -4,10 +4,11 @@ from typing import List, Any, Optional, Literal
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Response, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, contains_eager
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 import os
 import shutil
 from pathlib import Path
+import re
 
 from app import crud, models, schemas
 from app.api import deps
@@ -58,19 +59,17 @@ def upload_recording(
         performers: Optional[str] = Form(None),
         recording_year: Optional[int] = Form(None),
         youtube_url: Optional[str] = Form(None),
-        file: UploadFile = File(None),  # Файл необязателен
+        file: UploadFile = File(None),
         db: Session = Depends(get_db),
         u: models.User = Depends(deps.get_current_active_admin)
 ):
-    # 1. Валидация: Должен быть либо файл, либо ссылка
     if not file and not youtube_url:
         raise HTTPException(400, "Must provide either an audio file or a YouTube URL")
 
     if not db.query(models.music.Composition).get(composition_id):
         raise HTTPException(404, "Composition not found")
 
-    # Сценарий А: ЕСТЬ АУДИОФАЙЛ
-    if file:
+    if file:  # Сценарий с аудиофайлом
         if not file.content_type or not file.content_type.startswith("audio/"):
             raise HTTPException(400, "Invalid file type")
 
@@ -78,23 +77,31 @@ def upload_recording(
 
         try:
             if crud.music.get_recording_by_hash(db, file_hash):
-                raise HTTPException(409, "Duplicate file")
+                raise HTTPException(409, "Duplicate file (hash match)")
 
-            rec_data = schemas.RecordingCreate(
-                performers=performers,
-                recording_year=recording_year,
-                youtube_url=youtube_url
-            )
+            if performers:
+                potential_duplicate = db.query(models.music.Recording).filter(
+                    and_(
+                        models.music.Recording.composition_id == composition_id,
+                        func.lower_utf8(models.music.Recording.performers) == performers.lower(),
+                        models.music.Recording.duration.between(duration - 2, duration + 2)
+                    )
+                ).first()
+                if potential_duplicate:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Possible duplicate performance by {performers} found (duration match)."
+                    )
 
-            new_rec = crud.music.create_recording_for_composition(
-                db, rec_in=rec_data, composition_id=composition_id, duration=duration, file_path="temp",
-                file_hash=file_hash
-            )
+            rec_data = schemas.RecordingCreate(performers=performers, recording_year=recording_year,
+                                               youtube_url=youtube_url)
+            new_rec = crud.music.create_recording_for_composition(db, rec_in=rec_data, composition_id=composition_id,
+                                                                  duration=duration, file_path="temp",
+                                                                  file_hash=file_hash)
 
             ext = Path(file.filename).suffix.lower() or ".mp3"
             final_path = audio_processor.MUSIC_DIR / f"{new_rec.id}{ext}"
             shutil.move(str(temp_path), str(final_path))
-
             new_rec.file_path = f"/{final_path.as_posix()}"
             db.commit()
             db.refresh(new_rec)
@@ -102,30 +109,23 @@ def upload_recording(
         finally:
             if os.path.exists(temp_path): os.remove(temp_path)
 
-    # Сценарий Б: ТОЛЬКО YOUTUBE (Файла нет)
-    else:
-        # Генерируем уникальный ID для этой записи
-        unique_id = str(uuid.uuid4())
+    else:  # Сценарий только с YouTube
+        youtube_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', youtube_url)
+        if youtube_id_match:
+            youtube_id = youtube_id_match.group(1)
+            existing_video = db.query(models.music.Recording).filter(
+                models.music.Recording.youtube_url.contains(youtube_id)
+            ).first()
+            if existing_video:
+                raise HTTPException(409, "This YouTube video is already in the library.")
 
-        # Создаем уникальные фейковые данные, чтобы БД не ругалась на дубликаты
+        unique_id = str(uuid.uuid4())
         fake_path = f"youtube_only_{unique_id}"
         fake_hash = f"yt_{unique_id}"
-
-        rec_data = schemas.RecordingCreate(
-            performers=performers,
-            recording_year=recording_year,
-            youtube_url=youtube_url
-        )
-
-        new_rec = crud.music.create_recording_for_composition(
-            db,
-            rec_in=rec_data,
-            composition_id=composition_id,
-            duration=0,  # Длительность 0
-            file_path=fake_path,  # Уникальный путь
-            file_hash=fake_hash  # Уникальный хеш
-        )
-
+        rec_data = schemas.RecordingCreate(performers=performers, recording_year=recording_year,
+                                           youtube_url=youtube_url)
+        new_rec = crud.music.create_recording_for_composition(db, rec_in=rec_data, composition_id=composition_id,
+                                                              duration=0, file_path=fake_path, file_hash=fake_hash)
         return new_rec
 
 

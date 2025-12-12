@@ -1,12 +1,15 @@
 # app/api/endpoints/search.py
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
 from app.api import deps
 from app.db.session import get_db
 from typing import List, Optional
+from sqlalchemy import func
+import re
+from thefuzz import fuzz
 
 router = APIRouter()
 
@@ -75,3 +78,59 @@ def universal_search(q: str, db: Session = Depends(get_db)):
         compositions=found_compositions,
         recordings=found_recordings
     )
+
+
+def normalize_for_comparison(text: str) -> str:
+    """Очищает строку для сравнения, удаляя лишние символы и слова."""
+    if not text:
+        return ""
+    text = text.lower()
+    text = text.replace('ё', 'е')
+    text = re.sub(r'\(.*?\)', '', text)
+    # Оставляем только буквы и цифры, удаляя даже точки.
+    text = re.sub(r'[^\w\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+@router.get("/check-duplicates", response_model=List[schemas.music.WorkSimple])
+def check_for_duplicates(
+        entity_type: str = Query(..., description="Тип сущности: composer, work, composition"),
+        query: str = Query(..., min_length=3, description="Поисковый запрос"),
+        composer_id: Optional[int] = Query(None),
+        work_id: Optional[int] = Query(None),
+        db: Session = Depends(get_db),
+):
+    """Ищет похожие сущности для проверки на дубликаты, используя нечеткий поиск."""
+    normalized_query = normalize_for_comparison(query)
+    if not normalized_query:
+        return []
+
+    duplicates = []
+
+    # Снижаем порог до 85, чтобы уверенно ловить опечатки в одно слово
+    SIMILARITY_THRESHOLD = 85
+
+    if entity_type == "composer":
+        all_items = db.query(models.music.Composer).all()
+        for c in all_items:
+            # Используем partial_ratio - он лучше всего подходит для поиска фамилии в ФИО
+            score = fuzz.partial_ratio(normalized_query, normalize_for_comparison(c.name_ru))
+            if score >= SIMILARITY_THRESHOLD:
+                duplicates.append({"id": c.id, "name_ru": c.name_ru, "slug": c.slug})
+
+    elif entity_type == "work" and composer_id:
+        all_items = db.query(models.music.Work).filter(models.music.Work.composer_id == composer_id).all()
+        for w in all_items:
+            score = fuzz.partial_ratio(normalized_query, normalize_for_comparison(w.name_ru))
+            if score >= SIMILARITY_THRESHOLD:
+                duplicates.append({"id": w.id, "name_ru": w.name_ru, "slug": w.slug})
+
+    elif entity_type == "composition" and work_id:
+        all_items = db.query(models.music.Composition).filter(models.music.Composition.work_id == work_id).all()
+        for c in all_items:
+            score = fuzz.partial_ratio(normalized_query, normalize_for_comparison(c.title_ru))
+            if score >= SIMILARITY_THRESHOLD:
+                duplicates.append({"id": c.id, "name_ru": c.title_ru, "slug": c.slug})
+
+    return duplicates[:5]

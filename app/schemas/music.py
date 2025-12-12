@@ -143,12 +143,15 @@ class ComposerSimple(ComposerBase):
     id: int
     slug: Optional[str] = None
     portrait_url: Optional[str] = None
+    epoch: str
     class Config:
         from_attributes = True
 
 class WorkSimple(WorkBase):
     id: int
     slug: Optional[str] = None
+    name_ru: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -185,7 +188,7 @@ class Composer(ComposerBase):
     id: int
     slug: Optional[str] = None
     portrait_url: Optional[str] = None
-    # works здесь не обязательны, так как мы грузим их отдельным запросом
+    epoch: str
 
     class Config:
         from_attributes = True
