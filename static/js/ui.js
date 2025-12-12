@@ -1,5 +1,16 @@
 // static/js/ui.js
 
+const licenses = {
+  "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/deed.ru",
+  "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/deed.ru",
+  "CC BY-ND 4.0": "https://creativecommons.org/licenses/by-nd/4.0/deed.ru",
+  "CC BY-NC 4.0": "https://creativecommons.org/licenses/by-nc/4.0/deed.ru",
+  "CC BY-NC-SA 4.0":
+    "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ru",
+  "CC BY-NC-ND 4.0":
+    "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.ru",
+};
+
 let selectedRecordingFile = null;
 let quillLoadingPromise = null;
 
@@ -1547,26 +1558,25 @@ export function renderCompositionDetailView(
                               recordings ? recordings.length : 0
                             }</b></span>
                         </div>
-                    </div>
 
-                    ${
-                      isAdmin()
-                        ? `
-                    <div class="flex gap-3 w-full md:w-auto self-start md:self-center flex-shrink-0 ml-auto bg-white/50 p-2 rounded-2xl backdrop-blur-sm border border-white/20 shadow-inner">
-                        <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                        </button>
-                        <button id="edit-composition-btn" class="px-5 py-3 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow">
-                            Редактировать
-                        </button>
-                        <button class="add-recording-btn px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center gap-2 text-sm transform hover:-translate-y-0.5" data-composition-id="${composition.id}">
-                            <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить</span>
-                        </button>
-                    </div>`
-                        : ""
-                    }
+                        ${
+                          isAdmin()
+                            ? `
+                        <div class="mt-6 flex gap-2">
+                            <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                            </button>
+                            <button id="edit-composition-btn" class="p-3 md:px-5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-2">
+                                <i data-lucide="edit-2" class="w-5 h-5"></i> <span class="hidden md:inline">Редактировать</span>
+                            </button>
+                            <button class="add-recording-btn p-3 md:px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center gap-2 text-sm transform hover:-translate-y-0.5" data-composition-id="${composition.id}">
+                                <i data-lucide="upload-cloud" class="w-5 h-5"></i> <span class="hidden md:inline">Загрузить</span>
+                            </button>
+                        </div>`
+                            : ""
+                        }
+                    </div>
                 </div>
-            </div>
         </div>
     `;
 
@@ -1790,6 +1800,90 @@ export function updatePlayerInfo(rec) {
     deskCover.src = cover;
 
     renderLikeButton(deskFavContainer, recId);
+  }
+
+  const infoBtnMobile = document.getElementById("player-info-btn-mobile");
+  const infoBtnDesktop = document.getElementById("player-info-btn-desktop");
+  const popoverContent = document.getElementById("player-info-popover");
+  const modalContent = document.getElementById("player-info-modal-content");
+
+  if (!infoBtnMobile || !infoBtnDesktop || !popoverContent || !modalContent)
+    return;
+
+  if (rec) {
+    // Генерируем HTML для контента
+    const licenseUrl = licenses[rec.license];
+    const licenseHtml = licenseUrl
+      ? `<a href="${licenseUrl}" target="_blank" class="text-cyan-400 hover:underline">${rec.license}</a>`
+      : rec.license || "Не указана";
+
+    const sourceHtml =
+      rec.source_url && rec.source_text
+        ? `<a href="${rec.source_url}" target="_blank" class="text-cyan-400 hover:underline">${rec.source_text}</a>`
+        : "Не указан";
+
+    const infoHtml = `
+        <div class="space-y-3 text-sm">
+            <div>
+                <strong class="block text-gray-400 font-medium">Название:</strong>
+                <span class="font-semibold">${title}</span>
+            </div>
+            <div>
+                <strong class="block text-gray-400 font-medium">Композитор:</strong>
+                <span>${getLocalizedText(
+                  rec.composition.work.composer,
+                  "name",
+                  "ru"
+                )}</span>
+            </div>
+            <div>
+                <strong class="block text-gray-400 font-medium">Исполнитель:</strong>
+                <span>${rec.performers || "Не указан"}</span>
+            </div>
+
+
+            ${
+              rec.lead_performer
+                ? `
+              <div>
+                  <strong class="block text-gray-400 font-medium">Ведущий исполнитель:</strong>
+                  <span>${rec.lead_performer}</span>
+              </div>`
+                : ""
+            }
+
+
+
+            ${
+              rec.conductor
+                ? `
+            <div>
+                <strong class="block text-gray-400 font-medium">Дирижёр:</strong>
+                <span>${rec.conductor}</span>
+            </div>`
+                : ""
+            }
+            <div>
+                <strong class="block text-gray-400 font-medium">Лицензия:</strong>
+                <span>${licenseHtml}</span>
+            </div>
+            <div>
+                <strong class="block text-gray-400 font-medium">Источник:</strong>
+                <span>${sourceHtml}</span>
+            </div>
+        </div>
+    `;
+
+    popoverContent.innerHTML = infoHtml;
+    modalContent.innerHTML = infoHtml
+      .replace(/text-gray-400/g, "text-gray-500")
+      .replace(/text-cyan-400/g, "text-cyan-600");
+
+    infoBtnMobile.classList.remove("hidden");
+    infoBtnDesktop.classList.remove("hidden");
+  } else {
+    infoBtnMobile.classList.add("hidden");
+    infoBtnDesktop.classList.add("hidden");
   }
 }
 
@@ -2127,6 +2221,8 @@ export function showAddRecordingModal(id) {
   document
     .querySelectorAll("#add-recording-modal input:not([type=hidden])")
     .forEach((i) => (i.value = ""));
+
+  document.getElementById("add-recording-license").value = "";
   document.getElementById("selected-recording-filename").textContent =
     "Выберите файл...";
 }
@@ -2379,20 +2475,56 @@ export async function showEditEntityModal(type, data, onSave) {
       `;
   } else if (type === "recording") {
     modalTitle = "Редактировать запись";
+    const licenseOptions = Object.keys(licenses)
+      .map(
+        (key) =>
+          `<option value="${key}" ${
+            data.license === key ? "selected" : ""
+          }>${key}</option>`
+      )
+      .join("");
     fields = `
-        <div><label class="text-xs font-bold text-gray-500 uppercase">Исполнители</label>
-        <input id="edit-performers" class="w-full border p-2 rounded" value="${
-          data.performers || ""
-        }"></div>
-        <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Год записи</label>
-        <input type="number" id="edit-rec-year" class="w-full border p-2 rounded" value="${
-          data.recording_year || ""
-        }"></div>
-        <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">YouTube URL</label>
-        <input type="text" id="edit-youtube-url" class="w-full border p-2 rounded" value="${
-          data.youtube_url || ""
-        }" placeholder="https://..."></div>
-      `;
+            <div><label class="text-xs font-bold text-gray-500 uppercase">Исполнители</label>
+            <input id="edit-performers" class="w-full border p-2 rounded" value="${
+              data.performers || ""
+            }"></div>
+
+            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Ведущий исполнитель</label>
+            <input id="edit-lead-performer" class="w-full border p-2 rounded" value="${
+              data.lead_performer || ""
+            }"></div>
+            
+            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Дирижёр</label>
+            <input id="edit-conductor" class="w-full border p-2 rounded" value="${
+              data.conductor || ""
+            }"></div>
+
+            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Год записи</label>
+            <input type="number" id="edit-rec-year" class="w-full border p-2 rounded" value="${
+              data.recording_year || ""
+            }"></div>
+            
+            <div class="mt-4 p-3 bg-gray-50 border rounded-lg space-y-2">
+                <div><label class="text-xs font-bold text-gray-500 uppercase">Лицензия</label>
+                <select id="edit-license" class="w-full border p-2 rounded bg-white">
+                    <option value="">Не указана</option>
+                    ${licenseOptions}
+                </select></div>
+                <div><label class="text-xs font-bold text-gray-500 uppercase">Источник (анкор)</label>
+                <input id="edit-source-text" class="w-full border p-2 rounded" value="${
+                  data.source_text || ""
+                }"></div>
+                <div><label class="text-xs font-bold text-gray-500 uppercase">Источник (URL)</label>
+                <input id="edit-source-url" class="w-full border p-2 rounded" value="${
+                  data.source_url || ""
+                }"></div>
+            </div>
+
+            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">YouTube URL</label>
+            <input type="text" id="edit-youtube-url" class="w-full border p-2 rounded" value="${
+              data.youtube_url || ""
+            }" placeholder="https://..."></div>
+        `;
   } else if (type === "playlist_create" || type === "playlist_edit") {
     modalTitle =
       type === "playlist_create" ? "Новый плейлист" : "Переименовать плейлист";
@@ -2490,8 +2622,13 @@ export async function showEditEntityModal(type, data, onSave) {
       } else if (type === "recording") {
         payload = {
           performers: document.getElementById("edit-performers").value,
+          lead_performer: document.getElementById("edit-lead-performer").value,
+          conductor: document.getElementById("edit-conductor").value, // <--
           recording_year:
             parseInt(document.getElementById("edit-rec-year").value) || null,
+          license: document.getElementById("edit-license").value, // <--
+          source_text: document.getElementById("edit-source-text").value, // <--
+          source_url: document.getElementById("edit-source-url").value, // <--
           youtube_url:
             document.getElementById("edit-youtube-url").value.trim() || null,
         };
@@ -3245,17 +3382,29 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
 
   let tagsHtml = `
     <a href="/blog" data-navigo
-       class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${!activeTag ? 'bg-cyan-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+       class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+         !activeTag
+           ? "bg-cyan-600 text-white shadow-sm"
+           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+       }">
        Все статьи
     </a>`;
 
   if (allTags.length > 0) {
-    tagsHtml += allTags.map(tag => `
+    tagsHtml += allTags
+      .map(
+        (tag) => `
       <a href="/blog/tag/${tag.name}" data-navigo
-         class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activeTag === tag.name ? 'bg-cyan-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+           activeTag === tag.name
+             ? "bg-cyan-600 text-white shadow-sm"
+             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+         }">
          ${tag.name}
       </a>
-    `).join('');
+    `
+      )
+      .join("");
   }
   const tagsFilterBar = `<div class="flex flex-wrap gap-2 mb-8">${tagsHtml}</div>`;
 
@@ -3280,12 +3429,19 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const featuredPost = posts[0];
   const otherPosts = posts.slice(1);
 
-  const featuredDate = new Date(featuredPost.created_at).toLocaleDateString("ru-RU", {
-    day: "numeric", month: "long", year: "numeric",
-  });
-  const featuredCover = featuredPost.cover_image_url || "/static/img/placeholder.png";
-  
-  const featuredControls = isAdmin() ? `
+  const featuredDate = new Date(featuredPost.created_at).toLocaleDateString(
+    "ru-RU",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
+  const featuredCover =
+    featuredPost.cover_image_url || "/static/img/placeholder.png";
+
+  const featuredControls = isAdmin()
+    ? `
     <div class="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
         <button class="edit-post-btn bg-white/90 p-3 rounded-xl shadow-lg text-gray-700 hover:text-cyan-600 backdrop-blur-sm" data-slug="${featuredPost.slug}" title="Редактировать">
             <i data-lucide="edit-2" class="w-5 h-5"></i>
@@ -3294,43 +3450,62 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
             <i data-lucide="trash-2" class="w-5 h-5"></i>
         </button>
     </div>
-  ` : "";
+  `
+    : "";
 
   const featuredHtml = `
     <div class="group relative mb-12 w-full aspect-video md:aspect-[2.4/1] rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
-        <a href="/blog/${featuredPost.slug}" data-navigo class="block absolute inset-0">
+        <a href="/blog/${
+          featuredPost.slug
+        }" data-navigo class="block absolute inset-0">
             <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style="background-image: url('${featuredCover}')"></div>
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
             <div class="absolute inset-0 p-8 flex flex-col justify-end text-white">
                 <div class="text-xs font-bold uppercase tracking-wider opacity-80 mb-2">${featuredDate}</div>
-                <h2 class="text-3xl md:text-4xl font-bold leading-tight drop-shadow-md mb-2">${featuredPost.title}</h2>
-                <p class="text-base opacity-90 leading-relaxed line-clamp-2 max-w-3xl">${featuredPost.summary || ""}</p>
+                <h2 class="text-3xl md:text-4xl font-bold leading-tight drop-shadow-md mb-2">${
+                  featuredPost.title
+                }</h2>
+                <p class="text-base opacity-90 leading-relaxed line-clamp-2 max-w-3xl">${
+                  featuredPost.summary || ""
+                }</p>
             </div>
         </a>
         ${featuredControls}
     </div>
   `;
 
-  let otherPostsHtml = '';
+  let otherPostsHtml = "";
   if (otherPosts.length > 0) {
-      const cards = otherPosts.map((post) => {
-        const date = new Date(post.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    const cards = otherPosts
+      .map((post) => {
+        const date = new Date(post.created_at).toLocaleDateString("ru-RU", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
         const cover = post.cover_image_url || "/static/img/placeholder.png";
-        const controls = isAdmin() ? `
+        const controls = isAdmin()
+          ? `
               <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button class="edit-post-btn bg-white p-2 rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-slug="${post.slug}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                   <button class="delete-post-btn bg-white p-2 rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${post.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>`
-        : "";
+          : "";
 
-        const postTagsHtml = post.tags.length > 0 
-          ? `<div class="flex flex-wrap gap-1.5 mb-3">${post.tags.map(tag =>
-              `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">${tag.name}</span>`
-            ).join('')}</div>`
-          : '';
+        const postTagsHtml =
+          post.tags.length > 0
+            ? `<div class="flex flex-wrap gap-1.5 mb-3">${post.tags
+                .map(
+                  (tag) =>
+                    `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap">${tag.name}</span>`
+                )
+                .join("")}</div>`
+            : "";
 
         return `
-          <a href="/blog/${post.slug}" data-navigo class="group relative flex flex-col bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100">
+          <a href="/blog/${
+            post.slug
+          }" data-navigo class="group relative flex flex-col bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100">
               <div class="aspect-video rounded-xl overflow-hidden bg-gray-100 mb-4">
                   <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
               </div>
@@ -3340,23 +3515,27 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
                   ${postTagsHtml}
                   <!-- === КОНЕЦ ИЗМЕНЕНИЙ === -->
                   
-                  <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-2">${post.title}</h3>
-                  <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">${post.summary || ""}</p>
+                  <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-2">${
+                    post.title
+                  }</h3>
+                  <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">${
+                    post.summary || ""
+                  }</p>
                   <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
                       Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
                   </div>
               </div>
               ${controls}
           </a>`;
-      }).join("");
+      })
+      .join("");
 
-      otherPostsHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">${cards}</div>`;
+    otherPostsHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">${cards}</div>`;
   }
 
   listEl.innerHTML = `<div class="max-w-5xl mx-auto px-6 pb-10">${featuredHtml}${otherPostsHtml}</div>`;
   if (window.lucide) window.lucide.createIcons();
 }
-
 
 export async function renderBlogPost(post) {
   const { listEl } = getElements();

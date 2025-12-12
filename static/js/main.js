@@ -113,7 +113,7 @@ async function fetchUserProfile() {
 }
 
 function resetViewState() {
-  document.body.removeAttribute('data-epoch');
+  document.body.removeAttribute("data-epoch");
   state.view.currentComposer = null;
   state.view.currentWork = null;
   state.view.currentComposition = null;
@@ -209,10 +209,10 @@ function setupRouter() {
         loadCurrentView();
       },
       "/blog/tag/:tagName": ({ data }) => {
-            state.view.current = "blog_list";
-            state.view.blogTagFilter = data.tagName; // <-- Устанавливаем фильтр
-            resetViewState();
-            loadCurrentView();
+        state.view.current = "blog_list";
+        state.view.blogTagFilter = data.tagName; // <-- Устанавливаем фильтр
+        resetViewState();
+        loadCurrentView();
       },
       "/blog/:slug": ({ data }) => {
         state.view.current = "blog_post";
@@ -358,7 +358,7 @@ async function loadCurrentView() {
           `/api/recordings/composers/${cId}/works`
         );
         state.view.currentComposer = cFull;
-        document.body.setAttribute('data-epoch', cFull.epoch);
+        document.body.setAttribute("data-epoch", cFull.epoch);
         ui.renderWorkList(works, cFull, state.displayLanguage);
         break;
       case "work_detail":
@@ -366,7 +366,7 @@ async function loadCurrentView() {
         const wFull = await apiRequest(`/api/recordings/works/${wId}`);
         state.view.currentWork = wFull;
         state.view.currentComposer = wFull.composer;
-        document.body.setAttribute('data-epoch', wFull.composer.epoch);
+        document.body.setAttribute("data-epoch", wFull.composer.epoch);
         ui.renderCompositionGrid(wFull, state.displayLanguage);
         break;
       case "composition_detail":
@@ -379,7 +379,7 @@ async function loadCurrentView() {
         state.view.currentWork = cpFull.work;
         state.view.currentComposer = cpFull.work.composer;
         state.currentViewRecordings = recs;
-        document.body.setAttribute('data-epoch', cpFull.work.composer.epoch);
+        document.body.setAttribute("data-epoch", cpFull.work.composer.epoch);
         ui.renderCompositionDetailView(
           cpFull,
           recs,
@@ -455,10 +455,12 @@ async function loadCurrentView() {
         break;
       case "blog_list":
         const activeTag = state.view.blogTagFilter;
-        const apiUrl = activeTag ? `/api/blog/?tag=${encodeURIComponent(activeTag)}` : "/api/blog/";
+        const apiUrl = activeTag
+          ? `/api/blog/?tag=${encodeURIComponent(activeTag)}`
+          : "/api/blog/";
         const [posts, allTags] = await Promise.all([
-            apiRequest(apiUrl),
-            apiRequest("/api/blog/tags")
+          apiRequest(apiUrl),
+          apiRequest("/api/blog/tags"),
         ]);
         ui.renderBlogList(posts, allTags, activeTag);
         break;
@@ -514,6 +516,98 @@ function addEventListeners() {
 
   // 1. Инициализируем кнопку сворачивания плеера
   ui.initPlayerToggle();
+
+  // --- ЛОГИКА МОДАЛЬНОГО ОКНА И ПОДСКАЗКИ (ФИНАЛЬНАЯ ВЕРСИЯ) ---
+  const infoModal = document.getElementById("player-info-modal");
+  const infoModalWrapper = document.getElementById(
+    "player-info-modal-content-wrapper"
+  );
+  const openInfoBtn = document.getElementById("player-info-btn-mobile");
+  const closeInfoBtn = document.getElementById("player-info-modal-close-btn");
+  const infoPopoverContainer = document.getElementById(
+    "info-popover-container"
+  );
+  const infoBtnDesktop = document.getElementById("player-info-btn-desktop");
+  const popover = document.getElementById("player-info-popover");
+
+  // --- ЛОГИКА ДЛЯ МОБИЛЬНОГО ОКНА ---
+  const openInfoModal = () => {
+    const musicPlayer = document.getElementById("music-player");
+    // Проверяем, свернут ли плеер. Если да, его высота 0.
+    const playerHeight =
+      musicPlayer && !musicPlayer.classList.contains("player-collapsed")
+        ? musicPlayer.offsetHeight
+        : 0;
+    const availableHeight = window.innerHeight - playerHeight;
+
+    infoModal.classList.remove("hidden");
+    infoModalWrapper.style.visibility = "hidden"; // Сначала прячем
+    infoModalWrapper.style.transform = "scale(0.95)"; // Начальное состояние для анимации
+
+    requestAnimationFrame(() => {
+      const modalHeight = infoModalWrapper.offsetHeight;
+      const modalWidth = infoModalWrapper.offsetWidth;
+
+      // Вертикальное центрирование в доступной области
+      let topPosition = (availableHeight - modalHeight) / 2;
+      if (topPosition < 20) topPosition = 20; // Отступ сверху, чтобы не прилипало
+
+      // Горизонтальное центрирование
+      let leftPosition = (window.innerWidth - modalWidth) / 2;
+
+      infoModalWrapper.style.top = `${topPosition}px`;
+      infoModalWrapper.style.left = `${leftPosition}px`;
+
+      // Теперь показываем с анимацией
+      infoModalWrapper.style.visibility = "visible";
+      infoModal.classList.remove("opacity-0");
+      infoModalWrapper.style.transform = "scale(1)";
+    });
+  };
+
+  const closeInfoModal = () => {
+    infoModal.classList.add("opacity-0");
+    infoModalWrapper.style.transform = "scale(0.95)";
+    setTimeout(() => {
+      infoModal.classList.add("hidden");
+    }, 300);
+  };
+
+  if (openInfoBtn) openInfoBtn.addEventListener("click", openInfoModal);
+  if (closeInfoBtn) closeInfoBtn.addEventListener("click", closeInfoModal);
+
+  // --- ЛОГИКА ДЛЯ ДЕСКТОПНОЙ ПОДСКАЗКИ ---
+  if (infoPopoverContainer && infoBtnDesktop && popover) {
+    let hideTimeout;
+
+    const showPopover = () => {
+      clearTimeout(hideTimeout);
+      const btnRect = infoBtnDesktop.getBoundingClientRect();
+      popover.style.bottom = `${window.innerHeight - btnRect.top + 30}px`;
+      const popoverWidth = popover.offsetWidth;
+      const btnCenter = btnRect.left + btnRect.width / 2;
+      let left = btnCenter - popoverWidth / 2;
+      if (left < 10) left = 10;
+      if (left + popoverWidth > window.innerWidth - 10) {
+        left = window.innerWidth - popoverWidth - 10;
+      }
+      popover.style.left = `${left}px`;
+      popover.style.opacity = "1";
+      popover.classList.remove("pointer-events-none");
+    };
+
+    const hidePopover = () => {
+      hideTimeout = setTimeout(() => {
+        popover.style.opacity = "0";
+        popover.classList.add("pointer-events-none");
+      }, 200);
+    };
+
+    infoPopoverContainer.addEventListener("mouseenter", showPopover);
+    infoPopoverContainer.addEventListener("mouseleave", hidePopover);
+    popover.addEventListener("mouseenter", showPopover);
+    popover.addEventListener("mouseleave", hidePopover);
+  }
 
   // 2. ОСНОВНОЙ СЛУШАТЕЛЬ КЛИКОВ (Делегирование событий)
   document.body.addEventListener("click", async (e) => {
@@ -614,7 +708,10 @@ function addEventListeners() {
 
       const tagsValue = document.getElementById("blog-tags").value;
       const tags = tagsValue
-        ? tagsValue.split(',').map(tag => tag.trim()).filter(Boolean)
+        ? tagsValue
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
         : [];
 
       const data = {
@@ -624,7 +721,7 @@ function addEventListeners() {
         meta_description: document.getElementById("blog-meta-desc").value,
         meta_keywords: document.getElementById("blog-keywords").value,
         content: window.quillEditor.root.innerHTML,
-        tags: tags
+        tags: tags,
       };
 
       try {
@@ -1109,6 +1206,28 @@ function addEventListeners() {
 
       const fd = new FormData();
       fd.append("performers", perf || "");
+
+      fd.append(
+        "lead_performer",
+        document.getElementById("add-recording-lead-performer").value || ""
+      );
+
+      fd.append(
+        "conductor",
+        document.getElementById("add-recording-conductor").value || ""
+      );
+      fd.append(
+        "license",
+        document.getElementById("add-recording-license").value || ""
+      );
+      fd.append(
+        "source_text",
+        document.getElementById("add-recording-source-text").value || ""
+      );
+      fd.append(
+        "source_url",
+        document.getElementById("add-recording-source-url").value || ""
+      );
 
       if (youtubeUrl) fd.append("youtube_url", youtubeUrl);
 
@@ -2413,76 +2532,90 @@ function closeYouTubeVideo() {
   }, 200); // Ждем завершения анимации
 }
 function setupDuplicateCheckers() {
-    let debounceTimer;
+  let debounceTimer;
 
-    const check = async (entityType, query, warningElId, params = {}) => {
-        const warningEl = document.getElementById(warningElId);
-        if (!query || query.length < 3) {
-            warningEl.classList.add('hidden');
-            return;
-        }
+  const check = async (entityType, query, warningElId, params = {}) => {
+    const warningEl = document.getElementById(warningElId);
+    if (!query || query.length < 3) {
+      warningEl.classList.add("hidden");
+      return;
+    }
 
-        try {
-            let url = `/api/search/check-duplicates?entity_type=${entityType}&query=${encodeURIComponent(query)}`;
-            if (params.composerId) url += `&composer_id=${params.composerId}`;
-            if (params.workId) url += `&work_id=${params.workId}`;
+    try {
+      let url = `/api/search/check-duplicates?entity_type=${entityType}&query=${encodeURIComponent(
+        query
+      )}`;
+      if (params.composerId) url += `&composer_id=${params.composerId}`;
+      if (params.workId) url += `&work_id=${params.workId}`;
 
-            const duplicates = await apiRequest(url);
+      const duplicates = await apiRequest(url);
 
-            if (duplicates.length > 0) {
-                const list = duplicates.map(item => `
+      if (duplicates.length > 0) {
+        const list = duplicates
+          .map(
+            (item) => `
                     <li>
-                        <a href="#/works/${item.slug || item.id}" target="_blank" class="font-bold text-red-700 hover:underline">
+                        <a href="#/works/${
+                          item.slug || item.id
+                        }" target="_blank" class="font-bold text-red-700 hover:underline">
                             ${item.name_ru}
                         </a>
                     </li>
-                `).join('');
-                warningEl.innerHTML = `<strong>Внимание!</strong> Возможно, такая запись уже существует: <ul class="list-disc pl-5 mt-1">${list}</ul>`;
-                warningEl.classList.remove('hidden');
-            } else {
-                warningEl.classList.add('hidden');
-            }
-        } catch (e) {
-            console.error("Duplicate check failed:", e);
-            warningEl.classList.add('hidden');
-        }
-    };
-
-    const composerInput = document.getElementById('add-composer-name-ru');
-    if (composerInput) {
-        composerInput.addEventListener('input', (e) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                check('composer', e.target.value, 'composer-duplicates-warning');
-            }, 500);
-        });
+                `
+          )
+          .join("");
+        warningEl.innerHTML = `<strong>Внимание!</strong> Возможно, такая запись уже существует: <ul class="list-disc pl-5 mt-1">${list}</ul>`;
+        warningEl.classList.remove("hidden");
+      } else {
+        warningEl.classList.add("hidden");
+      }
+    } catch (e) {
+      console.error("Duplicate check failed:", e);
+      warningEl.classList.add("hidden");
     }
+  };
 
-    const workInput = document.getElementById('add-work-name-ru');
-    if (workInput) {
-        workInput.addEventListener('input', (e) => {
-            console.log("Сработал input для произведения!");
-            const composerId = window.state.view.currentComposer?.id;
-            if (!composerId) return;
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                console.log("Вызов check() для произведения:", e.target.value); // Проверяем вызов
-                check('work', e.target.value, 'work-duplicates-warning', { composerId });
-            }, 500);
-        });
-    } else {
-        console.error("КРИТИЧЕСКАЯ ОШИБКА: Элемент #add-work-name-ru не найден в DOM!");
-    }
+  const composerInput = document.getElementById("add-composer-name-ru");
+  if (composerInput) {
+    composerInput.addEventListener("input", (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        check("composer", e.target.value, "composer-duplicates-warning");
+      }, 500);
+    });
+  }
 
-    const compInput = document.getElementById('add-composition-title-ru');
-    if (compInput) {
-        compInput.addEventListener('input', (e) => {
-            const workId = window.state.view.currentWork?.id;
-            if (!workId) return;
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                check('composition', e.target.value, 'composition-duplicates-warning', { workId });
-            }, 500);
+  const workInput = document.getElementById("add-work-name-ru");
+  if (workInput) {
+    workInput.addEventListener("input", (e) => {
+      console.log("Сработал input для произведения!");
+      const composerId = window.state.view.currentComposer?.id;
+      if (!composerId) return;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.log("Вызов check() для произведения:", e.target.value); // Проверяем вызов
+        check("work", e.target.value, "work-duplicates-warning", {
+          composerId,
         });
-    }
+      }, 500);
+    });
+  } else {
+    console.error(
+      "КРИТИЧЕСКАЯ ОШИБКА: Элемент #add-work-name-ru не найден в DOM!"
+    );
+  }
+
+  const compInput = document.getElementById("add-composition-title-ru");
+  if (compInput) {
+    compInput.addEventListener("input", (e) => {
+      const workId = window.state.view.currentWork?.id;
+      if (!workId) return;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        check("composition", e.target.value, "composition-duplicates-warning", {
+          workId,
+        });
+      }, 500);
+    });
+  }
 }

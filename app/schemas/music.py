@@ -54,7 +54,11 @@ class RecordingBase(BaseModel):
     performers: Optional[str] = None
     recording_year: Optional[int] = None
     youtube_url: Optional[str] = None
-
+    conductor: Optional[str] = None
+    license: Optional[str] = None
+    source_text: Optional[str] = None
+    source_url: Optional[str] = None
+    lead_performer: Optional[str] = None
 
 # --- Create (Input) ---
 class ComposerCreate(ComposerBase):
@@ -93,6 +97,11 @@ class RecordingUpdate(BaseModel):
     performers: Optional[str] = None
     recording_year: Optional[int] = None
     youtube_url: Optional[str] = None
+    conductor: Optional[str] = None
+    license: Optional[str] = None
+    source_text: Optional[str] = None
+    source_url: Optional[str] = None
+    lead_performer: Optional[str] = None
     composer_name: Optional[str] = None
     work_name: Optional[str] = None
     composition_title: Optional[str] = None

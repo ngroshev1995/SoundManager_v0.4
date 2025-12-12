@@ -57,8 +57,13 @@ def create_new_composition(
 def upload_recording(
         composition_id: int,
         performers: Optional[str] = Form(None),
+        lead_performer: Optional[str] = Form(None),
         recording_year: Optional[int] = Form(None),
         youtube_url: Optional[str] = Form(None),
+        conductor: Optional[str] = Form(None),
+        license: Optional[str] = Form(None),
+        source_text: Optional[str] = Form(None),
+        source_url: Optional[str] = Form(None),
         file: UploadFile = File(None),
         db: Session = Depends(get_db),
         u: models.User = Depends(deps.get_current_active_admin)
@@ -93,8 +98,8 @@ def upload_recording(
                         detail=f"Possible duplicate performance by {performers} found (duration match)."
                     )
 
-            rec_data = schemas.RecordingCreate(performers=performers, recording_year=recording_year,
-                                               youtube_url=youtube_url)
+            rec_data = schemas.RecordingCreate(performers=performers, lead_performer=lead_performer, recording_year=recording_year,
+                                               youtube_url=youtube_url, conductor=conductor, license=license, source_text=source_text, source_url=source_url)
             new_rec = crud.music.create_recording_for_composition(db, rec_in=rec_data, composition_id=composition_id,
                                                                   duration=duration, file_path="temp",
                                                                   file_hash=file_hash)

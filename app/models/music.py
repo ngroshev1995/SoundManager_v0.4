@@ -82,6 +82,12 @@ class Recording(Base):
     file_hash = Column(String, unique=True, index=True, nullable=True)
     composition_id = Column(Integer, ForeignKey("compositions.id"), nullable=False)
 
+    conductor = Column(String, nullable=True)  # Дирижёр
+    license = Column(String, nullable=True)  # Название лицензии, e.g., "CC BY 4.0"
+    source_text = Column(String, nullable=True)  # Текст-анкор для источника
+    source_url = Column(String, nullable=True)  # Ссылка на источник
+    lead_performer = Column(String, nullable=True)  # Ведущий исполнитель
+
     # SQLAlchemy умный: когда имя класса в кавычках ("Composition"), он найдет его позже.
     composition = relationship("Composition", back_populates="recordings")
 
