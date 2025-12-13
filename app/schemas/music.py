@@ -60,6 +60,14 @@ class RecordingBase(BaseModel):
     source_url: Optional[str] = None
     lead_performer: Optional[str] = None
 
+
+class VideoRecordingCreate(BaseModel):
+    youtube_url: str
+    performers: str
+    lead_performer: Optional[str] = None
+    conductor: Optional[str] = None
+    recording_year: Optional[int] = None
+
 # --- Create (Input) ---
 class ComposerCreate(ComposerBase):
     name_ru: str  # Обязательно

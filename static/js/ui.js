@@ -497,7 +497,7 @@ export function renderRecordingList(
           window.state && window.state.selectedRecordingIds.has(r.id);
 
         return `
-          <div class="recording-item group flex items-center p-3 hover:bg-gray-50 ${
+          <div class="recording-item group flex items-center p-3 hover:bg-gray-50 select-none ${
             isSelected ? "bg-cyan-50" : "border-b border-gray-100"
           } bg-white last:border-0 transition-colors cursor-pointer relative select-none"
                data-recording-id="${r.id}" data-index="${i}">
@@ -1073,10 +1073,17 @@ export async function renderCompositionGrid(work, lang = "ru") {
         ${
           isAdmin()
             ? `
-            <button id="direct-upload-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2" data-work-id="${work.id}">
-                <i data-lucide="upload-cloud" class="w-4 h-4"></i> <span>Загрузить запись</span>
+            <!-- НОВЫЕ КНОПКИ: Видео и Аудио раздельно -->
+            <button id="add-work-video-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 text-sm">
+                <i data-lucide="youtube" class="w-5 h-5"></i> <span>Видео</span>
             </button>
-            <button id="add-composition-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <button id="add-work-audio-btn" class="bg-cyan-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2 text-sm">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i> <span>Аудио</span>
+            </button>
+            
+            <div class="w-px h-8 bg-gray-300 mx-1"></div> <!-- Разделитель -->
+
+            <button id="add-composition-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
                 <i data-lucide="plus" class="w-4 h-4"></i> <span>Часть</span>
             </button>
             <button id="edit-work-btn" class="border border-gray-300 text-gray-700 px-3 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors" title="Редактировать">
@@ -1188,8 +1195,8 @@ export async function renderCompositionGrid(work, lang = "ru") {
       );
       if (recs.length > 0) {
         showPlayerBlock = true;
-        // В плеер кладем ТОЛЬКО аудио
-        window.state.currentViewRecordings = recs.filter((r) => r.duration > 0);
+        // ИСПРАВЛЕНИЕ: Сохраняем ВСЕ записи, чтобы работало редактирование видео
+        window.state.currentViewRecordings = recs;
       }
     } catch (e) {
       console.error(e);
@@ -1221,15 +1228,12 @@ export async function renderCompositionGrid(work, lang = "ru") {
           const isFav = window.state.favoriteRecordingIds.has(r.id);
           const isSelected = window.state.selectedRecordingIds.has(r.id);
 
-          const displayTitle =
-            r.composition.sort_order === 0
-              ? getLocalizedText(work, "name", lang)
-              : getLocalizedText(r.composition, "title", lang);
+          // УБРАЛИ displayTitle, так как название уже есть в заголовке страницы
 
           return `
               <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
                 isSelected ? "bg-cyan-50" : "border-b border-gray-100"
-              } bg-white last:border-0 transition-colors cursor-pointer"
+              } bg-white last:border-0 transition-colors cursor-pointer select-none"
                   data-recording-id="${r.id}" data-index="${i}">
                   
                   <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
@@ -1251,19 +1255,13 @@ export async function renderCompositionGrid(work, lang = "ru") {
                      <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                   </div>
     
+                  <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: Только Исполнитель и Год -->
                   <div class="flex-1 min-w-0 ml-4">
                       <div class="font-bold text-gray-800 text-sm leading-tight break-words">
-                         ${displayTitle}
+                         ${r.performers || "Исполнитель не указан"}
                       </div>
                       <div class="text-xs text-gray-500 mt-0.5 break-words">
-                         <span>${
-                           r.performers || "Неизвестный исполнитель"
-                         }</span>
-                         ${
-                           r.recording_year
-                             ? `<span class="text-gray-300 mx-1">•</span> <span>${r.recording_year}</span>`
-                             : ""
-                         }
+                         ${r.recording_year || "Год не указан"}
                       </div>
                   </div>
     
@@ -1303,48 +1301,42 @@ export async function renderCompositionGrid(work, lang = "ru") {
          </div>`;
     }
 
-    // 2. БЛОК ВИДЕО (ИСПРАВЛЕНО: Вертикальная верстка на мобильных)
+    // 2. БЛОК ВИДЕО
     if (videoRecs.length > 0) {
       const rows = videoRecs
         .map((r) => {
           const controls = isAdmin()
             ? `
-             <div class="flex items-center gap-2 border-l border-gray-200 pl-2 ml-2 sm:ml-0">
+             <div class="flex items-center gap-2 border-l border-gray-200 pl-2 ml-2 sm:ml-0 flex-shrink-0">
                  <button class="edit-video-btn p-2 text-gray-400 hover:text-cyan-600 bg-gray-50 rounded-lg" data-recording-id="${r.id}"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                  <button class="delete-video-btn p-2 text-gray-400 hover:text-red-600 bg-gray-50 rounded-lg" data-recording-id="${r.id}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
              </div>`
             : "";
 
-          const displayTitle =
-            r.composition.sort_order === 0
-              ? getLocalizedText(work, "name", lang)
-              : getLocalizedText(r.composition, "title", lang);
+          // УБРАЛИ displayTitle
 
           return `
           <div class="bg-white p-3 rounded-xl border border-gray-100 mb-3 shadow-sm hover:shadow-md transition-all">
-              <!-- Контейнер: Колонка на мобильном, Ряд на ПК -->
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 
-                  <!-- ЛЕВО: Иконка + Текст -->
                   <div class="flex items-start gap-3 min-w-0 w-full">
                       <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
                           <i data-lucide="youtube" class="w-5 h-5"></i>
                       </div>
+                      <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: Исполнитель жирным, год серым -->
                       <div class="min-w-0 flex-1">
-                          <div class="font-bold text-gray-800 text-sm sm:text-lg leading-snug break-words">${displayTitle}</div>
-                          <div class="text-sm text-gray-500 font-medium truncate mt-0.5">${
+                          <div class="font-bold text-gray-800 text-sm sm:text-lg leading-snug break-words">${
                             r.performers || "Исполнитель не указан"
                           }</div>
-                          <div class="text-xs text-gray-400">${
-                            r.recording_year || ""
+                          <div class="text-xs text-gray-400 mt-0.5">${
+                            r.recording_year || "Год не указан"
                           }</div>
                       </div>
                   </div>
 
-                  <!-- ПРАВО: Кнопка (На всю ширину на мобильном) -->
                   <div class="flex items-center w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 mt-1 sm:mt-0">
                       <a href="${r.youtube_url}" target="_blank"
-                         class="flex-1 sm:flex-none justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 text-sm shadow-sm">
+                         class="flex-1 sm:flex-none justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center gap-2 text-sm shadow-sm whitespace-nowrap">
                           <span>Смотреть</span> <i data-lucide="external-link" class="w-4 h-4"></i>
                       </a>
                       ${controls}
@@ -1562,17 +1554,23 @@ export function renderCompositionDetailView(
                         ${
                           isAdmin()
                             ? `
-                        <div class="mt-6 flex gap-2">
-                            <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
-                                <i data-lucide="trash-2" class="w-5 h-5"></i>
-                            </button>
-                            <button id="edit-composition-btn" class="p-3 md:px-5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-2">
-                                <i data-lucide="edit-2" class="w-5 h-5"></i> <span class="hidden md:inline">Редактировать</span>
-                            </button>
-                            <button class="add-recording-btn p-3 md:px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center gap-2 text-sm transform hover:-translate-y-0.5" data-composition-id="${composition.id}">
-                                <i data-lucide="upload-cloud" class="w-5 h-5"></i> <span class="hidden md:inline">Загрузить</span>
-                            </button>
-                        </div>`
+                          <div class="mt-4">
+    <!-- Внутренний div сжимается по контенту (оформление здесь) -->
+    <div class="inline-flex gap-2 bg-white/50 p-2 rounded-2xl backdrop-blur-sm border border-white/20 shadow-inner">
+        <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+        </button>
+        <button id="edit-composition-btn" class="p-3 md:px-5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-2">
+            <i data-lucide="edit-2" class="w-5 h-5"></i> <span class="hidden md:inline">Редактировать</span>
+        </button>
+        <button id="add-video-btn" class="p-3 md:px-5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200/50 transition-all flex items-center justify-center gap-2 text-sm">
+            <i data-lucide="youtube" class="w-5 h-5"></i> <span class="hidden md:inline">Видео</span>
+        </button>
+        <button id="add-audio-btn" class="p-3 md:px-5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 transition-all flex items-center justify-center gap-2 text-sm">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i> <span class="hidden md:inline">Аудио</span>
+        </button>
+    </div>
+</div>`
                             : ""
                         }
                     </div>
@@ -1755,8 +1753,9 @@ export function updatePlayerInfo(rec) {
     );
     const work = getLocalizedText(rec.composition.work, "name", "ru");
     const performer = rec.performers || "Неизвестный исполнитель";
+    const year = rec.recording_year ? ` (${rec.recording_year})` : "";
 
-    artist = `${composer} • ${work} • ${performer}`;
+    artist = `${composer} • ${work} • ${performer}${year}`;
     cover =
       rec.composition.cover_art_url ||
       rec.composition.work.cover_art_url ||
@@ -2051,6 +2050,27 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: `"${window.state.view.searchQuery}"` });
       break;
 
+    // --- БЛОГ (СПИСОК) ---
+    case "blog_list":
+      if (window.state.view.blogTagFilter) {
+        // Если выбран тег: Главная -> Блог -> Тег
+        crumbs.push({ label: "Блог", link: "/blog" });
+        crumbs.push({ label: `#${window.state.view.blogTagFilter}` });
+      } else {
+        // Просто список: Главная -> Блог
+        crumbs.push({ label: "Блог" });
+      }
+      break;
+
+    // --- БЛОГ (СТАТЬЯ) ---
+    case "blog_post":
+      // Путь: Главная -> Блог -> Название статьи
+      crumbs.push({ label: "Блог", link: "/blog" });
+      if (window.state.view.currentBlogPost) {
+        crumbs.push({ label: window.state.view.currentBlogPost.title });
+      }
+      break;
+
     case "map":
       crumbs.push({ label: "Карта" });
       break;
@@ -2215,23 +2235,39 @@ export function showAddCompositionModal() {
   document.getElementById("add-composition-order").value = nextOrder;
 }
 
-export function showAddRecordingModal(id) {
+export function showAddAudioModal(id) {
+  // Переименована
   document.getElementById("add-recording-composition-id").value = id;
-  document.getElementById("add-recording-modal").classList.remove("hidden");
-  document
-    .querySelectorAll("#add-recording-modal input:not([type=hidden])")
+  const modal = document.getElementById("add-audio-modal");
+  modal.classList.remove("hidden");
+  // Сбрасываем все поля
+  modal
+    .querySelectorAll("input:not([type=hidden])")
     .forEach((i) => (i.value = ""));
-
-  document.getElementById("add-recording-license").value = "";
+  modal.querySelector("select").value = "";
   document.getElementById("selected-recording-filename").textContent =
     "Выберите файл...";
+}
+
+export function showAddVideoModal(id) {
+  // Новая функция
+  // Мы не используем hidden input здесь, так как ID берется из state в main.js
+  const modal = document.getElementById("add-video-modal");
+  modal.classList.remove("hidden");
+  modal.querySelectorAll("input").forEach((i) => (i.value = ""));
 }
 
 export async function showEditEntityModal(type, data, onSave) {
   const modal = document.getElementById("edit-modal");
   const content = document.getElementById("edit-modal-content");
-  const title = document.getElementById("edit-modal-title");
+  const titleEl = document.getElementById("edit-modal-title");
   const confirmBtn = document.getElementById("confirm-edit-btn");
+
+  let modalTitle = "Редактировать";
+  let fields = "";
+  let confirmBtnClass =
+    "px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all";
+  let confirmBtnText = "Сохранить";
 
   // Сброс кнопки
   const newBtn = confirmBtn.cloneNode(true);
@@ -2245,9 +2281,6 @@ export async function showEditEntityModal(type, data, onSave) {
       modal.classList.add("hidden");
     };
   });
-
-  let fields = "";
-  let modalTitle = "";
 
   // --- ГЕНЕРАЦИЯ ПОЛЕЙ ---
 
@@ -2473,8 +2506,8 @@ export async function showEditEntityModal(type, data, onSave) {
           data.composition_year || ""
         }"></div>
       `;
-  } else if (type === "recording") {
-    modalTitle = "Редактировать запись";
+  } else if (type === "audio_recording") {
+    modalTitle = `<i data-lucide="disc" class="w-5 h-5 text-cyan-600"></i> Редактировать аудиозапись`;
     const licenseOptions = Object.keys(licenses)
       .map(
         (key) =>
@@ -2483,61 +2516,61 @@ export async function showEditEntityModal(type, data, onSave) {
           }>${key}</option>`
       )
       .join("");
+
     fields = `
-            <div><label class="text-xs font-bold text-gray-500 uppercase">Исполнители</label>
-            <input id="edit-performers" class="w-full border p-2 rounded" value="${
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Исполнители</label><input type="text" id="edit-performers" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.performers || ""
             }"></div>
-
-            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Ведущий исполнитель</label>
-            <input id="edit-lead-performer" class="w-full border p-2 rounded" value="${
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ведущий исполнитель</label><input type="text" id="edit-lead-performer" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.lead_performer || ""
             }"></div>
-            
-            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Дирижёр</label>
-            <input id="edit-conductor" class="w-full border p-2 rounded" value="${
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Дирижёр</label><input type="text" id="edit-conductor" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.conductor || ""
             }"></div>
-
-            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">Год записи</label>
-            <input type="number" id="edit-rec-year" class="w-full border p-2 rounded" value="${
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год записи</label><input type="number" id="edit-rec-year" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.recording_year || ""
             }"></div>
-            
-            <div class="mt-4 p-3 bg-gray-50 border rounded-lg space-y-2">
-                <div><label class="text-xs font-bold text-gray-500 uppercase">Лицензия</label>
-                <select id="edit-license" class="w-full border p-2 rounded bg-white">
-                    <option value="">Не указана</option>
-                    ${licenseOptions}
-                </select></div>
-                <div><label class="text-xs font-bold text-gray-500 uppercase">Источник (анкор)</label>
-                <input id="edit-source-text" class="w-full border p-2 rounded" value="${
-                  data.source_text || ""
-                }"></div>
-                <div><label class="text-xs font-bold text-gray-500 uppercase">Источник (URL)</label>
-                <input id="edit-source-url" class="w-full border p-2 rounded" value="${
-                  data.source_url || ""
-                }"></div>
-            </div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Лицензия</label><select id="edit-license" class="w-full px-3 py-2 border rounded-lg bg-white outline-none"><option value="">Не указана</option>${licenseOptions}</select></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Источник (анкор)</label><input type="text" id="edit-source-text" class="w-full px-3 py-2 border rounded-lg" value="${
+              data.source_text || ""
+            }"></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Источник (URL)</label><input type="url" id="edit-source-url" class="w-full px-3 py-2 border rounded-lg" value="${
+              data.source_url || ""
+            }"></div>
+        </div>
+    `;
+  } else if (type === "video_recording") {
+    modalTitle = `<i data-lucide="youtube" class="w-5 h-5 text-red-600"></i> Редактировать видеозапись`;
+    confirmBtnClass =
+      "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg shadow-red-200/50 transition-all";
 
-            <div class="mt-2"><label class="text-xs font-bold text-gray-500 uppercase">YouTube URL</label>
-            <input type="text" id="edit-youtube-url" class="w-full border p-2 rounded" value="${
-              data.youtube_url || ""
-            }" placeholder="https://..."></div>
-        `;
-  } else if (type === "playlist_create" || type === "playlist_edit") {
-    modalTitle =
-      type === "playlist_create" ? "Новый плейлист" : "Переименовать плейлист";
     fields = `
-        <div class="mb-3"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Название</label>
-        <input id="edit-playlist-name" class="w-full border border-gray-300 p-2 rounded-lg" value="${
-          data.name || ""
-        }" placeholder="Мой плейлист"></div>
-      `;
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ссылка на YouTube <span class="text-red-500">*</span></label><input type="text" id="edit-youtube-url" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none" value="${
+              data.youtube_url || ""
+            }"></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-700 uppercase mb-1">Исполнитель <span class="text-red-500">*</span></label><input type="text" id="edit-performers" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.performers || ""
+            }"></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ведущий исполнитель</label><input type="text" id="edit-lead-performer" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.lead_performer || ""
+            }"></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Дирижёр</label><input type="text" id="edit-conductor" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.conductor || ""
+            }"></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год записи</label><input type="number" id="edit-rec-year" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.recording_year || ""
+            }"></div>
+        </div>
+    `;
   }
 
-  title.textContent = modalTitle;
+  titleEl.innerHTML = modalTitle;
   content.innerHTML = fields;
+  newBtn.className = confirmBtnClass;
+  newBtn.textContent = confirmBtnText;
+  if (window.lucide) window.lucide.createIcons();
 
   // --- ИНИЦИАЛИЗАЦИЯ QUILL ---
   if (type === "composer" || type === "work") {
@@ -2619,18 +2652,32 @@ export async function showEditEntityModal(type, data, onSave) {
           composition_year:
             parseInt(document.getElementById("edit-year").value) || null,
         };
-      } else if (type === "recording") {
+      } else if (type === "audio_recording") {
         payload = {
           performers: document.getElementById("edit-performers").value,
           lead_performer: document.getElementById("edit-lead-performer").value,
-          conductor: document.getElementById("edit-conductor").value, // <--
+          conductor: document.getElementById("edit-conductor").value,
           recording_year:
             parseInt(document.getElementById("edit-rec-year").value) || null,
-          license: document.getElementById("edit-license").value, // <--
-          source_text: document.getElementById("edit-source-text").value, // <--
-          source_url: document.getElementById("edit-source-url").value, // <--
-          youtube_url:
-            document.getElementById("edit-youtube-url").value.trim() || null,
+          license: document.getElementById("edit-license").value,
+          source_text: document.getElementById("edit-source-text").value,
+          source_url: document.getElementById("edit-source-url").value,
+        };
+      } else if (type === "video_recording") {
+        const url = document.getElementById("edit-youtube-url").value.trim();
+        const performers = document
+          .getElementById("edit-performers")
+          .value.trim();
+        if (!url || !performers) {
+          throw new Error("Ссылка YouTube и Исполнитель обязательны");
+        }
+        payload = {
+          youtube_url: url,
+          performers: performers,
+          lead_performer: document.getElementById("edit-lead-performer").value,
+          conductor: document.getElementById("edit-conductor").value,
+          recording_year:
+            parseInt(document.getElementById("edit-rec-year").value) || null,
         };
       } else if (type === "playlist_create" || type === "playlist_edit") {
         payload = { name: document.getElementById("edit-playlist-name").value };
@@ -3440,6 +3487,19 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const featuredCover =
     featuredPost.cover_image_url || "/static/img/placeholder.png";
 
+  // 1. ГЕНЕРАЦИЯ ТЕГОВ ДЛЯ ГЛАВНОЙ КАРТОЧКИ (Стиль Glassmorphism)
+  const featuredTagsHtml =
+    featuredPost.tags && featuredPost.tags.length > 0
+      ? `<div class="flex flex-wrap gap-2 mb-3 relative z-10">
+         ${featuredPost.tags
+           .map(
+             (tag) =>
+               `<span class="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-2.5 py-1 rounded-lg text-xs font-bold border border-white/10 transition-colors shadow-sm">${tag.name}</span>`
+           )
+           .join("")}
+       </div>`
+      : "";
+
   const featuredControls = isAdmin()
     ? `
     <div class="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -3453,21 +3513,45 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   `
     : "";
 
+  // 2. ОБНОВЛЕННЫЙ HTML ГЛАВНОЙ КАРТОЧКИ
+  // h-[500px] - фиксированная высота для мобильных
+  // md:h-auto md:aspect-[2.4/1] - автовысота и широкое соотношение для ПК
   const featuredHtml = `
-    <div class="group relative mb-12 w-full aspect-video md:aspect-[2.4/1] rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300">
+    <!-- aspect-square (квадрат) для мобильных, md:aspect-[2.4/1] (широкий) для ПК -->
+    <div class="group relative mb-12 w-full aspect-square md:aspect-[2.4/1] rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform translate-z-0">
         <a href="/blog/${
           featuredPost.slug
         }" data-navigo class="block absolute inset-0">
-            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" style="background-image: url('${featuredCover}')"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-            <div class="absolute inset-0 p-8 flex flex-col justify-end text-white">
-                <div class="text-xs font-bold uppercase tracking-wider opacity-80 mb-2">${featuredDate}</div>
-                <h2 class="text-3xl md:text-4xl font-bold leading-tight drop-shadow-md mb-2">${
-                  featuredPost.title
-                }</h2>
-                <p class="text-base opacity-90 leading-relaxed line-clamp-2 max-w-3xl">${
-                  featuredPost.summary || ""
-                }</p>
+            
+            <!-- Фон -->
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('${featuredCover}')"></div>
+            
+            <!-- Градиент (Усилен снизу) -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+            
+            <!-- Контент -->
+            <div class="absolute inset-0 p-5 md:p-10 flex flex-col justify-end text-white">
+                
+                <!-- Дата -->
+                <div class="text-xs font-bold uppercase tracking-wider opacity-80 mb-2 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-3 h-3"></i> ${featuredDate}
+                </div>
+                
+                <!-- Теги -->
+                ${featuredTagsHtml}
+
+                <!-- Заголовок: 
+                     text-xl (поменьше) на мобильных, text-4xl на ПК.
+                     line-clamp-4 (до 4 строк) на мобильных. -->
+                <h2 class="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black leading-tight drop-shadow-lg mb-2 line-clamp-4 md:line-clamp-none">
+                    ${featuredPost.title}
+                </h2>
+                
+                <!-- Описание:
+                     Ограничено 2 строками (line-clamp-2), чтобы не вытеснять заголовок -->
+                <p class="text-sm md:text-lg opacity-90 leading-relaxed line-clamp-2 max-w-3xl font-medium text-gray-200">
+                  ${featuredPost.summary || ""}
+                </p>
             </div>
         </a>
         ${featuredControls}
@@ -3503,30 +3587,41 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
             : "";
 
         return `
-          <a href="/blog/${
-            post.slug
-          }" data-navigo class="group relative flex flex-col bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100">
-              <div class="aspect-video rounded-xl overflow-hidden bg-gray-100 mb-4">
-                  <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-              </div>
-              <div class="flex-1 flex flex-col">
-                  <!-- === ИЗМЕНЕНИЯ ЗДЕСЬ === -->
-                  <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-2">${date}</div>
-                  ${postTagsHtml}
-                  <!-- === КОНЕЦ ИЗМЕНЕНИЙ === -->
-                  
-                  <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-2">${
-                    post.title
-                  }</h3>
-                  <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">${
-                    post.summary || ""
-                  }</p>
-                  <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
-                      Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                  </div>
-              </div>
-              ${controls}
-          </a>`;
+            <a href="/blog/${
+              post.slug
+            }" data-navigo class="group relative flex flex-col bg-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 h-full">
+                <!-- Картинка -->
+                <div class="aspect-video rounded-xl overflow-hidden bg-gray-100 mb-4 flex-shrink-0">
+                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                </div>
+                
+                <div class="flex-1 flex flex-col">
+                    <!-- Дата -->
+                    <div class="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-2">${date}</div>
+                    
+                    <!-- Теги -->
+                    ${postTagsHtml}
+                    
+                    <!-- ЗАГОЛОВОК (ИЗМЕНЕНИЯ) -->
+                    <!-- text-lg (поменьше) на мобильных, text-xl на ПК -->
+                    <!-- line-clamp-3 (до 3 строк), чтобы длинные названия влезали -->
+                    <h3 class="text-lg md:text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-3 leading-tight">
+                      ${post.title}
+                    </h3>
+                    
+                    <!-- ОПИСАНИЕ (ИЗМЕНЕНИЯ) -->
+                    <!-- line-clamp-2 (уменьшили до 2 строк), чтобы освободить место заголовку -->
+                    <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2 flex-1">
+                      ${post.summary || ""}
+                    </p>
+                    
+                    <!-- Кнопка "Читать далее" (прижата к низу благодаря mt-auto) -->
+                    <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
+                        Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                ${controls}
+            </a>`;
       })
       .join("");
 
@@ -3862,13 +3957,17 @@ export function renderLibraryContent(
           r.composition.work.cover_art_url ||
           "/static/img/placeholder.png";
 
+        // --- ИЗМЕНЕНИЕ 1: Год записи ---
+        const yearHtml = r.recording_year
+          ? `<span class="text-gray-300 mx-1">•</span><span>${r.recording_year}</span>`
+          : "";
+
         return `
-          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
+          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 select-none ${
             isSelected ? "bg-cyan-50" : "border-b border-gray-100"
           } bg-white last:border-0 transition-colors cursor-pointer"
                data-recording-id="${r.id}" data-index="${i}">
 
-               <!-- 1. Чекбокс -->
                <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
                  window.state?.isSelectionMode ? "flex" : "hidden md:flex"
                }">
@@ -3877,39 +3976,31 @@ export function renderLibraryContent(
                  }" ${isSelected ? "checked" : ""}>
                </div>
                
-               <!-- Пустышка для гостей -->
                ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
 
-               <!-- 2. Кнопка Play -->
                <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
                  r.id
                }">
                   <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                </div>
 
-               <!-- 3. Обложка -->
                <div class="flex-shrink-0 mx-2 md:mx-4">
                   <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy">
                </div>
 
-               <!-- 4. НОВАЯ, КРАСИВАЯ ИНФОРМАЦИЯ -->
                <div class="flex-1 min-w-0">
-                   <!-- Строка 1: НАЗВАНИЕ (жирным) -->
                    <div class="font-bold text-gray-800 text-sm leading-tight break-words">
                       ${compTitle}
                    </div>
-                   <!-- Строка 2: МЕТАДАННЫЕ (серым) -->
                    <div class="text-xs text-gray-500 mt-0.5 break-words">
                       <span>${performerText}</span>
                       <span class="text-gray-300 mx-1">•</span>
                       <span>${composerName}</span>
+                      ${yearHtml} <!-- Добавили год сюда -->
                    </div>
                </div>
 
-               <!-- 5. Правая часть (Лайк и Длительность) -->
                <div class="flex items-center ml-auto pl-3 flex-shrink-0">
-                    
-                    <!-- === ИЗМЕНЕНИЕ ЗДЕСЬ: Оборачиваем кнопку в div, который скрывается на мобильных === -->
                     <div class="hidden md:flex items-center">
                         ${
                           isLoggedIn()
@@ -3923,7 +4014,7 @@ export function renderLibraryContent(
                                   isFav ? "fill-current" : ""
                                 }"></i>
                             </button>`
-                            : '<div class="w-10"></div>' // Пустышка для выравнивания
+                            : '<div class="w-10"></div>'
                         }
                     </div>
                     
@@ -3945,6 +4036,17 @@ export function renderLibraryContent(
         const workTitle = r.composition.work.name_ru;
         const composerName = r.composition.work.composer.name_ru;
         const youtubeId = r.youtube_url.split("v=")[1]?.split("&")[0];
+
+        // --- ИЗМЕНЕНИЕ 2: Формируем строки для Солиста и Дирижера ---
+        let extraInfoHtml = "";
+
+        if (r.lead_performer) {
+          extraInfoHtml += `<div class="truncate" title="Солист: ${r.lead_performer}"><span class="font-semibold text-gray-400 text-[10px] uppercase">Солист:</span> ${r.lead_performer}</div>`;
+        }
+
+        if (r.conductor) {
+          extraInfoHtml += `<div class="truncate" title="Дирижер: ${r.conductor}"><span class="font-semibold text-gray-400 text-[10px] uppercase">Дирижёр:</span> ${r.conductor}</div>`;
+        }
 
         const controls = isAdmin()
           ? `
@@ -3979,10 +4081,19 @@ export function renderLibraryContent(
                     <h3 class="font-bold text-gray-800 line-clamp-2 text-sm">${compTitle}</h3>
                     <p class="text-xs text-gray-500 mt-1">${workTitle} • ${composerName}</p>
                  </div>
+                 
+                 <!-- Блок с доп. информацией (Солист/Дирижер) -->
+                 <div class="mb-3 text-xs text-gray-600 space-y-1">
+                    ${extraInfoHtml}
+                 </div>
 
                  <div class="mt-auto pt-3 border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
-                    <span class="pr-2">${r.performers || "Unknown"}</span>
-                    <span class="flex-shrink-0">${r.recording_year || ""}</span>
+                    <span class="pr-2 truncate max-w-[70%]">${
+                      r.performers || "Unknown"
+                    }</span>
+                    <span class="flex-shrink-0 font-mono">${
+                      r.recording_year || ""
+                    }</span>
                  </div>
              </div>
              `;

@@ -466,6 +466,7 @@ async function loadCurrentView() {
         break;
       case "blog_post":
         const post = await apiRequest(`/api/blog/${state.view.blogSlug}`);
+        state.view.currentBlogPost = post;
         ui.renderBlogPost(post);
         break;
     }
@@ -898,9 +899,14 @@ function addEventListeners() {
     if (target.closest("#add-work-btn")) ui.showAddWorkModal();
     if (target.closest("#add-composition-btn")) ui.showAddCompositionModal();
 
-    if (target.closest(".add-recording-btn")) {
-      const compId = target.closest(".add-recording-btn").dataset.compositionId;
-      ui.showAddRecordingModal(compId);
+    // Разделяем вызовы
+    if (target.closest("#add-audio-btn")) {
+      const compId = state.view.currentComposition?.id;
+      ui.showAddAudioModal(compId);
+    }
+    if (target.closest("#add-video-btn")) {
+      const compId = state.view.currentComposition?.id;
+      ui.showAddVideoModal(compId);
     }
 
     // --- МОДАЛЬНЫЕ ОКНА (Закрытие) ---
@@ -1178,92 +1184,84 @@ function addEventListeners() {
       return;
     }
 
-    // 4. Загрузка Записи (Или добавление YouTube ссылки)
-    const createRecBtn = target.closest("#create-recording-btn");
-    if (createRecBtn) {
+    // 4. Загрузка АУДИО Записи
+    const createAudioBtn = target.closest("#create-audio-recording-btn");
+    if (createAudioBtn) {
       e.preventDefault();
-      const compId = document.getElementById(
-        "add-recording-composition-id"
-      ).value;
-      const perf = document
-        .getElementById("add-recording-performers")
-        .value.trim();
-
-      const youtubeInput = document.getElementById("add-recording-youtube");
-      const youtubeUrl = youtubeInput ? youtubeInput.value.trim() : null;
-
+      const compId = document.getElementById("add-recording-composition-id").value;
       const fileInput = document.getElementById("composition-upload-input");
       const file = fileInput.files[0];
 
-      // === НОВАЯ ВАЛИДАЦИЯ: Файл ИЛИ Ссылка ===
-      if (!file && !youtubeUrl) {
-        return ui.showNotification(
-          "Добавьте аудиофайл ИЛИ ссылку на YouTube",
-          "error"
-        );
+      if (!file) {
+        return ui.showNotification("Пожалуйста, выберите аудиофайл", "error");
       }
-      // ========================================
 
       const fd = new FormData();
-      fd.append("performers", perf || "");
-
-      fd.append(
-        "lead_performer",
-        document.getElementById("add-recording-lead-performer").value || ""
-      );
-
-      fd.append(
-        "conductor",
-        document.getElementById("add-recording-conductor").value || ""
-      );
-      fd.append(
-        "license",
-        document.getElementById("add-recording-license").value || ""
-      );
-      fd.append(
-        "source_text",
-        document.getElementById("add-recording-source-text").value || ""
-      );
-      fd.append(
-        "source_url",
-        document.getElementById("add-recording-source-url").value || ""
-      );
-
-      if (youtubeUrl) fd.append("youtube_url", youtubeUrl);
-
-      if (document.getElementById("add-recording-year").value) {
-        fd.append(
-          "recording_year",
-          document.getElementById("add-recording-year").value
-        );
-      }
-
-      // Отправляем файл только если он выбран
-      if (file) {
-        fd.append("file", file);
-      }
+      fd.append("performers", document.getElementById("add-recording-performers").value || "");
+      fd.append("lead_performer", document.getElementById("add-recording-lead-performer").value || "");
+      fd.append("conductor", document.getElementById("add-recording-conductor").value || "");
+      fd.append("recording_year", document.getElementById("add-recording-year").value || "");
+      fd.append("license", document.getElementById("add-recording-license").value || "");
+      fd.append("source_text", document.getElementById("add-recording-source-text").value || "");
+      fd.append("source_url", document.getElementById("add-recording-source-url").value || "");
+      fd.append("file", file);
 
       handleCreateEntity(
-        createRecBtn,
+        createAudioBtn,
         `/api/recordings/compositions/${compId}/upload`,
         fd,
-        "add-recording-modal",
-        "Запись добавлена!"
+        "add-audio-modal",
+        "Аудиозапись добавлена!"
       );
       return;
     }
 
-    // --- ПРЯМАЯ ЗАГРУЗКА (Запись для всего произведения) ---
-    const directUploadBtn = target.closest("#direct-upload-btn");
-    if (directUploadBtn) {
+    // 5. Добавление ВИДЕО Записи
+    const createVideoBtn = target.closest("#create-video-recording-btn");
+    if (createVideoBtn) {
+        e.preventDefault();
+        const compId = state.view.currentComposition?.id;
+        const url = document.getElementById("add-video-youtube").value.trim();
+        const performers = document.getElementById("add-video-performers").value.trim();
+
+        if (!url || !performers) {
+            return ui.showNotification("Ссылка YouTube и Исполнитель обязательны", "error");
+        }
+
+        const data = {
+            youtube_url: url,
+            performers: performers,
+            lead_performer: document.getElementById("add-video-lead-performer").value.trim() || null,
+            conductor: document.getElementById("add-video-conductor").value.trim() || null,
+            recording_year: parseInt(document.getElementById("add-video-year").value) || null,
+        };
+
+        handleCreateEntity(
+            createVideoBtn,
+            `/api/recordings/compositions/${compId}/add-video`,
+            data,
+            "add-video-modal",
+            "Видеозапись добавлена!"
+        );
+        return;
+    }
+
+    // --- ЗАГРУЗКА НА СТРАНИЦЕ ПРОИЗВЕДЕНИЯ (АУДИО И ВИДЕО) ---
+    const workAudioBtn = target.closest("#add-work-audio-btn");
+    const workVideoBtn = target.closest("#add-work-video-btn");
+
+    if (workAudioBtn || workVideoBtn) {
+      const btn = workAudioBtn || workVideoBtn;
+      const type = workAudioBtn ? "audio" : "video";
+      
       const w = state.view.currentWork;
       if (!w) return;
 
-      // Ищем существующую часть для полного произведения (sort_order === 0)
-      // Или, если произведение считалось одночастным, берем единственную часть
+      // 1. Ищем подходящую часть для записи
+      // Сначала ищем спец-часть "Полное произведение" (№0)
       let targetComp = w.compositions.find((c) => c.sort_order === 0);
 
-      // Логика для одночастных (старая совместимость): если часть одна и она "обычная" (не 0), грузим в неё
+      // Логика для одночастных (совместимость): если часть одна и она "обычная" (не 0), берем её
       if (
         !targetComp &&
         w.compositions.length === 1 &&
@@ -1272,11 +1270,12 @@ function addEventListeners() {
         targetComp = w.compositions[0];
       }
 
-      // Если спец-части нет, создаем её
+      // Если подходящей части нет, создаем "Полное произведение" (№0)
       if (!targetComp) {
         try {
-          const originalText = directUploadBtn.innerHTML;
-          directUploadBtn.textContent = "Подготовка...";
+          const originalText = btn.innerHTML;
+          btn.textContent = "Создание раздела...";
+          btn.disabled = true;
 
           const newComp = await apiRequest(
             `/api/recordings/works/${w.id}/compositions`,
@@ -1290,21 +1289,29 @@ function addEventListeners() {
           );
 
           targetComp = newComp;
-          w.compositions.push(newComp); // Обновляем стейт
-
-          directUploadBtn.innerHTML = originalText;
+          w.compositions.push(newComp); // Обновляем стейт локально
+          
+          btn.innerHTML = originalText;
+          btn.disabled = false;
         } catch (err) {
-          ui.showNotification(
-            "Ошибка создания раздела: " + err.message,
-            "error"
-          );
+          ui.showNotification("Ошибка создания раздела: " + err.message, "error");
+          btn.disabled = false;
           return;
         }
       }
 
       if (targetComp) {
-        ui.showAddRecordingModal(targetComp.id);
+        // ВАЖНО: Для модалки видео нужно установить currentComposition в стейт, 
+        // так как кнопка "Сохранить" в модалке берет ID оттуда.
+        state.view.currentComposition = targetComp;
+
+        if (type === "audio") {
+           ui.showAddAudioModal(targetComp.id);
+        } else {
+           ui.showAddVideoModal(targetComp.id);
+        }
       }
+      return;
     }
 
     // --- УПРАВЛЕНИЕ ВИДЕО (Кнопки на карточке) ---
@@ -1313,16 +1320,15 @@ function addEventListeners() {
     const editVideoBtn = target.closest(".edit-video-btn");
     if (editVideoBtn) {
       e.preventDefault();
-      e.stopPropagation(); // Чтобы не срабатывал клик по карточке
+      e.stopPropagation();
       const rid = parseInt(editVideoBtn.dataset.recordingId);
       const rec = state.currentViewRecordings.find((r) => r.id === rid);
 
       if (rec) {
-        ui.showEditEntityModal("recording", rec, async (data) => {
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+        ui.showEditEntityModal("video_recording", rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
-          ui.showNotification("Запись обновлена", "success");
-          state.selectedRecordingIds.clear();
-          ui.updateSelectionBar(0);
+          ui.showNotification("Видеозапись обновлена", "success");
           loadCurrentView();
         });
       }
@@ -1939,7 +1945,7 @@ function addEventListeners() {
       if (!touchTimer) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
-      if (Math.abs(x - touchStartX) > 10 || Math.abs(y - touchStartY) > 10) {
+      if (Math.abs(x - touchStartX) > 10 || Math.abs(y - touchStartY) > 30) {
         clearTimeout(touchTimer);
         touchTimer = null;
       }
@@ -2247,7 +2253,8 @@ async function handleContextMenuAction(li) {
       // Для редактирования берем объект
       const rec = state.currentViewRecordings.find((r) => r.id === contextRid);
       if (rec) {
-        ui.showEditEntityModal("recording", rec, async (data) => {
+        const recordingType = rec.duration > 0 ? "audio_recording" : "video_recording";
+        ui.showEditEntityModal(recordingType, rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Запись обновлена", "success");
           state.selectedRecordingIds.clear();
