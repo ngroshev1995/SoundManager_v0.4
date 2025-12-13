@@ -1636,10 +1636,7 @@
     <input type="file" id="portrait-upload-input" class="hidden" />
 
     <!-- Context Menus -->
-    <div
-      id="context-menu"
-      class="hidden fixed z-50"
-    ></div>
+    <div id="context-menu" class="hidden fixed z-50"></div>
     <div
       id="notification-container"
       class="fixed bottom-32 right-6 z-50 flex flex-col gap-2"
@@ -1689,9 +1686,8 @@
         </div>
 
         <!-- Правая часть: Действия -->
-        <!-- Уменьшил gap до 1, чтобы иконки стояли плотнее -->
         <div class="flex items-center gap-1 flex-shrink-0">
-          <!-- 1. ОЧЕРЕДЬ -->
+          <!-- 1. ОЧЕРЕДЬ (Для всех) -->
           <button
             id="bulk-play-next-btn"
             class="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -1707,21 +1703,31 @@
             <i data-lucide="list-plus" class="w-5 h-5"></i>
           </button>
 
-          <!-- 2. ПЛЕЙЛИСТ (Текст скрыт на мобильных - hidden md:inline) -->
+          <!-- 2. ПЛЕЙЛИСТ (Только для юзеров, скрыто по умолчанию) -->
           <button
             id="bulk-add-playlist-btn"
-            class="hidden flex items-center gap-2 px-2 py-1.5 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"
+            class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors"
+            title="В плейлист"
           >
             <i data-lucide="plus-square" class="w-5 h-5"></i>
-            <span class="hidden md:inline">В плейлист</span>
           </button>
 
-          <!-- 3. УДАЛЕНИЕ (Текст скрыт на мобильных - hidden md:inline) -->
+          <!-- 3. РЕДАКТИРОВАТЬ (Только админ, скрыто) -->
+          <button
+            id="bulk-edit-btn"
+            class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors text-cyan-300"
+            title="Редактировать"
+          >
+            <i data-lucide="edit-2" class="w-5 h-5"></i>
+          </button>
+
+          <!-- 4. УДАЛЕНИЕ (Админ или Владелец плейлиста, скрыто) -->
           <button
             id="bulk-delete-btn"
             class="hidden flex items-center gap-2 px-2 py-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-colors text-sm font-medium"
           >
             <i data-lucide="trash-2" class="w-5 h-5"></i>
+            <!-- Текст оставим скрытым на мобильных для экономии места -->
             <span id="bulk-delete-text" class="hidden md:inline">Удалить</span>
           </button>
         </div>

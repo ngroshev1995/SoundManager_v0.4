@@ -2974,33 +2974,48 @@ export function updateSelectionBar(count, context) {
   const countEl = document.getElementById("selection-count");
 
   // Кнопки
+  const queueNextBtn = document.getElementById("bulk-play-next-btn"); // Играть следующим
+  const queueEndBtn = document.getElementById("bulk-add-queue-btn"); // В конец
   const playlistBtn = document.getElementById("bulk-add-playlist-btn");
+  const editBtn = document.getElementById("bulk-edit-btn");
   const delBtn = document.getElementById("bulk-delete-btn");
   const delText = document.getElementById("bulk-delete-text");
 
   if (!bar) return;
 
-  // Проверка прав
   const isLoggedIn = !!localStorage.getItem("access_token");
   const isAdmin = localStorage.getItem("is_admin") === "true";
 
   if (count > 0) {
     bar.classList.remove("translate-y-full");
-    countEl.textContent = `${count} выбрано`;
+    countEl.textContent = `${count}`;
 
-    // 1. ПЛЕЙЛИСТЫ: Показываем только залогиненным
+    // 1. ОЧЕРЕДЬ: Видна всем (и гостям тоже, так как очередь локальная)
+    queueNextBtn.classList.remove("hidden");
+    queueEndBtn.classList.remove("hidden");
+
+    // 2. ПЛЕЙЛИСТЫ: Только залогиненным
     if (isLoggedIn) {
       playlistBtn.classList.remove("hidden");
-      // На мобилках показываем только иконку (класс hidden для span внутри html), на пк текст
     } else {
       playlistBtn.classList.add("hidden");
     }
 
-    // 2. УДАЛЕНИЕ: Показываем в плейлисте (всем владельцам) ИЛИ в медиатеке (только админам)
+    // 3. РЕДАКТИРОВАНИЕ: Только админ и ТОЛЬКО если выбран 1 трек
+    if (isAdmin && count === 1) {
+      editBtn.classList.remove("hidden");
+    } else {
+      editBtn.classList.add("hidden");
+    }
+
+    // 4. УДАЛЕНИЕ
+    // Если мы внутри плейлиста -> кнопку видят все владельцы (залогиненные)
     if (context === "playlist") {
       delBtn.classList.remove("hidden");
       if (delText) delText.textContent = "Убрать";
-    } else {
+    }
+    // Если в общей библиотеке -> только админы
+    else {
       if (isAdmin) {
         delBtn.classList.remove("hidden");
         if (delText) delText.textContent = "Удалить";
@@ -3009,14 +3024,13 @@ export function updateSelectionBar(count, context) {
       }
     }
 
-    // Обновляем иконки (важно для новых кнопок)
     if (window.lucide) window.lucide.createIcons();
   } else {
     bar.classList.add("translate-y-full");
   }
 }
 
-// Модалка выбора плейлиста (для массового добавления)
+// Мод  алка выбора плейлиста (для массового добавления)
 export function showSelectPlaylistModal(playlists, onSelect) {
   const modal = document.getElementById("edit-modal"); // Используем то же окно
   const content = document.getElementById("edit-modal-content");

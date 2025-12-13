@@ -1188,7 +1188,9 @@ function addEventListeners() {
     const createAudioBtn = target.closest("#create-audio-recording-btn");
     if (createAudioBtn) {
       e.preventDefault();
-      const compId = document.getElementById("add-recording-composition-id").value;
+      const compId = document.getElementById(
+        "add-recording-composition-id"
+      ).value;
       const fileInput = document.getElementById("composition-upload-input");
       const file = fileInput.files[0];
 
@@ -1197,13 +1199,34 @@ function addEventListeners() {
       }
 
       const fd = new FormData();
-      fd.append("performers", document.getElementById("add-recording-performers").value || "");
-      fd.append("lead_performer", document.getElementById("add-recording-lead-performer").value || "");
-      fd.append("conductor", document.getElementById("add-recording-conductor").value || "");
-      fd.append("recording_year", document.getElementById("add-recording-year").value || "");
-      fd.append("license", document.getElementById("add-recording-license").value || "");
-      fd.append("source_text", document.getElementById("add-recording-source-text").value || "");
-      fd.append("source_url", document.getElementById("add-recording-source-url").value || "");
+      fd.append(
+        "performers",
+        document.getElementById("add-recording-performers").value || ""
+      );
+      fd.append(
+        "lead_performer",
+        document.getElementById("add-recording-lead-performer").value || ""
+      );
+      fd.append(
+        "conductor",
+        document.getElementById("add-recording-conductor").value || ""
+      );
+      fd.append(
+        "recording_year",
+        document.getElementById("add-recording-year").value || ""
+      );
+      fd.append(
+        "license",
+        document.getElementById("add-recording-license").value || ""
+      );
+      fd.append(
+        "source_text",
+        document.getElementById("add-recording-source-text").value || ""
+      );
+      fd.append(
+        "source_url",
+        document.getElementById("add-recording-source-url").value || ""
+      );
       fd.append("file", file);
 
       handleCreateEntity(
@@ -1219,31 +1242,40 @@ function addEventListeners() {
     // 5. Добавление ВИДЕО Записи
     const createVideoBtn = target.closest("#create-video-recording-btn");
     if (createVideoBtn) {
-        e.preventDefault();
-        const compId = state.view.currentComposition?.id;
-        const url = document.getElementById("add-video-youtube").value.trim();
-        const performers = document.getElementById("add-video-performers").value.trim();
+      e.preventDefault();
+      const compId = state.view.currentComposition?.id;
+      const url = document.getElementById("add-video-youtube").value.trim();
+      const performers = document
+        .getElementById("add-video-performers")
+        .value.trim();
 
-        if (!url || !performers) {
-            return ui.showNotification("Ссылка YouTube и Исполнитель обязательны", "error");
-        }
-
-        const data = {
-            youtube_url: url,
-            performers: performers,
-            lead_performer: document.getElementById("add-video-lead-performer").value.trim() || null,
-            conductor: document.getElementById("add-video-conductor").value.trim() || null,
-            recording_year: parseInt(document.getElementById("add-video-year").value) || null,
-        };
-
-        handleCreateEntity(
-            createVideoBtn,
-            `/api/recordings/compositions/${compId}/add-video`,
-            data,
-            "add-video-modal",
-            "Видеозапись добавлена!"
+      if (!url || !performers) {
+        return ui.showNotification(
+          "Ссылка YouTube и Исполнитель обязательны",
+          "error"
         );
-        return;
+      }
+
+      const data = {
+        youtube_url: url,
+        performers: performers,
+        lead_performer:
+          document.getElementById("add-video-lead-performer").value.trim() ||
+          null,
+        conductor:
+          document.getElementById("add-video-conductor").value.trim() || null,
+        recording_year:
+          parseInt(document.getElementById("add-video-year").value) || null,
+      };
+
+      handleCreateEntity(
+        createVideoBtn,
+        `/api/recordings/compositions/${compId}/add-video`,
+        data,
+        "add-video-modal",
+        "Видеозапись добавлена!"
+      );
+      return;
     }
 
     // --- ЗАГРУЗКА НА СТРАНИЦЕ ПРОИЗВЕДЕНИЯ (АУДИО И ВИДЕО) ---
@@ -1253,7 +1285,7 @@ function addEventListeners() {
     if (workAudioBtn || workVideoBtn) {
       const btn = workAudioBtn || workVideoBtn;
       const type = workAudioBtn ? "audio" : "video";
-      
+
       const w = state.view.currentWork;
       if (!w) return;
 
@@ -1290,25 +1322,28 @@ function addEventListeners() {
 
           targetComp = newComp;
           w.compositions.push(newComp); // Обновляем стейт локально
-          
+
           btn.innerHTML = originalText;
           btn.disabled = false;
         } catch (err) {
-          ui.showNotification("Ошибка создания раздела: " + err.message, "error");
+          ui.showNotification(
+            "Ошибка создания раздела: " + err.message,
+            "error"
+          );
           btn.disabled = false;
           return;
         }
       }
 
       if (targetComp) {
-        // ВАЖНО: Для модалки видео нужно установить currentComposition в стейт, 
+        // ВАЖНО: Для модалки видео нужно установить currentComposition в стейт,
         // так как кнопка "Сохранить" в модалке берет ID оттуда.
         state.view.currentComposition = targetComp;
 
         if (type === "audio") {
-           ui.showAddAudioModal(targetComp.id);
+          ui.showAddAudioModal(targetComp.id);
         } else {
-           ui.showAddVideoModal(targetComp.id);
+          ui.showAddVideoModal(targetComp.id);
         }
       }
       return;
@@ -1583,6 +1618,44 @@ function addEventListeners() {
         ui.updateSelectionBar(0);
         loadCurrentView();
       });
+    }
+
+    // --- МАССОВОЕ РЕДАКТИРОВАНИЕ (В ПАНЕЛИ) ---
+    if (target.closest("#bulk-edit-btn")) {
+      const iterator = state.selectedRecordingIds.values();
+      const id = iterator.next().value;
+      if (!id) return;
+
+      const rec = state.currentViewRecordings.find((r) => r.id === id);
+      if (rec) {
+        // === ИЗМЕНЕНИЯ ЗДЕСЬ ===
+        // 1. Сразу выходим из режима выделения и прячем панель
+        state.selectedRecordingIds.clear();
+        state.isSelectionMode = false;
+
+        ui.updateSelectionBar(0); // Прячет панель
+        ui.updateSelectionStyles(); // Убирает синий фон у строки
+
+        // Прячем чекбоксы
+        document
+          .querySelectorAll(".selection-checkbox-container")
+          .forEach((el) => {
+            el.classList.add("hidden");
+            el.style.display = "";
+          });
+        // =======================
+
+        const type = rec.duration > 0 ? "audio_recording" : "video_recording";
+
+        // 2. И только потом открываем модалку
+        ui.showEditEntityModal(type, rec, async (data) => {
+          await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
+          ui.showNotification("Запись обновлена", "success");
+
+          // Здесь очистка уже не нужна, мы сделали её до открытия
+          loadCurrentView();
+        });
+      }
     }
 
     // 3. Массовое удаление
@@ -1953,25 +2026,25 @@ function addEventListeners() {
     { passive: true }
   );
 
-  // 3. ОТПУСТИЛИ ПАЛЕЦ (КЛЮЧЕВОЙ ФИКС)
+  // 3. ОТПУСТИЛИ ПАЛЕЦ
   document.body.addEventListener("touchend", (e) => {
-    // Сценарий A: Если это был долгий тап (флаг уже стоит), то мы НИЧЕГО не делаем,
-    // кроме сброса флага и отмены стандартного поведения. Выделение уже произошло.
+    // Если сработал долгий тап (таймер выполнился) -> выходим, выделение уже произошло
     if (isLongTouch) {
       e.preventDefault();
       isLongTouch = false;
-      clearTimeout(touchTimer); // На всякий случай
+      clearTimeout(touchTimer);
       touchTimer = null;
-      return; // ВАЖНО: Выходим, чтобы не выполнять логику короткого тапа
+      return;
     }
 
-    // Сценарий B: Если это был НЕ долгий тап, значит таймер еще не сработал.
-    // Это короткий тап.
+    // Если это короткий тап (таймер не успел сработать, мы его отменяем)
     if (touchTimer) {
       clearTimeout(touchTimer);
       touchTimer = null;
 
       const row = e.target.closest(".recording-item");
+
+      // Игнорируем кнопки внутри строки (Play, Лайк), у них свои обработчики click
       if (
         !row ||
         e.target.closest(".recording-play-pause-btn") ||
@@ -1980,20 +2053,16 @@ function addEventListeners() {
         return;
       }
 
+      // ЛОГИКА:
+      // 1. Если включен режим выделения -> короткий тап переключает чекбокс.
       if (window.state.isSelectionMode) {
-        // Короткий тап в режиме выделения -> переключаем чекбокс
         e.preventDefault();
         handleSelectionToggle(row);
-      } else {
-        // Короткий тап в обычном режиме -> ВЫЗЫВАЕМ КОНТЕКСТНОЕ МЕНЮ
-        e.preventDefault();
-        const touch = e.changedTouches[0];
-        showRecordingContextMenu(
-          touch.clientX,
-          touch.clientY,
-          parseInt(row.dataset.recordingId)
-        );
       }
+      // 2. Если обычный режим -> НИЧЕГО НЕ ДЕЛАЕМ.
+      // (e.preventDefault НЕ вызываем, чтобы не блокировать скролл или системные жесты,
+      // но никакой свой код не запускаем).
+      // Воспроизведение сработает только если юзер попадет пальцем в кнопку Play (событие click).
     }
   });
 
@@ -2253,7 +2322,8 @@ async function handleContextMenuAction(li) {
       // Для редактирования берем объект
       const rec = state.currentViewRecordings.find((r) => r.id === contextRid);
       if (rec) {
-        const recordingType = rec.duration > 0 ? "audio_recording" : "video_recording";
+        const recordingType =
+          rec.duration > 0 ? "audio_recording" : "video_recording";
         ui.showEditEntityModal(recordingType, rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Запись обновлена", "success");
