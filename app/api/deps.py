@@ -1,10 +1,9 @@
-# app/api/deps.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
-from app import crud, models, schemas # <-- Этот импорт правильный
+from app import crud, models, schemas
 from app.core import config
 from app.db.session import get_db
 
@@ -29,7 +28,7 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = crud.user.get_user_by_email(db, email=token_data.email) # <-- и этот вызов тоже
+    user = crud.user.get_user_by_email(db, email=token_data.email)
     if user is None:
         raise credentials_exception
     return user

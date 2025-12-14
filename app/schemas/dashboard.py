@@ -1,8 +1,7 @@
-# app/schemas/dashboard.py
 from pydantic import BaseModel
 from typing import List, Optional
 
-# Локальные мини-схемы, чтобы не зависеть от music.py и его рекурсий
+
 class DashComposer(BaseModel):
     id: int
     name: Optional[str] = None

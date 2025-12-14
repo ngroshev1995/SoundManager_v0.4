@@ -1,5 +1,3 @@
-# app/api/endpoints/search.py
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -28,7 +26,6 @@ def universal_search(q: str, db: Session = Depends(get_db)):
 
     search_term = q.lower().strip()
 
-    # 1. Композиторы (ищем в RU и Orig)
     all_composers = db.query(models.music.Composer).all()
     found_composers = [
                           c for c in all_composers
@@ -36,7 +33,6 @@ def universal_search(q: str, db: Session = Depends(get_db)):
                              is_match(c.original_name, search_term)
                       ][:10]
 
-    # 2. Произведения (ищем в RU и Orig)
     all_works = db.query(models.music.Work).options(joinedload(models.music.Work.composer)).all()
     found_works = [
                       w for w in all_works
@@ -45,7 +41,6 @@ def universal_search(q: str, db: Session = Depends(get_db)):
                          is_match(w.nickname, search_term)
                   ][:20]
 
-    # 3. Части (Compositions) - Ищем по названию части
     all_compositions = db.query(models.music.Composition).options(
         joinedload(models.music.Composition.work).joinedload(models.music.Work.composer)
     ).all()
@@ -57,9 +52,6 @@ def universal_search(q: str, db: Session = Depends(get_db)):
                                 is_match(c.catalog_number, search_term)
                          ][:20]
 
-    # 4. Записи (Ищем по исполнителям)
-    # (Поиск по названию произведения уже покрыт пунктами 2 и 3,
-    # здесь ищем именно исполнения)
     all_recordings = db.query(models.music.Recording).options(
         joinedload(models.music.Recording.composition)
         .joinedload(models.music.Composition.work)
@@ -87,7 +79,6 @@ def normalize_for_comparison(text: str) -> str:
     text = text.lower()
     text = text.replace('ё', 'е')
     text = re.sub(r'\(.*?\)', '', text)
-    # Оставляем только буквы и цифры, удаляя даже точки.
     text = re.sub(r'[^\w\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
@@ -108,13 +99,11 @@ def check_for_duplicates(
 
     duplicates = []
 
-    # Снижаем порог до 85, чтобы уверенно ловить опечатки в одно слово
     SIMILARITY_THRESHOLD = 85
 
     if entity_type == "composer":
         all_items = db.query(models.music.Composer).all()
         for c in all_items:
-            # Используем partial_ratio - он лучше всего подходит для поиска фамилии в ФИО
             score = fuzz.partial_ratio(normalized_query, normalize_for_comparison(c.name_ru))
             if score >= SIMILARITY_THRESHOLD:
                 duplicates.append({"id": c.id, "name_ru": c.name_ru, "slug": c.slug})

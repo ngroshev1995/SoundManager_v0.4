@@ -1,4 +1,3 @@
-# app/schemas/user.py
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
@@ -13,7 +12,7 @@ class UserUpdate(UserBase):
 
 class User(UserBase):
     id: int
-    is_admin: bool = False # <-- НОВОЕ ПОЛЕ
+    is_admin: bool = False
 
     class Config:
         from_attributes = True

@@ -11,12 +11,10 @@ from app import models, schemas
 # --- Helper ---
 def _delete_physical_files(file_paths: List[str]):
     """
-    Удаляет физические файлы. Обернуто в try/except, чтобы
-    ошибка доступа к файлу (например, он играет сейчас) не ломала сервер.
+    Удаляет физические файлы.
     """
     for path in file_paths:
         try:
-            # Путь в БД хранится как "/static/music/...", нам нужен относительный путь
             clean_path = path.lstrip("/")
             if os.path.exists(clean_path):
                 os.remove(clean_path)
@@ -26,10 +24,8 @@ def _delete_physical_files(file_paths: List[str]):
 
 
 # --- CREATE Functions ---
-# (Эти функции нужны, так как они вызываются из endpoints, которые ты прислал)
 
 def create_composer(db: Session, composer_in: schemas.music.ComposerCreate) -> models.music.Composer:
-    # Генерируем slug из name_ru
     slug = generate_unique_slug(db, models.music.Composer, composer_in.name_ru)
 
     db_obj = models.music.Composer(
@@ -48,7 +44,6 @@ def create_composer(db: Session, composer_in: schemas.music.ComposerCreate) -> m
 
 
 def create_work_for_composer(db: Session, work_in: schemas.music.WorkCreate, composer_id: int) -> models.music.Work:
-    # Для произведений добавляем имя композитора в slug для уникальности
     composer = db.query(models.music.Composer).get(composer_id)
     base_name = f"{composer.name_ru} {work_in.name_ru}"
     slug = generate_unique_slug(db, models.music.Work, base_name)
@@ -63,7 +58,6 @@ def create_work_for_composer(db: Session, work_in: schemas.music.WorkCreate, com
 
 def create_composition_for_work(db: Session, comp_in: schemas.music.CompositionCreate,
                                 work_id: int) -> models.music.Composition:
-    # Для частей добавляем название произведения
     work = db.query(models.music.Work).get(work_id)
     base_name = f"{work.composer.name_ru} {work.name_ru} {comp_in.title_ru}"
     slug = generate_unique_slug(db, models.music.Composition, base_name)
@@ -153,10 +147,9 @@ def delete_composition(db: Session, composition_id: int) -> bool:
     comp = db.query(models.music.Composition).get(composition_id)
     if not comp: return False
 
-    # Собираем пути файлов
     files = [r.file_path for r in comp.recordings]
 
-    db.delete(comp)  # Cascade удалит записи из БД
+    db.delete(comp)
     db.commit()
 
     _delete_physical_files(files)
@@ -172,7 +165,7 @@ def delete_work(db: Session, work_id: int) -> bool:
         for rec in comp.recordings:
             files.append(rec.file_path)
 
-    db.delete(work)  # Cascade удалит части и записи
+    db.delete(work)
     db.commit()
 
     _delete_physical_files(files)
@@ -183,7 +176,6 @@ def delete_composer(db: Session, composer_id: int) -> bool:
     composer = db.query(models.music.Composer).get(composer_id)
     if not composer: return False
 
-    # Чтобы не делать кучу запросов в цикле, сделаем один JOIN запрос для получения путей
     recordings = (
         db.query(models.music.Recording)
         .join(models.music.Composition)
@@ -193,7 +185,7 @@ def delete_composer(db: Session, composer_id: int) -> bool:
     )
     files = [r.file_path for r in recordings]
 
-    db.delete(composer)  # Cascade удалит всё дерево в БД
+    db.delete(composer)
     db.commit()
 
     _delete_physical_files(files)
@@ -214,7 +206,6 @@ def get_composition(db: Session, composition_id: int) -> Optional[models.music.C
 
 def update_composer(db: Session, db_obj: models.music.Composer,
                     obj_in: schemas.music.ComposerUpdate) -> models.music.Composer:
-    # Проходимся по полям, если поле пришло (!= None), обновляем его
     update_data = obj_in.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -228,12 +219,10 @@ def update_composer(db: Session, db_obj: models.music.Composer,
 def update_work(db: Session, db_obj: models.music.Work, obj_in: schemas.music.WorkUpdate) -> models.music.Work:
     update_data = obj_in.dict(exclude_unset=True)
 
-    # === ЛОГИКА: Если поставили "б/н" произведению, ставим и всем частям ===
     if update_data.get("is_no_catalog") is True:
         for comp in db_obj.compositions:
             comp.is_no_catalog = True
-            comp.catalog_number = None  # Очищаем старый номер, если был
-    # =======================================================================
+            comp.catalog_number = None
 
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -272,11 +261,9 @@ def update_composer_portrait(db: Session, composer_id: int, url: str):
     comp = get_composer(db, composer_id)
     if not comp: return None
 
-    # 1. Удаляем старую обложку
     if comp.portrait_url:
         delete_file_by_url(comp.portrait_url)
 
-    # 2. Ставим новую
     comp.portrait_url = url
     db.commit()
     db.refresh(comp)
@@ -289,21 +276,15 @@ def update_work_cover(db: Session, work_id: int, url: str):
 
     old_work_url = work.cover_art_url
 
-    # 1. Удаляем старую обложку ПРОИЗВЕДЕНИЯ
     if old_work_url:
         delete_file_by_url(old_work_url)
 
-    # 2. Обновляем обложку произведения
     work.cover_art_url = url
 
-    # 3. ЛОГИКА НАСЛЕДОВАНИЯ: Обновляем все части
-    # Если у части была СВОЯ уникальная обложка (не совпадающая со старой обложкой произведения),
-    # мы её тоже удаляем, чтобы не плодить мусор, так как обложка произведения "главнее".
     for comp in work.compositions:
         if comp.cover_art_url and comp.cover_art_url != old_work_url:
             delete_file_by_url(comp.cover_art_url)
 
-        # Присваиваем новую обложку всем частям
         comp.cover_art_url = url
 
     db.commit()
@@ -314,9 +295,6 @@ def update_work_cover(db: Session, work_id: int, url: str):
 def update_composition_cover(db: Session, comp_id: int, url: str):
     comp = get_composition(db, comp_id)
     if not comp: return None
-
-    # Если у части была обложка, удаляем файл (но только если это не обложка Родительского произведения!)
-    # Иначе мы удалим обложку у всего произведения.
     work_cover = comp.work.cover_art_url
 
     if comp.cover_art_url and comp.cover_art_url != work_cover:
@@ -329,17 +307,13 @@ def update_composition_cover(db: Session, comp_id: int, url: str):
 
 
 def reorder_compositions(db: Session, work_id: int, new_order_ids: List[int]):
-    # Получаем все части этого произведения
     work = get_work(db, work_id)
     if not work: return None
 
-    # Создаем карту {id: объект} для быстрого доступа
     comp_map = {c.id: c for c in work.compositions}
 
-    # Проходим по присланному списку ID и ставим им порядок 1, 2, 3...
     for index, comp_id in enumerate(new_order_ids):
         if comp_id in comp_map:
-            # sort_order начинается с 1
             comp_map[comp_id].sort_order = index + 1
 
     db.commit()

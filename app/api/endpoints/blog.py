@@ -7,12 +7,11 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-# Public routes
 @router.get("/", response_model=List[schemas.Post])
 def read_posts(
     skip: int = 0,
     limit: int = 20,
-    tag: Optional[str] = None, # <-- Добавить параметр
+    tag: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     return crud.crud_blog.get_posts(db, skip=skip, limit=limit, tag_name=tag)
@@ -63,6 +62,5 @@ def upload_blog_image(
     db: Session = Depends(get_db),
     u: models.User = Depends(deps.get_current_active_admin)
 ):
-    # Сохраняем в папку static/blog_images
     url = utils.save_upload_file(file, "blog_images", "img")
     return {"url": url}

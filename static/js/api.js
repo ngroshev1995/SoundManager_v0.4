@@ -23,17 +23,15 @@ export async function apiRequest(endpoint, method = "GET", body = null) {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, options);
 
-    // === ЗАЩИТА ОТ БЕСКОНЕЧНОЙ ПЕРЕЗАГРУЗКИ ===
     if (response.status === 401) {
       if (token) {
           localStorage.removeItem("access_token");
           localStorage.removeItem("user_email");
-          localStorage.removeItem("is_admin"); // <--- ДОБАВЛЕНО
+          localStorage.removeItem("is_admin");
           window.location.reload();
       }
       throw new Error("Доступ запрещен (401)");
     }
-    // ===========================================
 
     if (response.status === 204) {
       return null;

@@ -1,4 +1,3 @@
-# app/crud/crud_playlist.py
 from sqlalchemy.orm import Session
 from typing import List, Optional
 

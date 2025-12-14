@@ -146,7 +146,6 @@ def add_video_recording(
     fake_path = f"youtube_only_{unique_id}"
     fake_hash = f"yt_{unique_id}"
 
-    # Создаем объект RecordingCreate из VideoRecordingCreate
     rec_data = schemas.RecordingCreate(**video_in.dict())
 
     new_rec = crud.music.create_recording_for_composition(
@@ -246,8 +245,6 @@ def get_work(slug: str, db: Session = Depends(get_db)):
     if not w:
         raise HTTPException(404, "Not found")
 
-    # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем .joinedload(models.music.Composition.recordings)
-    # Эта строка говорит SQLAlchemy подгрузить записи для каждой части.
     return (
         db.query(models.music.Work)
         .options(
@@ -295,16 +292,12 @@ def get_random_playable_work(
         .filter(models.music.Recording.duration > 0)
     )
 
-    # === ЛОГИКА ИСКЛЮЧЕНИЯ ===
     if exclude_ids:
         query = query.filter(models.music.Work.id.notin_(exclude_ids))
-    # ========================
 
     work = query.order_by(random_func).first()
 
-    # Если с учетом исключений ничего не найдено, пробуем найти любое без исключений
     if not work:
-        # Это сработает, когда все произведения проиграны и мы начинаем заново
         work = (
             db.query(models.music.Work)
             .join(models.music.Work.compositions)
@@ -317,7 +310,6 @@ def get_random_playable_work(
     if not work:
         raise HTTPException(status_code=404, detail="No playable works found")
 
-    # "Жадно" загружаем все части и их записи для найденного произведения
     result = (
         db.query(models.music.Work)
         .options(
@@ -342,8 +334,6 @@ def list_recordings(
         sort_by: Optional[Literal["newest", "oldest"]] = "newest",
         db: Session = Depends(get_db)
 ):
-    # 1. Жестко соединяем все таблицы.
-    # Это гарантирует, что у нас есть доступ к полям Композитора и Произведения.
     query = (
         db.query(models.music.Recording)
         .join(models.music.Composition, models.music.Recording.composition_id == models.music.Composition.id)
@@ -351,53 +341,42 @@ def list_recordings(
         .join(models.music.Composer, models.music.Work.composer_id == models.music.Composer.id)
     )
 
-    # 2. Оптимизация загрузки (чтобы при выдаче JSON не было доп. запросов)
     query = query.options(
         contains_eager(models.music.Recording.composition)
         .contains_eager(models.music.Composition.work)
         .contains_eager(models.music.Work.composer)
     )
 
-    # 3. Фильтр по типу
     if media_type == "audio":
         query = query.filter(models.music.Recording.duration > 0)
     elif media_type == "video":
         query = query.filter(models.music.Recording.duration == 0)
 
-    # 4. ПОИСК (ИСПРАВЛЕННЫЙ)
     if q:
-        search_term = q.lower()  # Приводим запрос к нижнему регистру в Python
+        search_term = q.lower()
 
-        # Используем нашу кастомную функцию lower_utf8 для полей базы
         query = query.filter(
             or_(
-                # Ищем в исполнителях
                 func.lower_utf8(models.music.Recording.performers).contains(search_term),
 
-                # Ищем в названии части (например, "Фуга")
                 func.lower_utf8(models.music.Composition.title_ru).contains(search_term),
                 func.lower_utf8(models.music.Composition.title_original).contains(search_term),
 
-                # Ищем в названии произведения (например, "Багатель", "Симфония")
                 func.lower_utf8(models.music.Work.name_ru).contains(search_term),
                 func.lower_utf8(models.music.Work.original_name).contains(search_term),
-                func.lower_utf8(models.music.Work.nickname).contains(search_term),  # Прозвища ("Лунная")
+                func.lower_utf8(models.music.Work.nickname).contains(search_term),
 
-                # Ищем в имени композитора (например, "Бах", "Вивальди")
                 func.lower_utf8(models.music.Composer.name_ru).contains(search_term),
                 func.lower_utf8(models.music.Composer.original_name).contains(search_term)
             )
         )
 
-    # 5. Фильтр по Композитору
     if composer_id:
         query = query.filter(models.music.Work.composer_id == composer_id)
 
-    # 6. Фильтр по Жанру
     if genre:
         query = query.filter(models.music.Work.genre == genre)
 
-    # 7. Сортировка
     if sort_by == "newest":
         query = query.order_by(models.music.Recording.id.desc())
     elif sort_by == "oldest":
@@ -410,14 +389,12 @@ def list_recordings(
 
 
 # --- ПРОЧЕЕ ---
-# Стрим доступен всем
 @router.get("/stream/{rid}")
 def stream(rid: int, db: Session = Depends(get_db)):
     rec = crud.music.get_recording(db, rid)
     if not rec or not os.path.exists(rec.file_path.lstrip('/')): raise HTTPException(404, "Not found")
     return FileResponse(rec.file_path.lstrip('/'))
 
-# Лайки только для юзеров
 @router.post("/{rid}/favorite", status_code=204)
 def fav_add(rid: int, db: Session = Depends(get_db), u=Depends(deps.get_current_user)):
     if r := crud.music.get_recording(db, rid): crud.music.add_recording_to_favorites(db, u, r)
@@ -472,5 +449,3 @@ def reorder_work_compositions(
 ):
     crud.music.reorder_compositions(db, work_id, payload.composition_ids)
     return {"status": "ok"}
-
-

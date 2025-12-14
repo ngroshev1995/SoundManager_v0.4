@@ -10,6 +10,5 @@ class SearchResults(BaseModel):
     compositions: List[Composition] = []
     recordings: List[Recording] = []
 
-    # ДОБАВЛЕНО:
     class Config:
         from_attributes = True

@@ -1,7 +1,6 @@
-# app/api/endpoints/dashboard.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.sql.expression import func, desc  # <-- ДОБАВИЛ desc
+from sqlalchemy.sql.expression import func, desc
 from sqlalchemy import func
 
 from app import models, schemas
@@ -27,7 +26,6 @@ def get_dashboard_summary(
         total_composers=total_composers
     )
 
-    # 2. Топ 4 композитора (по количеству произведений)
     top_composers_query = (
         db.query(
             models.music.Composer,
@@ -45,7 +43,6 @@ def get_dashboard_summary(
         comp.works_count = count
         popular_composers.append(comp)
 
-    # 3. Недавно добавленные
     recently_added_works = (
         db.query(models.music.Work)
         .options(joinedload(models.music.Work.composer))
@@ -55,7 +52,6 @@ def get_dashboard_summary(
         .all()
     )
 
-    # 4. Случайные
     random_func = func.random()
     if db.bind.dialect.name == 'mysql':
         random_func = func.rand()

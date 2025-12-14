@@ -15,7 +15,6 @@ class PlaylistRecording(Base):
     recording = relationship("Recording", back_populates="playlist_associations")
 
 
-# --- ИСПРАВЛЕНИЕ: Правильное имя таблицы и правильный ForeignKey ---
 recording_favorites_association = Table(
     'recording_favorites', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),

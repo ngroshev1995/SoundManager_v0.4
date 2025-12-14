@@ -94,7 +94,6 @@ def delete_playlist(
     playlist = crud.playlist.get_playlist(db, playlist_id=playlist_id)
     if not playlist:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Playlist not found")
-    # ИСПРАВЛЕНИЕ: Добавлена проверка владельца
     if playlist.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
@@ -161,7 +160,6 @@ def remove_recording_from_playlist(
     if not playlist or playlist.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
-    # Для простоты и консистентности вызываем bulk-метод с одним ID
     updated_playlist = crud.playlist.remove_recordings_from_playlist(
         db, playlist_id=playlist_id, recording_ids=[recording_id]
     )

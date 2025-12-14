@@ -1,4 +1,3 @@
-# app/schemas/playlist.py
 from pydantic import BaseModel
 from typing import List, Optional
 from .music import Recording # Изменено

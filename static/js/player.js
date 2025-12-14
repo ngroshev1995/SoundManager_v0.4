@@ -1,8 +1,5 @@
-// static/js/player.js
-
 import * as ui from "./ui.js";
 
-// === ОСНОВНЫЕ ПЕРЕМЕННЫЕ ===
 let currentRecordingList = [];
 let currentRecordingIndex = -1;
 let queueNext = [];
@@ -12,7 +9,6 @@ let isPlaying = false;
 let fullQueueForUI = [];
 let playedWorkIds = new Set();
 
-// === ОСНОВНЫЕ ФУНКЦИИ УПРАВЛЕНИЯ ПЛЕЕРОМ ===
 
 function playRecordingObject(recording) {
   if (!recording) return;
@@ -35,18 +31,13 @@ function togglePlayPause() {
 }
 
 async function playNext() {
-  // 1. ПРИОРИТЕТ: Треки "Играть следующим" (Queue Next)
-  // Если они есть, мы ВНЕДРЯЕМ их в текущий список сразу после текущей позиции.
   if (queueNext.length > 0) {
     const nextRecording = queueNext.shift();
 
     if (currentRecordingIndex === -1) {
-        // Если список был пуст
         currentRecordingList = [nextRecording];
         currentRecordingIndex = 0;
     } else {
-        // Вставляем трек в currentRecordingList сразу после текущего (index + 1)
-        // splice(index, deleteCount, item)
         currentRecordingList.splice(currentRecordingIndex + 1, 0, nextRecording);
         currentRecordingIndex++;
     }
@@ -55,19 +46,15 @@ async function playNext() {
     return;
   }
 
-  // 2. ПРИОРИТЕТ: Продолжаем играть текущий список (Основное произведение)
   if (currentRecordingIndex < currentRecordingList.length - 1) {
     currentRecordingIndex++;
     playRecordingObject(currentRecordingList[currentRecordingIndex]);
     return;
   }
 
-  // 3. ПРИОРИТЕТ: Треки "Добавить в очередь" (Queue Last)
-  // Если основной список кончился, берем из хвоста очереди и ДОБАВЛЯЕМ в текущий список.
   if (queueLast.length > 0) {
     const nextRecording = queueLast.shift();
 
-    // Добавляем в конец текущего списка истории
     currentRecordingList.push(nextRecording);
     currentRecordingIndex++;
 
@@ -75,7 +62,6 @@ async function playNext() {
     return;
   }
 
-  // 4. ПРИОРИТЕТ: АВТОПЛЕЙ ("Радио")
   console.log("Queue finished, starting autoplay...");
   try {
     const excludeQuery = Array.from(playedWorkIds).map(id => `exclude_ids=${id}`).join('&');
@@ -98,7 +84,6 @@ async function playNext() {
         if (newPlaylist.length > 0) {
             ui.showNotification(`Далее: ${work.name_ru}`, "info");
 
-            // Здесь мы заменяем список, так как это логическое начало нового "альбома"
             currentRecordingList = newPlaylist;
             currentRecordingIndex = 0;
             playRecordingObject(currentRecordingList[currentRecordingIndex]);
@@ -106,7 +91,6 @@ async function playNext() {
     }
   } catch (e) {
     console.error("Autoplay failed:", e);
-    // Останавливаем плеер, но не очищаем UI, чтобы было видно, что играло последним
     const audioPlayer = document.getElementById("audio-player");
     if(audioPlayer) audioPlayer.pause();
     isPlaying = false;
@@ -127,8 +111,6 @@ function playPrev() {
     }
   }
 }
-
-// === EXPORTED FUNCTIONS ===
 
 export function handleTrackClick(recordingId, index, recordingList) {
   if (recordingId === currentRecordingId) {
@@ -173,7 +155,6 @@ export function clearFullQueue(stopPlayer = true) {
         isPlaying = false;
         ui.updatePlayerInfo(null);
 
-        // Безопасный сброс времени (Mobile & Desktop)
         const timeElements = [
             'current-time-mobile', 'total-time-mobile',
             'current-time-desktop', 'total-time-desktop'
@@ -184,17 +165,14 @@ export function clearFullQueue(stopPlayer = true) {
             if (el) el.textContent = "0:00";
         });
 
-        // Сброс прогресс баров
         ['progress-bar-mobile', 'progress-bar-desktop'].forEach(id => {
             const bar = document.getElementById(id);
             if(bar) {
                 bar.value = 0;
-                // Сброс градиента (если используется)
                 bar.style.background = '';
             }
         });
 
-        // Сброс визуальных полосок (fill)
         ['progress-fill-mobile', 'progress-fill-desktop'].forEach(id => {
             const fill = document.getElementById(id);
             if(fill) fill.style.width = '0%';
@@ -229,12 +207,9 @@ function updateFullQueueAndRender() {
     ui.renderQueue(nowPlaying, fullQueueForUI);
 }
 
-// === ИНИЦИАЛИЗАЦИЯ ===
-
 export function initPlayer() {
   const audioPlayer = document.getElementById("audio-player");
 
-  // Массив пар ID (мобильный, десктопный)
   const controls = [
       { play: 'play-pause-btn-mobile', prev: 'prev-btn-mobile', next: 'next-btn-mobile', progress: 'progress-bar-mobile' },
       { play: 'play-pause-btn-desktop', prev: 'prev-btn-desktop', next: 'next-btn-desktop', progress: 'progress-bar-desktop' }
@@ -252,7 +227,6 @@ export function initPlayer() {
       if (progress) progress.addEventListener("input", seek);
   });
 
-  // Кнопки очереди
   const queueMobile = document.getElementById("queue-btn-mobile");
   const queueDesktop = document.getElementById("queue-btn-desktop");
   const sidebar = document.getElementById("queue-sidebar");
@@ -273,14 +247,12 @@ export function initPlayer() {
     audioPlayer.addEventListener("pause", () => { isPlaying = false; updateIcons(); });
   }
 
-  // --- ЛОГИКА ГРОМКОСТИ ---
   const volumeSlider = document.getElementById("volume-slider");
   const volumeFill = document.getElementById("volume-fill");
   const muteBtn = document.getElementById("mute-btn");
   let lastVolume = 1;
 
   if (volumeSlider && audioPlayer) {
-      // Устанавливаем начальную громкость
       audioPlayer.volume = 1;
 
       volumeSlider.addEventListener("input", (e) => {
@@ -288,7 +260,6 @@ export function initPlayer() {
           audioPlayer.volume = val;
           if (volumeFill) volumeFill.style.width = `${val * 100}%`;
 
-          // Иконка
           updateVolumeIcon(val);
           if (val > 0) lastVolume = val;
       });
@@ -323,8 +294,6 @@ function updateIcons() {
   });
 }
 
-// === ЛОГИКА ПРОГРЕСС БАРА ===
-
 function updateProgress() {
   const audioPlayer = document.getElementById("audio-player");
   if (!audioPlayer) return;
@@ -333,17 +302,14 @@ function updateProgress() {
   const percent = duration ? (currentTime / duration) * 100 : 0;
   const timeStr = formatTime(currentTime);
 
-  // --- MOBILE ---
   const mobBar = document.getElementById("progress-bar-mobile");
-  const mobFill = document.getElementById("progress-fill-mobile"); // Новый элемент
+  const mobFill = document.getElementById("progress-fill-mobile");
   const mobTime = document.getElementById("current-time-mobile");
 
   if (mobBar) mobBar.value = percent;
-  // Красим полоску через ширину div (надежнее, чем градиент)
   if (mobFill) mobFill.style.width = `${percent}%`;
   if (mobTime) mobTime.textContent = timeStr;
 
-  // --- DESKTOP ---
   const deskBar = document.getElementById("progress-bar-desktop");
   const deskFill = document.getElementById("progress-fill-desktop");
   const deskThumb = document.getElementById("progress-thumb-desktop");
@@ -362,7 +328,6 @@ function updateTimeDisplay() {
 
     const timeStr = formatTime(audioPlayer.duration);
 
-    // Безопасная проверка: обновляем текст только если элементы существуют в HTML
     const mobileTimeEl = document.getElementById("total-time-mobile");
     if (mobileTimeEl) {
         mobileTimeEl.textContent = timeStr;
@@ -383,7 +348,6 @@ function seek(e) {
   const seekTime = (percent / 100) * audioPlayer.duration;
   audioPlayer.currentTime = seekTime;
 
-  // Обновляем визуал мгновенно
   const isDesktop = e.target.id === "progress-bar-desktop";
 
   if (isDesktop) {
@@ -392,7 +356,6 @@ function seek(e) {
       if (deskFill) deskFill.style.width = `${percent}%`;
       if (deskThumb) deskThumb.style.left = `${percent}%`;
   } else {
-      // Mobile update
       const mobFill = document.getElementById("progress-fill-mobile");
       if (mobFill) mobFill.style.width = `${percent}%`;
   }
@@ -410,15 +373,6 @@ function updateVolumeIcon(vol) {
       const icon = muteBtn.querySelector("i") || muteBtn.querySelector("svg");
       if (!icon) return;
 
-      // Удаляем старую иконку и ставим новую через Lucide API или классы
-      // Для простоты, очистим и вставим SVG или изменим атрибут data-lucide
-      // Примечание: Lucide работает при загрузке. Динамически лучше менять содержимое SVG или пересоздавать.
-
-      // Простой вариант с классами, если бы были разные SVG внутри.
-      // Но так как мы используем data-lucide, проще всего вызвать window.lucide.createIcons()
-      // после смены атрибута, но это дорого.
-
-      // Эффективный способ:
       if (vol === 0) {
           muteBtn.innerHTML = '<i data-lucide="volume-x" class="w-5 h-5"></i>';
       } else if (vol < 0.5) {

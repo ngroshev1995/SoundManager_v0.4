@@ -1,1800 +1,1716 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta
-      name="description"
-      content="Персональная библиотека классической музыки. Слушайте, создавайте плейлисты и изучайте биографии великих композиторов."
+            name="description"
+            content="Персональная библиотека классической музыки. Слушайте, создавайте плейлисты и изучайте биографии великих композиторов."
     />
 
     <title>Библиотека классической музыки</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
     />
 
-    <link href="/static/css/style.css" rel="stylesheet" />
-
-    <!--    &lt;!&ndash; Асинхронная загрузка остальных стилей остается, это правильно &ndash;&gt;-->
-    <!--    <link rel="preload" href="/static/css/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">-->
-    <!--    <noscript><link rel="stylesheet" href="/static/css/style.css"></noscript>-->
+    <link href="/static/css/style.css" rel="stylesheet"/>
 
     <link
-      rel="preload"
-      href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
+            rel="preload"
+            href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link
-        rel="stylesheet"
-        href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
-      />
+        <link
+                rel="stylesheet"
+                href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
+        />
     </noscript>
 
     <link
-      rel="preload"
-      href="https://cdn.plyr.io/3.7.8/plyr.css"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
+            rel="preload"
+            href="https://cdn.plyr.io/3.7.8/plyr.css"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+        <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css"/>
     </noscript>
 
     <link
-      rel="preload"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
+            rel="preload"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      />
+        <link
+                rel="stylesheet"
+                href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
     </noscript>
 
-    <link rel="icon" type="image/png" href="/static/img/favicon.png" />
+    <link rel="icon" type="image/png" href="/static/img/favicon.png"/>
 
-    <style>
-      .plyr--audio .plyr__control.plyr__tab-focus,
-      .plyr--audio .plyr__control:hover,
-      .plyr--audio .plyr__control[aria-expanded="true"] {
-        background: #06b6d4;
-      }
-      .plyr--full-ui input[type="range"] {
-        color: #06b6d4;
-      }
-      .plyr__control--overlaid {
-        background: #06b6d4;
-      }
-      .plyr--audio .plyr__controls {
-        background: transparent;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 10px;
-      }
-    </style>
-  </head>
-  <body class="text-gray-800 h-screen flex flex-col overflow-hidden">
-    <!-- Auth View -->
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+<!-- Auth View -->
+<div
+        id="auth-view"
+        class="hidden fixed inset-0 z-50 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4"
+>
     <div
-      id="auth-view"
-      class="hidden fixed inset-0 z-50 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4"
+            class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative"
     >
-      <!-- Добавил класс relative сюда, чтобы крестик позиционировался относительно окна -->
-      <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative"
-      >
         <!-- === КНОПКА ЗАКРЫТИЯ === -->
         <button
-          id="auth-close-btn"
-          class="absolute top-4 right-4 text-white/70 hover:text-white z-10 transition-colors p-1 rounded-full hover:bg-white/10"
+                id="auth-close-btn"
+                class="absolute top-4 right-4 text-white/70 hover:text-white z-10 transition-colors p-1 rounded-full hover:bg-white/10"
         >
-          <i data-lucide="x" class="w-6 h-6"></i>
+            <i data-lucide="x" class="w-6 h-6"></i>
         </button>
-        <!-- ======================= -->
 
         <div
-          class="bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white text-center"
+                class="bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white text-center"
         >
-          <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4"></i>
-          <h1 class="text-3xl font-bold">ClassicaLib</h1>
+            <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4"></i>
+            <h1 class="text-3xl font-bold">ClassicaLib</h1>
         </div>
         <div id="login-form" class="p-8 space-y-6">
-          <input
-            type="email"
-            id="login-email"
-            placeholder="Email"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <input
-            type="password"
-            id="login-password"
-            placeholder="Пароль"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <button
-            id="login-btn"
-            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
-          >
-            Войти
-          </button>
-          <p class="text-center text-sm text-gray-500">
-            <a href="#" id="show-register" class="text-cyan-600 hover:underline"
-              >Регистрация</a
+            <input
+                    type="email"
+                    id="login-email"
+                    placeholder="Email"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
+            />
+            <input
+                    type="password"
+                    id="login-password"
+                    placeholder="Пароль"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
+            />
+            <button
+                    id="login-btn"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
             >
-          </p>
+                Войти
+            </button>
+            <p class="text-center text-sm text-gray-500">
+                <a href="#" id="show-register" class="text-cyan-600 hover:underline"
+                >Регистрация</a
+                >
+            </p>
         </div>
         <div id="register-form" class="p-8 space-y-6 hidden">
-          <input
-            type="email"
-            id="register-email"
-            placeholder="Email"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <input
-            type="password"
-            id="register-password"
-            placeholder="Пароль"
-            class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
-          />
-          <button
-            id="register-btn"
-            class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
-          >
-            Создать аккаунт
-          </button>
-          <p class="text-center text-sm text-gray-500">
-            <a href="#" id="show-login" class="text-cyan-600 hover:underline"
-              >Вход</a
+            <input
+                    type="email"
+                    id="register-email"
+                    placeholder="Email"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
+            />
+            <input
+                    type="password"
+                    id="register-password"
+                    placeholder="Пароль"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-cyan-400 outline-none"
+            />
+            <button
+                    id="register-btn"
+                    class="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition-all"
             >
-          </p>
+                Создать аккаунт
+            </button>
+            <p class="text-center text-sm text-gray-500">
+                <a href="#" id="show-login" class="text-cyan-600 hover:underline"
+                >Вход</a
+                >
+            </p>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- Main View -->
-    <div id="main-view" class="hidden flex flex-col h-full">
-      <!-- Header -->
-      <header
-        class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg flex-shrink-0 z-40"
-      >
+<!-- Main View -->
+<div id="main-view" class="hidden flex flex-col h-full">
+    <header
+            class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg flex-shrink-0 z-40"
+    >
         <div class="w-full px-4 md:px-8 py-3 flex items-center justify-between">
-          <!-- Левая часть: Логотип и десктопная навигация -->
-          <div class="flex items-center space-x-8">
-            <a
-              href="/"
-              data-navigo
-              class="flex items-center space-x-2 font-bold text-xl"
-            >
-              <i data-lucide="music-2" class="w-6 h-6"></i>
-              <span>ClassicaLib</span>
-            </a>
-            <!-- ДЕСКТОПНАЯ НАВИГАЦИЯ (скрыта на мобильных) -->
-            <nav class="hidden md:flex space-x-1">
-              <div class="relative group">
+            <!-- Левая часть: Логотип и десктопная навигация -->
+            <div class="flex items-center space-x-8">
+                <a
+                        href="/"
+                        data-navigo
+                        class="flex items-center space-x-2 font-bold text-xl"
+                >
+                    <i data-lucide="music-2" class="w-6 h-6"></i>
+                    <span>ClassicaLib</span>
+                </a>
+                <!-- ДЕСКТОПНАЯ НАВИГАЦИЯ -->
+                <nav class="hidden md:flex space-x-1">
+                    <div class="relative group">
                 <span
-                  class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer"
+                        class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer"
                 >
                   Медиатека
                   <i data-lucide="chevron-down" class="w-3 h-3 opacity-70"></i>
                 </span>
-                <!-- Dropdown -->
-                <div
-                  class="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 border border-gray-100"
+                        <!-- Dropdown -->
+                        <div
+                                class="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 border border-gray-100"
+                        >
+                            <div
+                                    class="absolute -top-1.5 left-6 w-3 h-3 bg-white transform rotate-45 border-l border-t border-gray-100"
+                            ></div>
+                            <a
+                                    href="/recordings/audio"
+                                    data-navigo
+                                    class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2"
+                            ><i data-lucide="disc" class="w-4 h-4"></i> Аудиозаписи</a
+                            >
+                            <a
+                                    href="/recordings/video"
+                                    data-navigo
+                                    class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2"
+                            ><i data-lucide="youtube" class="w-4 h-4"></i> Видеозал</a
+                            >
+                        </div>
+                    </div>
+                    <a
+                            href="/composers"
+                            data-navigo
+                            class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                    >Композиторы</a
+                    >
+                    <a
+                            href="/favorites"
+                            data-navigo
+                            id="nav-favorites-link"
+                            class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
+                    ><i data-lucide="heart" class="w-4 h-4"></i> Избранное</a
+                    >
+                    <a
+                            href="/playlists"
+                            data-navigo
+                            id="nav-playlists-link"
+                            class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
+                    ><i data-lucide="list-music" class="w-4 h-4"></i> Мои
+                        плейлисты</a
+                    >
+                    <a
+                            href="/blog"
+                            data-navigo
+                            class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                    >Блог</a
+                    >
+                    <a
+                            href="/map"
+                            data-navigo
+                            class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
+                    ><i data-lucide="map" class="w-4 h-4"></i> Карта</a
+                    >
+                </nav>
+            </div>
+
+            <!-- Правая часть: Блок авторизации (виден всегда) и кнопка Гамбургер (только на мобильных) -->
+            <div class="flex items-center space-x-2">
+                <div id="header-auth-block"></div>
+                <!-- КНОПКА ГАМБУРГЕР (видна только на мобильных) -->
+                <button
+                        id="mobile-menu-btn"
+                        class="md:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
                 >
-                  <div
-                    class="absolute -top-1.5 left-6 w-3 h-3 bg-white transform rotate-45 border-l border-t border-gray-100"
-                  ></div>
-                  <a
-                    href="/recordings/audio"
-                    data-navigo
-                    class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2"
-                    ><i data-lucide="disc" class="w-4 h-4"></i> Аудиозаписи</a
-                  >
-                  <a
-                    href="/recordings/video"
-                    data-navigo
-                    class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-2"
-                    ><i data-lucide="youtube" class="w-4 h-4"></i> Видеозал</a
-                  >
-                </div>
-              </div>
-              <a
-                href="/composers"
-                data-navigo
-                class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-                >Композиторы</a
-              >
-              <a
-                href="/favorites"
-                data-navigo
-                id="nav-favorites-link"
-                class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
-                ><i data-lucide="heart" class="w-4 h-4"></i> Избранное</a
-              >
-              <a
-                href="/playlists"
-                data-navigo
-                id="nav-playlists-link"
-                class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
-                ><i data-lucide="list-music" class="w-4 h-4"></i> Мои
-                плейлисты</a
-              >
-              <a
-                href="/blog"
-                data-navigo
-                class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-                >Блог</a
-              >
-              <a
-                href="/map"
-                data-navigo
-                class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
-                ><i data-lucide="map" class="w-4 h-4"></i> Карта</a
-              >
-            </nav>
-          </div>
-
-          <!-- Правая часть: Блок авторизации (виден всегда) и кнопка Гамбургер (только на мобильных) -->
-          <div class="flex items-center space-x-2">
-            <div id="header-auth-block"></div>
-            <!-- КНОПКА ГАМБУРГЕР (видна только на мобильных) -->
-            <button
-              id="mobile-menu-btn"
-              class="md:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
-            >
-              <i data-lucide="menu" class="w-6 h-6"></i>
-            </button>
-          </div>
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
         </div>
-      </header>
+    </header>
 
-      <div
-        id="mobile-menu-panel"
-        class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm p-4 text-white"
-      >
+    <div
+            id="mobile-menu-panel"
+            class="hidden fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm p-4 text-white"
+    >
         <div class="flex justify-end mb-8">
-          <button id="mobile-menu-close-btn" class="p-2">
-            <i data-lucide="x" class="w-8 h-8"></i>
-          </button>
+            <button id="mobile-menu-close-btn" class="p-2">
+                <i data-lucide="x" class="w-8 h-8"></i>
+            </button>
         </div>
         <nav
-          class="flex flex-col items-center justify-center gap-4 text-center"
+                class="flex flex-col items-center justify-center gap-4 text-center"
         >
-          <h3
-            class="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2"
-          >
-            Медиатека
-          </h3>
-          <a
-            href="/recordings/audio"
-            data-navigo
-            class="text-2xl font-bold py-2"
+            <h3
+                    class="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2"
+            >
+                Медиатека
+            </h3>
+            <a
+                    href="/recordings/audio"
+                    data-navigo
+                    class="text-2xl font-bold py-2"
             >Аудиозаписи</a
-          >
-          <a
-            href="/recordings/video"
-            data-navigo
-            class="text-2xl font-bold py-2"
+            >
+            <a
+                    href="/recordings/video"
+                    data-navigo
+                    class="text-2xl font-bold py-2"
             >Видеозал</a
-          >
-          <div class="w-16 h-px bg-white/20 my-4"></div>
+            >
+            <div class="w-16 h-px bg-white/20 my-4"></div>
 
-          <a href="/composers" data-navigo class="text-2xl font-bold py-2"
+            <a href="/composers" data-navigo class="text-2xl font-bold py-2"
             >Композиторы</a
-          >
-          <a
-            href="/favorites"
-            data-navigo
-            id="mobile-nav-favorites-link"
-            class="hidden text-2xl font-bold py-2"
+            >
+            <a
+                    href="/favorites"
+                    data-navigo
+                    id="mobile-nav-favorites-link"
+                    class="hidden text-2xl font-bold py-2"
             >Избранное</a
-          >
-          <a
-            href="/playlists"
-            data-navigo
-            id="mobile-nav-playlists-link"
-            class="hidden text-2xl font-bold py-2"
+            >
+            <a
+                    href="/playlists"
+                    data-navigo
+                    id="mobile-nav-playlists-link"
+                    class="hidden text-2xl font-bold py-2"
             >Мои плейлисты</a
-          >
-          <a href="/blog" data-navigo class="text-2xl font-bold py-2">Блог</a>
-          <a href="/map" data-navigo class="text-2xl font-bold py-2">Карта</a>
+            >
+            <a href="/blog" data-navigo class="text-2xl font-bold py-2">Блог</a>
+            <a href="/map" data-navigo class="text-2xl font-bold py-2">Карта</a>
         </nav>
-      </div>
+    </div>
 
-      <!-- Main Content -->
-      <main
-        class="flex-1 overflow-y-auto relative flex flex-col transition-[padding] duration-300"
-        id="main-content"
-      >
+    <!-- Main Content -->
+    <main
+            class="flex-1 overflow-y-auto relative flex flex-col transition-[padding] duration-300"
+            id="main-content"
+    >
         <div id="content-header" class="max-w-7xl mx-auto px-6 pt-6">
-          <div
-            id="breadcrumbs-container"
-            class="text-sm text-gray-500 mb-6"
-          ></div>
-          <div id="view-title-container" class="hidden mb-6"></div>
+            <div
+                    id="breadcrumbs-container"
+                    class="text-sm text-gray-500 mb-6"
+            ></div>
+            <div id="view-title-container" class="hidden mb-6"></div>
         </div>
         <div id="composition-list" class="pb-20"></div>
         <div
-          id="pagination-container"
-          class="py-8 flex justify-center space-x-2 pb-32"
+                id="pagination-container"
+                class="py-8 flex justify-center space-x-2 pb-32"
         ></div>
 
         <footer
-          class="bg-gray-800 text-white mt-auto border-t border-gray-700 pb-32"
+                class="bg-gray-800 text-white mt-auto border-t border-gray-700 pb-32"
         >
-          <div class="max-w-7xl mx-auto px-6 py-12">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div>
-                <div class="flex items-center space-x-2 mb-4">
-                  <i data-lucide="music-2" class="w-6 h-6 text-cyan-400"></i>
-                  <span class="text-lg font-bold">ClassicaLib</span>
+            <div class="max-w-7xl mx-auto px-6 py-12">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i data-lucide="music-2" class="w-6 h-6 text-cyan-400"></i>
+                            <span class="text-lg font-bold">ClassicaLib</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">
+                            Ваша персональная библиотека классической музыки.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4 text-cyan-400">Навигация</h4>
+                        <ul class="space-y-2 text-sm text-gray-400">
+                            <li>
+                                <a
+                                        href="/recordings"
+                                        data-navigo
+                                        class="hover:text-cyan-400 transition-colors"
+                                >Медиатека</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                        href="/composers"
+                                        data-navigo
+                                        class="hover:text-cyan-400 transition-colors"
+                                >Композиторы</a
+                                >
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <p class="text-gray-400 text-sm">
-                  Ваша персональная библиотека классической музыки.
-                </p>
-              </div>
-              <div>
-                <h4 class="font-semibold mb-4 text-cyan-400">Навигация</h4>
-                <ul class="space-y-2 text-sm text-gray-400">
-                  <li>
-                    <a
-                      href="/recordings"
-                      data-navigo
-                      class="hover:text-cyan-400 transition-colors"
-                      >Медиатека</a
-                    >
-                  </li>
-                  <li>
-                    <a
-                      href="/composers"
-                      data-navigo
-                      class="hover:text-cyan-400 transition-colors"
-                      >Композиторы</a
-                    >
-                  </li>
-                </ul>
-              </div>
+                <div
+                        class="border-t border-gray-700 mt-10 pt-8 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center"
+                >
+                    <p>© 2025 ClassicaLib. Все права защищены.</p>
+                    <p class="mt-2 md:mt-0 flex items-center gap-1">
+                        Сделано с
+                        <i
+                                data-lucide="heart"
+                                class="w-3 h-3 text-red-500 fill-current"
+                        ></i>
+                        к музыке.
+                    </p>
+                </div>
             </div>
-            <div
-              class="border-t border-gray-700 mt-10 pt-8 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center"
-            >
-              <p>© 2025 ClassicaLib. Все права защищены.</p>
-              <p class="mt-2 md:mt-0 flex items-center gap-1">
-                Сделано с
-                <i
-                  data-lucide="heart"
-                  class="w-3 h-3 text-red-500 fill-current"
-                ></i>
-                к музыке.
-              </p>
-            </div>
-          </div>
         </footer>
-      </main>
+    </main>
 
-      <button
-        id="restore-player-btn"
-        class="fixed bottom-6 right-6 z-[90] w-14 h-14 bg-white/80 backdrop-blur-md border border-cyan-100/50 rounded-full shadow-lg shadow-cyan-500/20 flex items-center justify-center text-cyan-600 hover:scale-110 hover:bg-cyan-50 transition-all duration-300 opacity-0 translate-y-20 pointer-events-none group"
-      >
+    <button
+            id="restore-player-btn"
+            class="fixed bottom-6 right-6 z-[90] w-14 h-14 bg-white/80 backdrop-blur-md border border-cyan-100/50 rounded-full shadow-lg shadow-cyan-500/20 flex items-center justify-center text-cyan-600 hover:scale-110 hover:bg-cyan-50 transition-all duration-300 opacity-0 translate-y-20 pointer-events-none group"
+    >
         <span
-          class="absolute inset-0 rounded-full border border-cyan-400 opacity-0 group-hover:animate-ping"
+                class="absolute inset-0 rounded-full border border-cyan-400 opacity-0 group-hover:animate-ping"
         ></span>
         <i data-lucide="music" class="w-6 h-6"></i>
-      </button>
+    </button>
 
-      <!-- Player -->
-      <footer
-        id="music-player"
-        class="player-collapsed fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] group/player"
-      >
+    <!-- Player -->
+    <footer
+            id="music-player"
+            class="player-collapsed fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] group/player"
+    >
         <audio id="audio-player" preload="auto" crossorigin="anonymous"></audio>
 
         <!-- MOBILE LAYOUT -->
         <div class="player-layout-mobile w-full h-auto py-3 px-5 flex-col">
-          <div class="flex items-center gap-3 mb-3 w-full">
+            <div class="flex items-center gap-3 mb-3 w-full">
             <span
-              id="current-time-mobile"
-              class="text-[10px] font-mono text-gray-400 w-8 text-right"
-              >0:00</span
+                    id="current-time-mobile"
+                    class="text-[10px] font-mono text-gray-400 w-8 text-right"
+            >0:00</span
             >
-            <div class="relative flex-1 h-1 group">
-              <div
-                class="absolute top-0 left-0 right-0 h-full bg-gray-200 rounded-full"
-              ></div>
-              <input
-                type="range"
-                id="progress-bar-mobile"
-                value="0"
-                min="0"
-                max="100"
-                step="0.1"
-                class="absolute -top-2 w-full h-5 opacity-0 cursor-pointer z-20"
-              />
-              <div
-                id="progress-fill-mobile"
-                class="absolute top-0 left-0 h-full bg-cyan-500 rounded-full pointer-events-none w-0"
-              ></div>
-            </div>
-            <span
-              id="total-time-mobile"
-              class="text-[10px] font-mono text-gray-400 w-8"
-              >0:00</span
-            >
-          </div>
-          <div class="flex items-center justify-between mb-4 w-full">
-            <div class="flex items-center gap-3 overflow-hidden flex-1 mr-4">
-              <img
-                id="player-cover-art-mobile"
-                src="/static/img/placeholder.png"
-                class="w-12 h-12 rounded-lg object-cover shadow-sm bg-gray-200 flex-shrink-0 border border-gray-100"
-              />
-              <div
-                class="flex flex-col justify-center min-w-0 flex-1 overflow-hidden"
-              >
-                <div
-                  id="marquee-title-mobile"
-                  class="marquee-wrapper h-5 relative flex items-center overflow-hidden mask-linear-fade"
+                <div class="relative flex-1 h-1 group">
+                    <div
+                            class="absolute top-0 left-0 right-0 h-full bg-gray-200 rounded-full"
+                    ></div>
+                    <input
+                            type="range"
+                            id="progress-bar-mobile"
+                            value="0"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            class="absolute -top-2 w-full h-5 opacity-0 cursor-pointer z-20"
+                    />
+                    <div
+                            id="progress-fill-mobile"
+                            class="absolute top-0 left-0 h-full bg-cyan-500 rounded-full pointer-events-none w-0"
+                    ></div>
+                </div>
+                <span
+                        id="total-time-mobile"
+                        class="text-[10px] font-mono text-gray-400 w-8"
+                >0:00</span
                 >
+            </div>
+            <div class="flex items-center justify-between mb-4 w-full">
+                <div class="flex items-center gap-3 overflow-hidden flex-1 mr-4">
+                    <img
+                            id="player-cover-art-mobile"
+                            src="/static/img/placeholder.png"
+                            class="w-12 h-12 rounded-lg object-cover shadow-sm bg-gray-200 flex-shrink-0 border border-gray-100"
+                    />
+                    <div
+                            class="flex flex-col justify-center min-w-0 flex-1 overflow-hidden"
+                    >
+                        <div
+                                id="marquee-title-mobile"
+                                class="marquee-wrapper h-5 relative flex items-center overflow-hidden mask-linear-fade"
+                        >
                   <span
-                    id="player-title-mobile"
-                    class="text-base font-bold text-gray-900 block"
-                    >Ничего не играет</span
+                          id="player-title-mobile"
+                          class="text-base font-bold text-gray-900 block"
+                  >Ничего не играет</span
                   >
+                        </div>
+                        <div
+                                id="marquee-artist-mobile"
+                                class="marquee-wrapper h-4 relative flex items-center overflow-hidden mask-linear-fade"
+                        >
+                  <span
+                          id="player-artist-mobile"
+                          class="text-xs text-gray-500 block"
+                  >ClassicaLib</span
+                  >
+                        </div>
+                    </div>
                 </div>
                 <div
-                  id="marquee-artist-mobile"
-                  class="marquee-wrapper h-4 relative flex items-center overflow-hidden mask-linear-fade"
+                        id="player-favorite-btn-container-mobile"
+                        class="transform scale-110"
+                ></div>
+                <button
+                        id="player-info-btn-mobile"
+                        class="p-2 text-gray-400 hover:text-cyan-600 transition-colors hidden"
                 >
-                  <span
-                    id="player-artist-mobile"
-                    class="text-xs text-gray-500 block"
-                    >ClassicaLib</span
-                  >
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex items-center justify-between w-full px-1">
+                <button
+                        id="queue-btn-mobile"
+                        class="p-2 text-gray-400 hover:text-cyan-600 transition-colors"
+                >
+                    <i data-lucide="list-music" class="w-6 h-6"></i>
+                </button>
+                <div class="flex items-center gap-6">
+                    <button
+                            id="prev-btn-mobile"
+                            class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-90 p-1"
+                    >
+                        <i data-lucide="skip-back" class="w-7 h-7 fill-current"></i>
+                    </button>
+                    <button
+                            id="play-pause-btn-mobile"
+                            class="w-14 h-14 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-200 active:scale-95 transition-transform"
+                    >
+                        <i
+                                id="play-icon-mobile"
+                                data-lucide="play"
+                                class="w-6 h-6 fill-current ml-1"
+                        ></i>
+                        <i
+                                id="pause-icon-mobile"
+                                data-lucide="pause"
+                                class="w-6 h-6 fill-current hidden"
+                        ></i>
+                    </button>
+                    <button
+                            id="next-btn-mobile"
+                            class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-90 p-1"
+                    >
+                        <i data-lucide="skip-forward" class="w-7 h-7 fill-current"></i>
+                    </button>
                 </div>
-              </div>
+                <button
+                        id="player-toggle-btn-mobile"
+                        class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                    <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                </button>
             </div>
-            <div
-              id="player-favorite-btn-container-mobile"
-              class="transform scale-110"
-            ></div>
-            <button
-              id="player-info-btn-mobile"
-              class="p-2 text-gray-400 hover:text-cyan-600 transition-colors hidden"
-            >
-              <i data-lucide="info" class="w-5 h-5"></i>
-            </button>
-          </div>
-          <div class="flex items-center justify-between w-full px-1">
-            <button
-              id="queue-btn-mobile"
-              class="p-2 text-gray-400 hover:text-cyan-600 transition-colors"
-            >
-              <i data-lucide="list-music" class="w-6 h-6"></i>
-            </button>
-            <div class="flex items-center gap-6">
-              <button
-                id="prev-btn-mobile"
-                class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-90 p-1"
-              >
-                <i data-lucide="skip-back" class="w-7 h-7 fill-current"></i>
-              </button>
-              <button
-                id="play-pause-btn-mobile"
-                class="w-14 h-14 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-200 active:scale-95 transition-transform"
-              >
-                <i
-                  id="play-icon-mobile"
-                  data-lucide="play"
-                  class="w-6 h-6 fill-current ml-1"
-                ></i>
-                <i
-                  id="pause-icon-mobile"
-                  data-lucide="pause"
-                  class="w-6 h-6 fill-current hidden"
-                ></i>
-              </button>
-              <button
-                id="next-btn-mobile"
-                class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-90 p-1"
-              >
-                <i data-lucide="skip-forward" class="w-7 h-7 fill-current"></i>
-              </button>
-            </div>
-            <button
-              id="player-toggle-btn-mobile"
-              class="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <i data-lucide="chevron-down" class="w-6 h-6"></i>
-            </button>
-          </div>
         </div>
 
         <!-- DESKTOP LAYOUT -->
         <div
-          class="player-layout-desktop items-center justify-between w-full h-20 px-6 max-w-[1800px] mx-auto"
+                class="player-layout-desktop items-center justify-between w-full h-20 px-6 max-w-[1800px] mx-auto"
         >
-          <div class="flex items-center gap-4 w-[30%] min-w-[220px]">
-            <img
-              id="player-cover-art-desktop"
-              src="/static/img/placeholder.png"
-              class="w-14 h-14 rounded-lg object-cover shadow-md bg-gray-200"
-            />
-            <div class="min-w-0 flex-1">
-              <div
-                class="font-bold text-gray-900 text-sm truncate"
-                id="player-title-desktop"
-              >
-                Выберите трек
-              </div>
-              <div
-                class="text-xs text-gray-500 truncate"
-                id="player-artist-desktop"
-              >
-                ClassicaLib
-              </div>
+            <div class="flex items-center gap-4 w-[30%] min-w-[220px]">
+                <img
+                        id="player-cover-art-desktop"
+                        src="/static/img/placeholder.png"
+                        class="w-14 h-14 rounded-lg object-cover shadow-md bg-gray-200"
+                />
+                <div class="min-w-0 flex-1">
+                    <div
+                            class="font-bold text-gray-900 text-sm truncate"
+                            id="player-title-desktop"
+                    >
+                        Выберите трек
+                    </div>
+                    <div
+                            class="text-xs text-gray-500 truncate"
+                            id="player-artist-desktop"
+                    >
+                        ClassicaLib
+                    </div>
+                </div>
+                <div
+                        id="player-favorite-btn-container-desktop"
+                        class="flex-shrink-0"
+                ></div>
             </div>
             <div
-              id="player-favorite-btn-container-desktop"
-              class="flex-shrink-0"
-            ></div>
-          </div>
-          <div
-            class="flex flex-col items-center justify-center w-[40%] max-w-2xl gap-1"
-          >
-            <div class="flex items-center gap-6">
-              <button class="text-gray-400 hover:text-cyan-600 p-1">
-                <i data-lucide="shuffle" class="w-4 h-4"></i>
-              </button>
-              <button
-                id="prev-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600"
-              >
-                <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
-              </button>
-              <button
-                id="play-pause-btn-desktop"
-                class="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-200 transition-transform hover:scale-105"
-              >
-                <i
-                  id="play-icon-desktop"
-                  data-lucide="play"
-                  class="w-5 h-5 fill-current ml-0.5"
-                ></i>
-                <i
-                  id="pause-icon-desktop"
-                  data-lucide="pause"
-                  class="w-5 h-5 fill-current hidden"
-                ></i>
-              </button>
-              <button
-                id="next-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600"
-              >
-                <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
-              </button>
-              <button class="text-gray-400 hover:text-cyan-600 p-1">
-                <i data-lucide="repeat" class="w-4 h-4"></i>
-              </button>
-            </div>
-            <div
-              class="w-full flex items-center gap-3 text-xs font-mono text-gray-400"
+                    class="flex flex-col items-center justify-center w-[40%] max-w-2xl gap-1"
             >
-              <span id="current-time-desktop" class="w-9 text-right">0:00</span>
-              <div class="relative flex-1 h-1 group cursor-pointer">
+                <div class="flex items-center gap-6">
+                    <button class="text-gray-400 hover:text-cyan-600 p-1">
+                        <i data-lucide="shuffle" class="w-4 h-4"></i>
+                    </button>
+                    <button
+                            id="prev-btn-desktop"
+                            class="text-gray-400 hover:text-cyan-600"
+                    >
+                        <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
+                    </button>
+                    <button
+                            id="play-pause-btn-desktop"
+                            class="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-200 transition-transform hover:scale-105"
+                    >
+                        <i
+                                id="play-icon-desktop"
+                                data-lucide="play"
+                                class="w-5 h-5 fill-current ml-0.5"
+                        ></i>
+                        <i
+                                id="pause-icon-desktop"
+                                data-lucide="pause"
+                                class="w-5 h-5 fill-current hidden"
+                        ></i>
+                    </button>
+                    <button
+                            id="next-btn-desktop"
+                            class="text-gray-400 hover:text-cyan-600"
+                    >
+                        <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-cyan-600 p-1">
+                        <i data-lucide="repeat" class="w-4 h-4"></i>
+                    </button>
+                </div>
                 <div
-                  class="absolute w-full h-full bg-gray-200 rounded-full"
-                ></div>
-                <input
-                  type="range"
-                  id="progress-bar-desktop"
-                  value="0"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  class="absolute inset-0 w-full h-full opacity-0 z-10"
-                />
-                <div
-                  id="progress-fill-desktop"
-                  class="absolute h-full bg-cyan-500 rounded-full"
-                  style="width: 0%"
-                ></div>
-              </div>
-              <span id="total-time-desktop" class="w-9">0:00</span>
-            </div>
-          </div>
-          <div
-            class="flex items-center justify-end gap-3 w-[30%] min-w-[220px]"
-          >
-            <button
-              id="queue-btn-desktop"
-              class="p-2 text-gray-400 hover:text-cyan-600"
-            >
-              <i data-lucide="list-music" class="w-5 h-5"></i>
-            </button>
-            <div class="flex items-center gap-2 w-32">
-              <button id="mute-btn" class="text-gray-400 hover:text-gray-600">
-                <i data-lucide="volume-2" class="w-5 h-5"></i>
-              </button>
-              <div class="flex-1 h-1 bg-gray-200 rounded-full relative">
-                <input
-                  type="range"
-                  id="volume-slider"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value="1"
-                  class="absolute inset-0 w-full h-full opacity-0 z-10"
-                />
-                <div
-                  id="volume-fill"
-                  class="absolute h-full bg-gray-400 rounded-full"
-                  style="width: 100%"
-                ></div>
-              </div>
-            </div>
-            <!-- === ИЗМЕНЕННЫЙ БЛОК === -->
-            <div class="flex items-center">
-              <!-- 1. Создаем ОБЩИЙ контейнер для подсказки -->
-              <div id="info-popover-container" class="relative">
-                <!-- Кнопка "i" теперь внутри него -->
-                <button
-                  id="player-info-btn-desktop"
-                  class="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors hidden"
+                        class="w-full flex items-center gap-3 text-xs font-mono text-gray-400"
                 >
-                  <i data-lucide="info" class="w-5 h-5"></i>
-                </button>
-              </div>
-              <!-- Кнопка сворачивания остается снаружи -->
-              <button
-                id="player-toggle-btn"
-                class="p-2 ml-1 text-gray-400 hover:text-gray-600"
-              >
-                <i data-lucide="chevron-down" class="w-5 h-5"></i>
-              </button>
+                    <span id="current-time-desktop" class="w-9 text-right">0:00</span>
+                    <div class="relative flex-1 h-1 group cursor-pointer">
+                        <div
+                                class="absolute w-full h-full bg-gray-200 rounded-full"
+                        ></div>
+                        <input
+                                type="range"
+                                id="progress-bar-desktop"
+                                value="0"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                class="absolute inset-0 w-full h-full opacity-0 z-10"
+                        />
+                        <div
+                                id="progress-fill-desktop"
+                                class="absolute h-full bg-cyan-500 rounded-full"
+                                style="width: 0%"
+                        ></div>
+                    </div>
+                    <span id="total-time-desktop" class="w-9">0:00</span>
+                </div>
             </div>
-            <!-- === КОНЕЦ ИЗМЕНЕННОГО БЛОКА === -->
-          </div>
+            <div
+                    class="flex items-center justify-end gap-3 w-[30%] min-w-[220px]"
+            >
+                <button
+                        id="queue-btn-desktop"
+                        class="p-2 text-gray-400 hover:text-cyan-600"
+                >
+                    <i data-lucide="list-music" class="w-5 h-5"></i>
+                </button>
+                <div class="flex items-center gap-2 w-32">
+                    <button id="mute-btn" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="volume-2" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex-1 h-1 bg-gray-200 rounded-full relative">
+                        <input
+                                type="range"
+                                id="volume-slider"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value="1"
+                                class="absolute inset-0 w-full h-full opacity-0 z-10"
+                        />
+                        <div
+                                id="volume-fill"
+                                class="absolute h-full bg-gray-400 rounded-full"
+                                style="width: 100%"
+                        ></div>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div id="info-popover-container" class="relative">
+                        <button
+                                id="player-info-btn-desktop"
+                                class="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors hidden"
+                        >
+                            <i data-lucide="info" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <button
+                            id="player-toggle-btn"
+                            class="p-2 ml-1 text-gray-400 hover:text-gray-600"
+                    >
+                        <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-      </footer>
-    </div>
+    </footer>
+</div>
 
-    <!-- === МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ (УНИВЕРСАЛЬНОЕ) === -->
+<!-- === МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ (УНИВЕРСАЛЬНОЕ) === -->
+<div
+        id="edit-modal"
+        class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
     <div
-      id="edit-modal"
-      class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
     >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
-      >
         <div
-          class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0"
+                class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0"
         >
-          <h3
-            class="text-lg font-bold text-gray-800 flex items-center gap-2"
-            id="edit-modal-title"
-          >
-            Редактировать
-          </h3>
-          <button class="close-button text-gray-400 hover:text-gray-600">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
+            <h3
+                    class="text-lg font-bold text-gray-800 flex items-center gap-2"
+                    id="edit-modal-title"
+            >
+                Редактировать
+            </h3>
+            <button class="close-button text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
         </div>
         <div
-          class="p-6 space-y-4 overflow-y-auto"
-          id="edit-modal-content"
+                class="p-6 space-y-4 overflow-y-auto"
+                id="edit-modal-content"
         ></div>
         <div
-          class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0"
+                class="bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0"
         >
-          <button
-            class="close-button px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
-          >
-            Отмена
-          </button>
-          <button
-            id="confirm-edit-btn"
-            class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all"
-          >
-            Сохранить
-          </button>
+            <button
+                    class="close-button px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+            >
+                Отмена
+            </button>
+            <button
+                    id="confirm-edit-btn"
+                    class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all"
+            >
+                Сохранить
+            </button>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- 1. Создать КОМПОЗИТОРА -->
+<!-- 1. Создать КОМПОЗИТОРА -->
+<div
+        id="add-composer-modal"
+        class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
     <div
-      id="add-composer-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
     >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
-      >
         <!-- Шапка -->
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
-          <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i data-lucide="user-plus" class="w-5 h-5 text-cyan-600"></i>
-            Добавить композитора
-          </h2>
-          <button class="close-button text-gray-400 hover:text-gray-800">
-            <i data-lucide="x"></i>
-          </button>
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-5 h-5 text-cyan-600"></i>
+                Добавить композитора
+            </h2>
+            <button class="close-button text-gray-400 hover:text-gray-800">
+                <i data-lucide="x"></i>
+            </button>
         </div>
 
         <!-- Контент -->
         <div class="space-y-4 overflow-y-auto pr-2">
-          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Портрет (опционально)</label
-            >
-            <input
-              type="file"
-              id="add-composer-portrait"
-              accept="image/*"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-            />
-          </div>
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Имя (RU) <span class="text-red-500">*</span></label
-              ><input
-                type="text"
-                id="add-composer-name-ru"
-                class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
-                placeholder="Например: Петр Ильич Чайковский"
-              />
-              <div
-                id="composer-duplicates-warning"
-                class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
-              ></div>
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Имя на родном языке</label
-              ><input
-                type="text"
-                id="add-composer-name-orig"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
-                placeholder="Pyotr Tchaikovsky"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                  >Родился</label
-                ><input
-                  type="number"
-                  id="add-composer-born"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  placeholder="YYYY"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                  >Умер</label
-                ><input
-                  type="number"
-                  id="add-composer-died"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  placeholder="YYYY"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Место рождения</label
-            >
-            <input
-              type="text"
-              id="add-composer-city"
-              placeholder="Например: Зальцбург, Австрия"
-              class="w-full px-3 py-2 border rounded-lg mb-2 outline-none"
-            />
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-400 uppercase mb-1"
-                  >Широта (Lat)</label
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
+                >Портрет (опционально)</label
                 >
                 <input
-                  type="number"
-                  step="any"
-                  id="add-composer-lat"
-                  placeholder="47.8095"
-                  class="w-full px-3 py-2 border rounded-lg outline-none"
+                        type="file"
+                        id="add-composer-portrait"
+                        accept="image/*"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
                 />
-              </div>
-              <div>
-                <label
-                  class="block text-xs font-bold text-gray-400 uppercase mb-1"
-                  >Долгота (Lng)</label
+            </div>
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Имя (RU) <span class="text-red-500">*</span></label
+                    ><input
+                        type="text"
+                        id="add-composer-name-ru"
+                        class="w-full px-3 py-3 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                        placeholder="Например: Петр Ильич Чайковский"
+                />
+                    <div
+                            id="composer-duplicates-warning"
+                            class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
+                    ></div>
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Имя на родном языке</label
+                    ><input
+                        type="text"
+                        id="add-composer-name-orig"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none"
+                        placeholder="Pyotr Tchaikovsky"
+                />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                                class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                        >Родился</label
+                        ><input
+                            type="number"
+                            id="add-composer-born"
+                            class="w-full px-3 py-2 border rounded-lg"
+                            placeholder="YYYY"
+                    />
+                    </div>
+                    <div>
+                        <label
+                                class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                        >Умер</label
+                        ><input
+                            type="number"
+                            id="add-composer-died"
+                            class="w-full px-3 py-2 border rounded-lg"
+                            placeholder="YYYY"
+                    />
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
+                >Место рождения</label
                 >
                 <input
-                  type="number"
-                  step="any"
-                  id="add-composer-lng"
-                  placeholder="13.0550"
-                  class="w-full px-3 py-2 border rounded-lg outline-none"
+                        type="text"
+                        id="add-composer-city"
+                        placeholder="Например: Зальцбург, Австрия"
+                        class="w-full px-3 py-2 border rounded-lg mb-2 outline-none"
                 />
-              </div>
-            </div>
-            <p class="text-[10px] text-gray-400 mt-1">
-              Подсказка: В Google Maps нажмите правой кнопкой на город ->
-              выберите цифры сверху.
-            </p>
-          </div>
 
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Краткая биография</label
-            >
-            <div
-              class="bg-white rounded-lg border border-gray-300 overflow-hidden"
-            >
-              <div id="add-composer-bio" class="h-64"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label
+                                class="block text-xs font-bold text-gray-400 uppercase mb-1"
+                        >Широта (Lat)</label
+                        >
+                        <input
+                                type="number"
+                                step="any"
+                                id="add-composer-lat"
+                                placeholder="47.8095"
+                                class="w-full px-3 py-2 border rounded-lg outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label
+                                class="block text-xs font-bold text-gray-400 uppercase mb-1"
+                        >Долгота (Lng)</label
+                        >
+                        <input
+                                type="number"
+                                step="any"
+                                id="add-composer-lng"
+                                placeholder="13.0550"
+                                class="w-full px-3 py-2 border rounded-lg outline-none"
+                        />
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">
+                    Подсказка: В Google Maps нажмите правой кнопкой на город ->
+                    выберите цифры сверху.
+                </p>
             </div>
-          </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                >Краткая биография</label
+                >
+                <div
+                        class="bg-white rounded-lg border border-gray-300 overflow-hidden"
+                >
+                    <div id="add-composer-bio" class="h-64"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Подвал -->
         <div class="mt-6 flex-shrink-0">
-          <button
-            id="create-composer-btn"
-            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200"
-          >
-            Создать
-          </button>
+            <button
+                    id="create-composer-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-lg shadow-cyan-200"
+            >
+                Создать
+            </button>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- 2. Создать ПРОИЗВЕДЕНИЕ -->
+<!-- 2. Создать ПРОИЗВЕДЕНИЕ -->
+<div
+        id="add-work-modal"
+        class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
     <div
-      id="add-work-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
     >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
-      >
         <!-- Шапка -->
         <div
-          class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10"
+                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10"
         >
-          <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <i data-lucide="book-open" class="w-5 h-5 text-cyan-600"></i>
-            Добавить произведение
-          </h2>
-          <button class="close-button text-gray-400 hover:text-gray-800">
-            <i data-lucide="x"></i>
-          </button>
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-cyan-600"></i>
+                Добавить произведение
+            </h2>
+            <button class="close-button text-gray-400 hover:text-gray-800">
+                <i data-lucide="x"></i>
+            </button>
         </div>
 
         <!-- Контент -->
         <div class="p-6 space-y-4 overflow-y-auto">
-          <!-- Обложка -->
-          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Обложка</label
-            >
-            <input
-              type="file"
-              id="add-work-cover"
-              accept="image/*"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-            />
-          </div>
-
-          <!-- Основные поля -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Название (RU) <span class="text-red-500">*</span></label
-              >
-              <input
-                type="text"
-                id="add-work-name-ru"
-                class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
-                placeholder="Например: Симфония №5"
-              />
-              <div
-                id="work-duplicates-warning"
-                class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
-              ></div>
-            </div>
-
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Оригинальное название</label
-              >
-              <input
-                type="text"
-                id="add-work-name-orig"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Symphony No. 5"
-              />
-            </div>
-
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Тональность</label
-              >
-              <input
-                type="text"
-                id="add-work-tonality"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="до минор (c-moll)"
-              />
-            </div>
-
-            <div>
-              <div class="flex justify-between items-end mb-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase"
-                  >Каталог (Op., BWV)</label
+            <!-- Обложка -->
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
+                >Обложка</label
                 >
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="add-work-no-catalog"
-                    class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
-                  />
-                  <span class="text-xs text-gray-500">Б/Н (Без номера)</span>
-                </label>
-              </div>
-              <input
-                type="text"
-                id="add-work-catalog"
-                class="w-full px-3 py-2 border rounded-lg outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                placeholder="Например: Op. 23"
-              />
+                <input
+                        type="file"
+                        id="add-work-cover"
+                        accept="image/*"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
+                />
             </div>
 
+            <!-- Основные поля -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Название (RU) <span class="text-red-500">*</span></label
+                    >
+                    <input
+                            type="text"
+                            id="add-work-name-ru"
+                            class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                            placeholder="Например: Симфония №5"
+                    />
+                    <div
+                            id="work-duplicates-warning"
+                            class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
+                    ></div>
+                </div>
+
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Оригинальное название</label
+                    >
+                    <input
+                            type="text"
+                            id="add-work-name-orig"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="Symphony No. 5"
+                    />
+                </div>
+
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Тональность</label
+                    >
+                    <input
+                            type="text"
+                            id="add-work-tonality"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="до минор (c-moll)"
+                    />
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase"
+                        >Каталог (Op., BWV)</label
+                        >
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input
+                                    type="checkbox"
+                                    id="add-work-no-catalog"
+                                    class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500"
+                            />
+                            <span class="text-xs text-gray-500">Б/Н (Без номера)</span>
+                        </label>
+                    </div>
+                    <input
+                            type="text"
+                            id="add-work-catalog"
+                            class="w-full px-3 py-2 border rounded-lg outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                            placeholder="Например: Op. 23"
+                    />
+                </div>
+
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Жанр</label
+                    >
+                    <!-- INPUT с атрибутом list -->
+                    <input
+                            type="text"
+                            id="add-work-genre"
+                            list="genre-options"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="Начните вводить..."
+                            autocomplete="off"
+                    />
+
+                    <datalist id="genre-options">
+                    </datalist>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Популярное название / Прозвище</label
+                    >
+                    <input
+                            type="text"
+                            id="add-work-nickname"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="«Судьба», «Лунная»"
+                    />
+                </div>
+
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Год начала</label
+                    >
+                    <input
+                            type="number"
+                            id="add-work-year-start"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="YYYY"
+                    />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Год окончания</label
+                    >
+                    <input
+                            type="number"
+                            id="add-work-year-end"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="YYYY"
+                    />
+                </div>
+            </div>
+
+            <!-- Редактор -->
             <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Жанр</label
-              >
-              <!-- INPUT с атрибутом list -->
-              <input
-                type="text"
-                id="add-work-genre"
-                list="genre-options"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Начните вводить..."
-                autocomplete="off"
-              />
-
-              <!-- DATALIST (скрытый список) -->
-              <datalist id="genre-options">
-                <!-- Опции будут добавлены через JS -->
-              </datalist>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                >Описание / История создания</label
+                >
+                <div
+                        class="bg-white rounded-lg border border-gray-300 overflow-hidden"
+                >
+                    <div id="add-work-notes" class="h-48"></div>
+                </div>
             </div>
-
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Популярное название / Прозвище</label
-              >
-              <input
-                type="text"
-                id="add-work-nickname"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="«Судьба», «Лунная»"
-              />
-            </div>
-
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Год начала</label
-              >
-              <input
-                type="number"
-                id="add-work-year-start"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Год окончания</label
-              >
-              <input
-                type="number"
-                id="add-work-year-end"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-          </div>
-
-          <!-- Редактор -->
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Описание / История создания</label
-            >
-            <div
-              class="bg-white rounded-lg border border-gray-300 overflow-hidden"
-            >
-              <div id="add-work-notes" class="h-48"></div>
-            </div>
-          </div>
         </div>
 
         <!-- Подвал -->
         <div
-          class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50"
+                class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50"
         >
-          <button
-            id="create-work-btn"
-            class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
-          >
-            Создать
-          </button>
+            <button
+                    id="create-work-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
+            >
+                Создать
+            </button>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- 3. Создать КОМПОЗИЦИЮ -->
+<!-- 3. Создать КОМПОЗИЦИЮ -->
+<div
+        id="add-composition-modal"
+        class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
     <div
-      id="add-composition-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative animate-scale-in"
     >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6 relative animate-scale-in"
-      >
         <button
-          class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
+                class="close-button absolute top-4 right-4 text-gray-400 hover:text-gray-800"
         >
-          <i data-lucide="x"></i>
+            <i data-lucide="x"></i>
         </button>
         <h2
-          class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
+                class="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2"
         >
-          <i data-lucide="music" class="w-5 h-5 text-cyan-600"></i> Добавить
-          часть
+            <i data-lucide="music" class="w-5 h-5 text-cyan-600"></i> Добавить
+            часть
         </h2>
 
         <div class="space-y-4">
-          <!-- Обложка -->
-          <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Обложка (если отличается)</label
-            >
-            <input
-              type="file"
-              id="add-composition-cover"
-              accept="image/*"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-            />
-          </div>
-
-          <div class="grid grid-cols-4 gap-4">
-            <div class="col-span-1">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >№ <span class="text-red-500">*</span></label
-              >
-              <input
-                type="number"
-                id="add-composition-order"
-                min="1"
-                step="1"
-                class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-center"
-                placeholder="1"
-                value="1"
-              />
-            </div>
-            <div class="col-span-3">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Название (RU) <span class="text-red-500">*</span></label
-              >
-              <input
-                type="text"
-                id="add-composition-title-ru"
-                class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
-                placeholder="I. Allegro con brio"
-              />
-              <div
-                id="composition-duplicates-warning"
-                class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
-              ></div>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Оригинальное название</label
-            >
-            <input
-              type="text"
-              id="add-composition-title-orig"
-              class="w-full px-3 py-2 border rounded-lg outline-none"
-              placeholder="Allegro con brio"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Тональность части</label
-              >
-              <input
-                type="text"
-                id="add-composition-tonality"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="ми-бемоль мажор"
-              />
-            </div>
-            <div>
-              <div class="flex justify-between items-end mb-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase"
-                  >Каталог (Op.)</label
-                >
-                <label class="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="add-composition-no-catalog"
-                    class="w-3 h-3 text-cyan-600 rounded border-gray-300"
-                  />
-                  <span class="text-[10px] text-gray-500">Б/Н</span>
-                </label>
-              </div>
-              <input
-                type="text"
-                id="add-composition-catalog"
-                class="w-full px-3 py-2 border rounded-lg outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                placeholder="Op. 18 No. 1"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Год (если отличается)</label
-            >
-            <input
-              type="number"
-              id="add-composition-year"
-              class="w-full px-3 py-2 border rounded-lg outline-none"
-              placeholder="YYYY"
-            />
-          </div>
-        </div>
-        <button
-          id="create-composition-btn"
-          class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
-        >
-          Создать
-        </button>
-      </div>
-    </div>
-
-    <!-- 4. Загрузить АУДИОЗАПИСЬ -->
-    <div
-      id="add-audio-modal"
-      class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col animate-scale-in"
-      >
-        <div
-          class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
-        >
-          <h3 class="font-bold text-lg flex items-center gap-2">
-            <i data-lucide="upload-cloud" class="w-5 h-5 text-cyan-600"></i>
-            Загрузить аудиозапись
-          </h3>
-          <button class="close-button p-1 text-gray-400 hover:text-gray-700">
-            <i data-lucide="x" class="w-6 h-6"></i>
-          </button>
-        </div>
-        <div class="p-6 space-y-4 overflow-y-auto">
-          <input type="hidden" id="add-recording-composition-id" />
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Исполнители</label
-              ><input
-                type="text"
-                id="add-recording-performers"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Кто исполняет?"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Ведущий исполнитель</label
-              ><input
-                type="text"
-                id="add-recording-lead-performer"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Напр: Святослав Рихтер"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Дирижёр</label
-              ><input
-                type="text"
-                id="add-recording-conductor"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Напр: Герберт фон Караян"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Год записи</label
-              ><input
-                type="number"
-                id="add-recording-year"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Лицензия</label
-              ><select
-                id="add-recording-license"
-                class="w-full px-3 py-2 border rounded-lg bg-white outline-none"
-              >
-                <option value="">Не указана</option>
-                <option value="CC BY 4.0">CC BY 4.0</option>
-                <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
-                <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
-                <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
-                <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
-                <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
-              </select>
-            </div>
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Источник (анкор)</label
-              ><input
-                type="text"
-                id="add-recording-source-text"
-                class="w-full px-3 py-2 border rounded-lg"
-                placeholder="Напр: Wikipedia"
-              />
-            </div>
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Источник (URL)</label
-              ><input
-                type="url"
-                id="add-recording-source-url"
-                class="w-full px-3 py-2 border rounded-lg"
-                placeholder="https://..."
-              />
-            </div>
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Аудиофайл <span class="text-red-500">*</span></label
-              >
-              <div
-                class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer"
-                onclick="document.getElementById('composition-upload-input').click()"
-              >
-                <span
-                  id="selected-recording-filename"
-                  class="text-sm text-gray-500 truncate max-w-[200px]"
-                  >Выберите файл...</span
-                ><i data-lucide="file-audio" class="text-cyan-600 w-5 h-5"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div
-          class="flex-shrink-0 bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end"
-        >
-          <button
-            id="create-audio-recording-btn"
-            class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all"
-          >
-            Загрузить
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. ДОБАВИТЬ ВИДЕОЗАПИСЬ -->
-    <div
-      id="add-video-modal"
-      class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col animate-scale-in"
-      >
-        <div
-          class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
-        >
-          <h3 class="font-bold text-lg flex items-center gap-2">
-            <i data-lucide="youtube" class="w-5 h-5 text-red-600"></i> Добавить
-            видеозапись
-          </h3>
-          <button class="close-button p-1 text-gray-400 hover:text-gray-700">
-            <i data-lucide="x" class="w-6 h-6"></i>
-          </button>
-        </div>
-        <div class="p-6 space-y-4 overflow-y-auto">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Ссылка на YouTube <span class="text-red-500">*</span></label
-              ><input
-                type="text"
-                id="add-video-youtube"
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
-                placeholder="https://youtube.com/watch?v=..."
-              />
-            </div>
-            <div class="md:col-span-2">
-              <label
-                class="block text-xs font-bold text-gray-700 uppercase mb-1"
-                >Исполнитель <span class="text-red-500">*</span></label
-              ><input
-                type="text"
-                id="add-video-performers"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Оркестр или солист"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Ведущий исполнитель</label
-              ><input
-                type="text"
-                id="add-video-lead-performer"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Напр: Anne-Sophie Mutter"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Дирижёр</label
-              ><input
-                type="text"
-                id="add-video-conductor"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="Напр: Герберт фон Караян"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold text-gray-500 uppercase mb-1"
-                >Год записи</label
-              ><input
-                type="number"
-                id="add-video-year"
-                class="w-full px-3 py-2 border rounded-lg outline-none"
-                placeholder="YYYY"
-              />
-            </div>
-          </div>
-        </div>
-        <div
-          class="flex-shrink-0 bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end"
-        >
-          <button
-            id="create-video-recording-btn"
-            class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg shadow-red-200/50 transition-all"
-          >
-            Добавить
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="delete-modal"
-      class="modal hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-transform duration-200"
-        id="delete-modal-content"
-      >
-        <div
-          class="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-3"
-        >
-          <div
-            class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0"
-          >
-            <i data-lucide="alert-triangle" class="text-red-600 w-6 h-6"></i>
-          </div>
-          <h3 class="text-lg font-bold text-red-800" id="delete-modal-title">
-            Удаление
-          </h3>
-        </div>
-        <div class="p-6">
-          <p class="text-gray-600 mb-6 leading-relaxed" id="delete-modal-text">
-            Вы уверены? Это действие необратимо.
-          </p>
-          <div id="delete-verification-container" class="hidden mb-6">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Для подтверждения введите:
-              <span
-                id="delete-verification-target"
-                class="select-all text-red-600 font-mono bg-red-50 px-1 rounded"
-              ></span
-            ></label>
-            <input
-              type="text"
-              id="delete-verification-input"
-              class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none transition-colors"
-              placeholder="Введите имя точно..."
-            />
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              class="close-button px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-            >
-              Отмена
-            </button>
-            <button
-              id="confirm-delete-btn"
-              class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md shadow-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Удалить навсегда
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BLOG MODAL -->
-    <div
-      id="blog-modal"
-      class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-    >
-      <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
-      >
-        <div
-          class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10"
-        >
-          <h2 class="text-xl font-bold text-gray-800" id="blog-modal-title">
-            Новая статья
-          </h2>
-          <button class="close-button text-gray-400 hover:text-gray-800">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-
-        <div class="p-6 space-y-4 overflow-y-auto">
-          <input type="hidden" id="blog-post-id" />
-
-          <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
-              >Обложка</label
-            >
-            <input
-              type="file"
-              id="blog-cover"
-              accept="image/*"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1"
-              >Заголовок</label
-            >
-            <input
-              type="text"
-              id="blog-title"
-              class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-lg"
-              placeholder="Заголовок статьи..."
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Slug (URL)</label
-            >
-            <input
-              type="text"
-              id="blog-slug"
-              class="w-full px-3 py-2 border rounded-lg outline-none font-mono text-sm"
-              placeholder="my-awesome-article"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Краткое описание</label
-            >
-            <textarea
-              id="blog-summary"
-              class="w-full px-3 py-2 border rounded-lg outline-none h-20 resize-none"
-            ></textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
-              >Теги (через запятую)</label
-            >
-            <input
-              type="text"
-              id="blog-tags"
-              class="w-full px-3 py-2 border rounded-lg outline-none text-sm"
-              placeholder="История, Теория, Бетховен"
-            />
-          </div>
-
-          <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <h3 class="text-xs font-bold text-blue-600 uppercase mb-3">
-              SEO Настройки
-            </h3>
-
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1"
-                  >Meta Description (для Google)</label
-                >
-                <textarea
-                  id="blog-meta-desc"
-                  class="w-full px-3 py-2 border rounded-lg outline-none h-16 text-sm resize-none"
-                  placeholder="О чем эта статья в двух предложениях..."
-                ></textarea>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-500 mb-1"
-                  >Keywords (через запятую)</label
+            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
+                >Обложка (если отличается)</label
                 >
                 <input
-                  type="text"
-                  id="blog-keywords"
-                  class="w-full px-3 py-2 border rounded-lg outline-none text-sm"
-                  placeholder="бетховен, симфония, история"
+                        type="file"
+                        id="add-composition-cover"
+                        accept="image/*"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
                 />
-              </div>
             </div>
-          </div>
 
-          <!-- Quill Editor -->
-          <div
-            class="bg-white rounded-lg border border-gray-300 overflow-hidden"
-          >
-            <div id="blog-content" class="h-96"></div>
-          </div>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="col-span-1">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >№ <span class="text-red-500">*</span></label
+                    >
+                    <input
+                            type="number"
+                            id="add-composition-order"
+                            min="1"
+                            step="1"
+                            class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-center"
+                            placeholder="1"
+                            value="1"
+                    />
+                </div>
+                <div class="col-span-3">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Название (RU) <span class="text-red-500">*</span></label
+                    >
+                    <input
+                            type="text"
+                            id="add-composition-title-ru"
+                            class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-medium"
+                            placeholder="I. Allegro con brio"
+                    />
+                    <div
+                            id="composition-duplicates-warning"
+                            class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
+                    ></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                >Оригинальное название</label
+                >
+                <input
+                        type="text"
+                        id="add-composition-title-orig"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Allegro con brio"
+                />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Тональность части</label
+                    >
+                    <input
+                            type="text"
+                            id="add-composition-tonality"
+                            class="w-full px-3 py-2 border rounded-lg outline-none"
+                            placeholder="ми-бемоль мажор"
+                    />
+                </div>
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase"
+                        >Каталог (Op.)</label
+                        >
+                        <label class="flex items-center gap-1 cursor-pointer">
+                            <input
+                                    type="checkbox"
+                                    id="add-composition-no-catalog"
+                                    class="w-3 h-3 text-cyan-600 rounded border-gray-300"
+                            />
+                            <span class="text-[10px] text-gray-500">Б/Н</span>
+                        </label>
+                    </div>
+                    <input
+                            type="text"
+                            id="add-composition-catalog"
+                            class="w-full px-3 py-2 border rounded-lg outline-none disabled:bg-gray-100 disabled:text-gray-400"
+                            placeholder="Op. 18 No. 1"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                >Год (если отличается)</label
+                >
+                <input
+                        type="number"
+                        id="add-composition-year"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="YYYY"
+                />
+            </div>
+        </div>
+        <button
+                id="create-composition-btn"
+                class="w-full mt-6 bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-lg font-bold transition-colors"
+        >
+            Создать
+        </button>
+    </div>
+</div>
+
+<!-- 4. Загрузить АУДИОЗАПИСЬ -->
+<div
+        id="add-audio-modal"
+        class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
+    <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col animate-scale-in"
+    >
+        <div
+                class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
+        >
+            <h3 class="font-bold text-lg flex items-center gap-2">
+                <i data-lucide="upload-cloud" class="w-5 h-5 text-cyan-600"></i>
+                Загрузить аудиозапись
+            </h3>
+            <button class="close-button p-1 text-gray-400 hover:text-gray-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto">
+            <input type="hidden" id="add-recording-composition-id"/>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Исполнители</label
+                    ><input
+                        type="text"
+                        id="add-recording-performers"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Кто исполняет?"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Ведущий исполнитель</label
+                    ><input
+                        type="text"
+                        id="add-recording-lead-performer"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Напр: Святослав Рихтер"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Дирижёр</label
+                    ><input
+                        type="text"
+                        id="add-recording-conductor"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Напр: Герберт фон Караян"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Год записи</label
+                    ><input
+                        type="number"
+                        id="add-recording-year"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="YYYY"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Лицензия</label
+                    ><select
+                        id="add-recording-license"
+                        class="w-full px-3 py-2 border rounded-lg bg-white outline-none"
+                >
+                    <option value="">Не указана</option>
+                    <option value="CC BY 4.0">CC BY 4.0</option>
+                    <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
+                    <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
+                    <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
+                    <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
+                    <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
+                </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Источник (анкор)</label
+                    ><input
+                        type="text"
+                        id="add-recording-source-text"
+                        class="w-full px-3 py-2 border rounded-lg"
+                        placeholder="Напр: Wikipedia"
+                />
+                </div>
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Источник (URL)</label
+                    ><input
+                        type="url"
+                        id="add-recording-source-url"
+                        class="w-full px-3 py-2 border rounded-lg"
+                        placeholder="https://..."
+                />
+                </div>
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Аудиофайл <span class="text-red-500">*</span></label
+                    >
+                    <div
+                            class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 hover:bg-gray-100 transition-colors cursor-pointer"
+                            onclick="document.getElementById('composition-upload-input').click()"
+                    >
+                <span
+                        id="selected-recording-filename"
+                        class="text-sm text-gray-500 truncate max-w-[200px]"
+                >Выберите файл...</span
+                ><i data-lucide="file-audio" class="text-cyan-600 w-5 h-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div
+                class="flex-shrink-0 bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end"
+        >
+            <button
+                    id="create-audio-recording-btn"
+                    class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all"
+            >
+                Загрузить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 5. ДОБАВИТЬ ВИДЕОЗАПИСЬ -->
+<div
+        id="add-video-modal"
+        class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
+    <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col animate-scale-in"
+    >
+        <div
+                class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
+        >
+            <h3 class="font-bold text-lg flex items-center gap-2">
+                <i data-lucide="youtube" class="w-5 h-5 text-red-600"></i> Добавить
+                видеозапись
+            </h3>
+            <button class="close-button p-1 text-gray-400 hover:text-gray-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Ссылка на YouTube <span class="text-red-500">*</span></label
+                    ><input
+                        type="text"
+                        id="add-video-youtube"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+                        placeholder="https://youtube.com/watch?v=..."
+                />
+                </div>
+                <div class="md:col-span-2">
+                    <label
+                            class="block text-xs font-bold text-gray-700 uppercase mb-1"
+                    >Исполнитель <span class="text-red-500">*</span></label
+                    ><input
+                        type="text"
+                        id="add-video-performers"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Оркестр или солист"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Ведущий исполнитель</label
+                    ><input
+                        type="text"
+                        id="add-video-lead-performer"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Напр: Anne-Sophie Mutter"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Дирижёр</label
+                    ><input
+                        type="text"
+                        id="add-video-conductor"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="Напр: Герберт фон Караян"
+                />
+                </div>
+                <div>
+                    <label
+                            class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Год записи</label
+                    ><input
+                        type="number"
+                        id="add-video-year"
+                        class="w-full px-3 py-2 border rounded-lg outline-none"
+                        placeholder="YYYY"
+                />
+                </div>
+            </div>
+        </div>
+        <div
+                class="flex-shrink-0 bg-gray-50 px-6 py-4 border-t border-gray-100 flex justify-end"
+        >
+            <button
+                    id="create-video-recording-btn"
+                    class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg shadow-red-200/50 transition-all"
+            >
+                Добавить
+            </button>
+        </div>
+    </div>
+</div>
+
+<div
+        id="delete-modal"
+        class="modal hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0"
+>
+    <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-transform duration-200"
+            id="delete-modal-content"
+    >
+        <div
+                class="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-3"
+        >
+            <div
+                    class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0"
+            >
+                <i data-lucide="alert-triangle" class="text-red-600 w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-red-800" id="delete-modal-title">
+                Удаление
+            </h3>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-600 mb-6 leading-relaxed" id="delete-modal-text">
+                Вы уверены? Это действие необратимо.
+            </p>
+            <div id="delete-verification-container" class="hidden mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2"
+                >Для подтверждения введите:
+                    <span
+                            id="delete-verification-target"
+                            class="select-all text-red-600 font-mono bg-red-50 px-1 rounded"
+                    ></span
+                    ></label>
+                <input
+                        type="text"
+                        id="delete-verification-input"
+                        class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none transition-colors"
+                        placeholder="Введите имя точно..."
+                />
+            </div>
+            <div class="flex justify-end gap-3">
+                <button
+                        class="close-button px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                >
+                    Отмена
+                </button>
+                <button
+                        id="confirm-delete-btn"
+                        class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md shadow-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Удалить навсегда
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BLOG MODAL -->
+<div
+        id="blog-modal"
+        class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+>
+    <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-5xl relative animate-scale-in max-h-[90vh] flex flex-col overflow-hidden"
+    >
+        <div
+                class="px-6 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white z-10"
+        >
+            <h2 class="text-xl font-bold text-gray-800" id="blog-modal-title">
+                Новая статья
+            </h2>
+            <button class="close-button text-gray-400 hover:text-gray-800">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+
+        <div class="overflow-y-auto">
+
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="blog-post-id"/>
+
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Обложка</label>
+                    <input type="file" id="blog-cover" accept="image/*"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Заголовок</label>
+                    <input type="text" id="blog-title"
+                           class="w-full px-3 py-2 border-2 border-cyan-100 rounded-lg focus:border-cyan-500 outline-none font-bold text-lg"
+                           placeholder="Заголовок статьи..."/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Slug (URL)</label>
+                    <input type="text" id="blog-slug"
+                           class="w-full px-3 py-2 border rounded-lg outline-none font-mono text-sm"
+                           placeholder="my-awesome-article"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Краткое описание</label>
+                    <textarea id="blog-summary"
+                              class="w-full px-3 py-2 border rounded-lg outline-none h-20 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Теги (через запятую)</label>
+                    <input type="text" id="blog-tags" class="w-full px-3 py-2 border rounded-lg outline-none text-sm"
+                           placeholder="История, Теория, Бетховен"/>
+                </div>
+
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <h3 class="text-xs font-bold text-blue-600 uppercase mb-3">SEO Настройки</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Meta Description</label>
+                            <textarea id="blog-meta-desc"
+                                      class="w-full px-3 py-2 border rounded-lg outline-none h-16 text-sm resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Keywords</label>
+                            <input type="text" id="blog-keywords"
+                                   class="w-full px-3 py-2 border rounded-lg outline-none text-sm"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 pb-6">
+                <div>
+                    <div id="blog-content" class="h-96"></div>
+                </div>
+            </div>
+
         </div>
 
         <div
-          class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50 flex justify-end"
+                class="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50 flex justify-end"
         >
-          <button
-            id="save-blog-btn"
-            class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors"
-          >
-            Опубликовать
-          </button>
+            <button
+                    id="save-blog-btn"
+                    class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors"
+            >
+                Опубликовать
+            </button>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- === ВИДЕОПЛЕЕР (МОДАЛЬНОЕ ОКНО) === -->
+<!-- === ВИДЕОПЛЕЕР (МОДАЛЬНОЕ ОКНО) === -->
+<div
+        id="video-player-modal"
+        class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0"
+>
     <div
-      id="video-player-modal"
-      class="modal hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity opacity-0"
+            class="bg-black rounded-xl shadow-2xl w-full max-w-4xl transform scale-95 transition-all duration-200"
+            id="video-modal-content"
     >
-      <div
-        class="bg-black rounded-xl shadow-2xl w-full max-w-4xl transform scale-95 transition-all duration-200"
-        id="video-modal-content"
-      >
         <!-- Верхняя панель с кнопкой закрытия -->
         <div class="h-10 flex justify-end items-center pr-4">
-          <button
-            class="close-button text-gray-400 hover:text-white transition-colors"
-            title="Закрыть"
-          >
-            <i data-lucide="x" class="w-6 h-6"></i>
-          </button>
+            <button
+                    class="close-button text-gray-400 hover:text-white transition-colors"
+                    title="Закрыть"
+            >
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
         </div>
 
         <!-- Контейнер для встраивания плеера -->
         <div class="aspect-video" id="youtube-player-container">
-          <!-- Сюда JS вставит iframe -->
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- File Inputs -->
-    <input type="file" id="cover-art-upload-input" class="hidden" />
-    <input type="file" id="composition-upload-input" class="hidden" />
-    <input type="file" id="portrait-upload-input" class="hidden" />
+<!-- File Inputs -->
+<input type="file" id="cover-art-upload-input" class="hidden"/>
+<input type="file" id="composition-upload-input" class="hidden"/>
+<input type="file" id="portrait-upload-input" class="hidden"/>
 
-    <!-- Context Menus -->
-    <div id="context-menu" class="hidden fixed z-50"></div>
-    <div
-      id="notification-container"
-      class="fixed bottom-32 right-6 z-50 flex flex-col gap-2"
-    ></div>
+<!-- Context Menus -->
+<div id="context-menu" class="hidden fixed z-50"></div>
+<div
+        id="notification-container"
+        class="fixed bottom-32 right-6 z-50 flex flex-col gap-2"
+></div>
 
-    <aside
-      id="queue-sidebar"
-      class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform z-50 p-4 flex flex-col"
-    >
-      <div class="flex justify-between items-center mb-4 flex-shrink-0">
+<aside
+        id="queue-sidebar"
+        class="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform z-50 p-4 flex flex-col"
+>
+    <div class="flex justify-between items-center mb-4 flex-shrink-0">
         <h2 class="font-bold text-lg">Очередь</h2>
         <button
-          id="close-queue-btn"
-          class="p-1 text-gray-400 hover:text-gray-800"
+                id="close-queue-btn"
+                class="p-1 text-gray-400 hover:text-gray-800"
         >
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <!-- Этот div теперь будет гибким и займет все оставшееся место -->
-      <div id="queue-list" class="flex-1 min-h-0"></div>
-    </aside>
-
-    <div
-      id="selection-bar"
-      class="fixed bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 ease-in-out z-[110] flex justify-center pb-6 pointer-events-none mb-[160px] md:mb-24"
-    >
-      <!-- ИЗМЕНЕНИЯ:
-       1. Убрал overflow-x-auto (скролл запрещен)
-       2. Уменьшил px-5 до px-4
-       3. Уменьшил gap-4 до gap-3
-       4. Добавил justify-between для гарантии вместимости
-  -->
-      <div
-        class="bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center justify-between gap-3 pointer-events-auto mb-24 max-w-[95vw]"
-      >
-        <!-- Левая часть: Отмена и Счетчик -->
-        <!-- Уменьшил отступ справа (pr-3) -->
-        <div
-          class="flex items-center gap-2 border-r border-gray-600 pr-3 flex-shrink-0"
-        >
-          <button id="selection-cancel-btn" class="hover:text-gray-300 p-1">
             <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-          <span class="font-bold text-sm whitespace-nowrap" id="selection-count"
+        </button>
+    </div>
+    <div id="queue-list" class="flex-1 min-h-0"></div>
+</aside>
+
+<div
+        id="selection-bar"
+        class="fixed bottom-0 left-0 right-0 transform translate-y-full transition-transform duration-300 ease-in-out z-[110] flex justify-center pointer-events-none mb-4 md:mb-10"
+>
+    <div
+            class="bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center justify-between gap-3 pointer-events-auto mb-24 max-w-[95vw]"
+    >
+        <div
+                class="flex items-center gap-2 border-r border-gray-600 pr-3 flex-shrink-0"
+        >
+            <button id="selection-cancel-btn" class="hover:text-gray-300 p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <span class="font-bold text-sm whitespace-nowrap" id="selection-count"
             >0</span
-          >
+            >
         </div>
 
         <!-- Правая часть: Действия -->
         <div class="flex items-center gap-1 flex-shrink-0">
-          <!-- 1. ОЧЕРЕДЬ (Для всех) -->
-          <button
-            id="bulk-play-next-btn"
-            class="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Играть следующим"
-          >
-            <i data-lucide="corner-down-right" class="w-5 h-5"></i>
-          </button>
-          <button
-            id="bulk-add-queue-btn"
-            class="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="В конец очереди"
-          >
-            <i data-lucide="list-plus" class="w-5 h-5"></i>
-          </button>
+            <!-- 1. ОЧЕРЕДЬ (Для всех) -->
+            <button
+                    id="bulk-play-next-btn"
+                    class="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    title="Играть следующим"
+            >
+                <i data-lucide="corner-down-right" class="w-5 h-5"></i>
+            </button>
+            <button
+                    id="bulk-add-queue-btn"
+                    class="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    title="В конец очереди"
+            >
+                <i data-lucide="list-plus" class="w-5 h-5"></i>
+            </button>
 
-          <!-- 2. ПЛЕЙЛИСТ (Только для юзеров, скрыто по умолчанию) -->
-          <button
-            id="bulk-add-playlist-btn"
-            class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="В плейлист"
-          >
-            <i data-lucide="plus-square" class="w-5 h-5"></i>
-          </button>
+            <!-- 2. ПЛЕЙЛИСТ (Только для юзеров, скрыто по умолчанию) -->
+            <button
+                    id="bulk-add-playlist-btn"
+                    class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    title="В плейлист"
+            >
+                <i data-lucide="plus-square" class="w-5 h-5"></i>
+            </button>
 
-          <!-- 3. РЕДАКТИРОВАТЬ (Только админ, скрыто) -->
-          <button
-            id="bulk-edit-btn"
-            class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors text-cyan-300"
-            title="Редактировать"
-          >
-            <i data-lucide="edit-2" class="w-5 h-5"></i>
-          </button>
+            <!-- 3. РЕДАКТИРОВАТЬ (Только админ, скрыто) -->
+            <button
+                    id="bulk-edit-btn"
+                    class="hidden p-2 hover:bg-white/20 rounded-lg transition-colors text-cyan-300"
+                    title="Редактировать"
+            >
+                <i data-lucide="edit-2" class="w-5 h-5"></i>
+            </button>
 
-          <!-- 4. УДАЛЕНИЕ (Админ или Владелец плейлиста, скрыто) -->
-          <button
-            id="bulk-delete-btn"
-            class="hidden flex items-center gap-2 px-2 py-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-colors text-sm font-medium"
-          >
-            <i data-lucide="trash-2" class="w-5 h-5"></i>
-            <!-- Текст оставим скрытым на мобильных для экономии места -->
-            <span id="bulk-delete-text" class="hidden md:inline">Удалить</span>
-          </button>
+            <!-- 4. УДАЛЕНИЕ (Админ или Владелец плейлиста, скрыто) -->
+            <button
+                    id="bulk-delete-btn"
+                    class="hidden flex items-center gap-2 px-2 py-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-colors text-sm font-medium"
+            >
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                <span id="bulk-delete-text" class="hidden md:inline">Удалить</span>
+            </button>
         </div>
-      </div>
     </div>
+</div>
 
-    <!-- === МОДАЛЬНОЕ ОКНО ИНФОРМАЦИИ О ТРЕКЕ (МОБИЛЬНОЕ) === -->
+<!-- === МОДАЛЬНОЕ ОКНО ИНФОРМАЦИИ О ТРЕКЕ (МОБИЛЬНОЕ) === -->
+<div
+        id="player-info-modal"
+        class="modal hidden fixed inset-0 z-[70] bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity duration-300 opacity-0"
+>
     <div
-      id="player-info-modal"
-      class="modal hidden fixed inset-0 z-[70] bg-slate-900/80 backdrop-blur-sm p-4 transition-opacity duration-300 opacity-0"
+            class="absolute bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-all duration-300"
+            id="player-info-modal-content-wrapper"
     >
-      <div
-        class="absolute bg-white rounded-xl shadow-2xl w-full max-w-md p-0 overflow-hidden transform scale-95 transition-all duration-300"
-        id="player-info-modal-content-wrapper"
-      >
         <div
-          class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
+                class="flex-shrink-0 flex justify-between items-center p-6 border-b border-gray-100"
         >
-          <h3 class="font-bold text-lg flex items-center gap-2">
-            <i data-lucide="info" class="w-5 h-5 text-cyan-600"></i> Информация
-            о записи
-          </h3>
-          <button
-            id="player-info-modal-close-btn"
-            class="p-1 text-gray-400 hover:text-gray-700"
-          >
-            <i data-lucide="x" class="w-6 h-6"></i>
-          </button>
+            <h3 class="font-bold text-lg flex items-center gap-2">
+                <i data-lucide="info" class="w-5 h-5 text-cyan-600"></i> Информация
+                о записи
+            </h3>
+            <button
+                    id="player-info-modal-close-btn"
+                    class="p-1 text-gray-400 hover:text-gray-700"
+            >
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
         </div>
         <div
-          id="player-info-modal-content"
-          class="space-y-3 text-sm p-6 overflow-y-auto"
+                id="player-info-modal-content"
+                class="space-y-3 text-sm p-6 overflow-y-auto"
         >
-          <!-- Содержимое будет вставлено через JS -->
         </div>
-      </div>
     </div>
+</div>
 
-    <div
-      id="player-info-popover"
-      class="fixed w-80 bg-slate-900 text-white p-4 rounded-xl shadow-2xl transition-opacity pointer-events-none z-[120] opacity-0"
-    >
-      <!-- Содержимое будет вставлено через JS -->
-    </div>
+<div
+        id="player-info-popover"
+        class="fixed w-80 bg-slate-900 text-white p-4 rounded-xl shadow-2xl transition-opacity pointer-events-none z-[120] opacity-0"
+>
+</div>
 
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest" defer></script>
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js" defer></script>
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      defer
-    ></script>
-    <script
-      src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"
-      defer
-    ></script>
-    <script type="module" src="/static/js/main.js"></script>
-    <script>
-      // Принудительная перерисовка иконок после загрузки
-      document.addEventListener("DOMContentLoaded", () => {
-        setTimeout(() => {
-          if (window.lucide) {
-            window.lucide.createIcons();
-            console.log("Icons initialized forcibly");
-          }
-        }, 100);
-      });
-    </script>
-  </body>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js" defer></script>
+<script src="https://unpkg.com/lucide@latest" defer></script>
+<script src="https://cdn.plyr.io/3.7.8/plyr.js" defer></script>
+<script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        defer
+></script>
+<script
+        src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"
+        defer
+></script>
+<script type="module" src="/static/js/main.js"></script>
+<script>
+    // Принудительная перерисовка иконок после загрузки
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+          console.log("Icons initialized forcibly");
+        }
+      }, 100);
+    });
+</script>
+</body>
 </html>

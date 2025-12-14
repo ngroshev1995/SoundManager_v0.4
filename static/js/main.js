@@ -1,4 +1,3 @@
-// static/js/main.js
 import { apiRequest } from "./api.js";
 import { initAuth } from "./auth.js";
 import * as ui from "./ui.js";
@@ -18,7 +17,7 @@ let state = {
   favoritesLoaded: false,
   composersPagination: {
     skip: 0,
-    limit: 12, // Сколько грузить за раз
+    limit: 12,
     hasMore: true,
   },
   view: {
@@ -32,11 +31,11 @@ let state = {
   isSelectionMode: false,
   pagination: { currentPage: 1, itemsPerPage: 50, totalPages: 1 },
   displayLanguage: "ru",
-  lastSelectedId: null, // Для Shift+Click
+  lastSelectedId: null,
   libraryFilters: {
     page: 1,
     limit: 20,
-    mediaType: null, // 'audio' или 'video'
+    mediaType: null,
     composerId: "",
     genre: "",
     sortBy: "newest",
@@ -53,60 +52,35 @@ document.addEventListener("DOMContentLoaded", main);
 function main() {
   const token = localStorage.getItem("access_token");
 
-  // 1. Инициализация (всегда)
   player.initPlayer();
   addEventListeners();
   setupDuplicateCheckers();
   if (window.lucide) window.lucide.createIcons();
 
-  // 2. Логика успешного входа (вызывается из auth.js)
   initAuth(() => {
     ui.showMainApp();
-
-    // Обновляем шапку (показываем логин, плейлисты)
     ui.updateHeaderAuth();
-
-    // Инициализируем роутер, если нужно
     setupRouter();
-
-    // Переходим на главную
     router.navigate("/");
     state.view.current = "dashboard";
     loadCurrentView();
   });
 
-  // 3. Старт приложения
-  setupRouter(); // Настраиваем ссылки
-  ui.updateHeaderAuth(); // <--- ВАЖНО: Обновляем шапку при старте (гость или юзер)
-
-  // Показываем приложение сразу (даже гостям!)
+  setupRouter();
+  ui.updateHeaderAuth();
   ui.showMainApp();
-
-  // Если есть токен, можно дополнительно проверить валидность,
-  // но пока просто считаем, что пользователь вошел.
-  // Если токена нет - updateHeaderAuth нарисует кнопку "Войти".
-
-  // Если URL пустой - грузим дашборд
   if (!window.location.hash || window.location.hash === "#/") {
     state.view.current = "dashboard";
   }
 
-  // Загружаем контент (для гостей тоже)
   loadCurrentView();
 }
 
-// Добавь эту функцию-хелпер:
 async function fetchUserProfile() {
   try {
-    // Нужно создать эндпоинт /api/users/me который возвращает {id, email, is_admin}
-    // Если его нет, используем заглушку или старый способ, но лучше добавить эндпоинт.
-    // Пока предположим, что мы сохраняем флаг при логине.
-
-    // ВРЕМЕННОЕ РЕШЕНИЕ:
     const userEmail = localStorage.getItem("user_email");
     if (userEmail) ui.setUserGreeting(userEmail);
 
-    // Лучше всего сохранить роль в localStorage при логине
   } catch (e) {
     console.error(e);
   }
@@ -119,7 +93,7 @@ function resetViewState() {
   state.view.currentComposition = null;
   state.view.playlistId = null;
   state.currentViewRecordings = [];
-  state.selectedRecordingIds.clear(); // Очищаем список ID
+  state.selectedRecordingIds.clear();
   ui.updateSelectionBar(0);
 }
 
@@ -128,13 +102,11 @@ function setupRouter() {
 
     .hooks({
       before: (done) => {
-        // Этот код будет выполняться ПЕРЕД КАЖДЫМ переходом по ссылке.
-        // Это самое надежное место, чтобы закрыть меню.
         const mobileMenuPanel = document.getElementById("mobile-menu-panel");
         if (mobileMenuPanel) {
           mobileMenuPanel.classList.add("hidden");
         }
-        done(); // Разрешаем роутеру продолжить переход.
+        done();
       },
     })
 
@@ -158,7 +130,7 @@ function setupRouter() {
 
       "/composers/:slug": ({ data }) => {
         state.view.current = "composer_detail";
-        state.view.currentComposer = { id: data.slug }; // Navigo передает это как строку, всё ок
+        state.view.currentComposer = { id: data.slug };
         loadCurrentView();
       },
       "/works/:slug": ({ data }) => {
@@ -183,22 +155,22 @@ function setupRouter() {
         loadCurrentView();
       },
       "/playlists": () => {
-        state.view.current = "playlists_overview"; // Новый вид
+        state.view.current = "playlists_overview";
         resetViewState();
         loadCurrentView();
       },
       "/recordings": () => {
-        state.view.current = "library_hub"; // Главная страница раздела
+        state.view.current = "library_hub";
         resetViewState();
         loadCurrentView();
       },
       "/recordings/audio": () => {
-        state.view.current = "library_audio"; // Только аудио
+        state.view.current = "library_audio";
         resetViewState();
         loadCurrentView();
       },
       "/recordings/video": () => {
-        state.view.current = "library_video"; // Только видео
+        state.view.current = "library_video";
         resetViewState();
         loadCurrentView();
       },
@@ -210,7 +182,7 @@ function setupRouter() {
       },
       "/blog/tag/:tagName": ({ data }) => {
         state.view.current = "blog_list";
-        state.view.blogTagFilter = data.tagName; // <-- Устанавливаем фильтр
+        state.view.blogTagFilter = data.tagName;
         resetViewState();
         loadCurrentView();
       },
@@ -234,25 +206,21 @@ function setupRouter() {
         }
 
         try {
-          // Проверяем, загружен ли Leaflet (L)
           if (typeof L === "undefined") {
-            // Динамически импортируем скрипт Leaflet, если его еще нет
             await import("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
           }
 
-          // Загружаем данные композиторов
           const composers = await apiRequest(
             "/api/recordings/composers?limit=1000"
           );
 
-          // Рендерим карту
           ui.renderComposersMap(composers);
 
           ui.renderBreadcrumbs();
         } catch (error) {
           console.error("Failed to load map:", error);
           ui.showNotification("Не удалось загрузить карту", "error");
-          if (listEl) listEl.innerHTML = ""; // Очищаем спиннер в случае ошибки
+          if (listEl) listEl.innerHTML = "";
         }
       },
     })
@@ -266,16 +234,13 @@ async function loadCurrentView() {
 
   if (!state.view.current) return;
 
-  // === ЗАЩИТА РОУТОВ (GUARD) ===
   const protectedViews = ["favorites", "playlist", "playlists_overview"];
   const isLoggedIn = !!localStorage.getItem("access_token");
 
   if (protectedViews.includes(state.view.current) && !isLoggedIn) {
-    // Если гость на защищенной странице -> редирект на главную
     console.warn("Доступ запрещен, редирект на главную");
     state.view.current = "dashboard";
     router.navigate("/");
-    // Код продолжит выполняться уже для dashboard
   }
 
   const contentHeader = document.getElementById("content-header");
@@ -292,7 +257,6 @@ async function loadCurrentView() {
     list.innerHTML =
       '<div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-600"></div></div>';
 
-  // ПРОВЕРКА: Загружаем личные данные ТОЛЬКО если есть токен
   const hasToken = !!localStorage.getItem("access_token");
 
   if (hasToken && !state.favoritesLoaded) {
@@ -325,10 +289,8 @@ async function loadCurrentView() {
         const s = await apiRequest(
           `/api/search/?q=${encodeURIComponent(state.view.searchQuery)}`
         );
-        // Сохраняем записи в стейт, чтобы плеер мог их играть
         state.currentViewRecordings = s.recordings;
 
-        // ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ
         ui.renderSearchResults(s, state.favoriteRecordingIds);
         break;
       case "recordings":
@@ -343,11 +305,9 @@ async function loadCurrentView() {
         );
         break;
       case "composers":
-        // Сбрасываем пагинацию при первом заходе на страницу
         state.composersPagination.skip = 0;
         state.composersPagination.hasMore = true;
 
-        // Грузим первую порцию
         await loadMoreComposers();
         break;
 
@@ -419,23 +379,19 @@ async function loadCurrentView() {
         break;
 
       case "library_audio":
-        // 1. Получаем список композиторов для фильтра (если еще нет)
         if (state.composersList.length === 0) {
           state.composersList = await apiRequest(
             "/api/recordings/composers?limit=100"
           );
         }
 
-        // 2. Сбрасываем фильтры
         state.libraryFilters.mediaType = "audio";
         state.libraryFilters.composerId = "";
         state.libraryFilters.genre = "";
         state.libraryFilters.search = "";
 
-        // 3. Рисуем каркас страницы (шапку с фильтрами)
         ui.renderLibraryPageStructure("Аудиоархив", state.composersList);
 
-        // 4. Грузим данные
         await loadLibraryWithFilters(true);
         break;
 
@@ -472,7 +428,6 @@ async function loadCurrentView() {
     }
   } catch (err) {
     console.error(err);
-    // Если мы получили 404 (Not found), это нормально при удалении - игнорируем
     if (!err.message.includes("404")) {
       ui.showNotification("Ошибка загрузки: " + err.message, "error");
     }
@@ -487,18 +442,11 @@ async function loadCurrentView() {
   }
 
   if (player.hasActiveTrack()) {
-    // Нужно немного подождать, пока lucide отрисует иконки Play, чтобы заменить их
     setTimeout(() => {
-      // Получаем доступ к приватным переменным плеера сложно,
-      // поэтому проще дернуть updateIcons, но она приватная.
-      // Сделаем проще: сымитируем обновление через player.js
-      // Но так как переменные закрыты, давай экспортируем метод в player.js
       player.forceUpdateIcons();
     }, 50);
   }
 }
-
-// static/js/main.js
 
 function addEventListeners() {
   // --- ЛОГИКА МОБИЛЬНОГО МЕНЮ ---
@@ -515,10 +463,9 @@ function addEventListeners() {
     });
   }
 
-  // 1. Инициализируем кнопку сворачивания плеера
   ui.initPlayerToggle();
 
-  // --- ЛОГИКА МОДАЛЬНОГО ОКНА И ПОДСКАЗКИ (ФИНАЛЬНАЯ ВЕРСИЯ) ---
+  // --- ЛОГИКА МОДАЛЬНОГО ОКНА И ПОДСКАЗКИ ---
   const infoModal = document.getElementById("player-info-modal");
   const infoModalWrapper = document.getElementById(
     "player-info-modal-content-wrapper"
@@ -534,7 +481,6 @@ function addEventListeners() {
   // --- ЛОГИКА ДЛЯ МОБИЛЬНОГО ОКНА ---
   const openInfoModal = () => {
     const musicPlayer = document.getElementById("music-player");
-    // Проверяем, свернут ли плеер. Если да, его высота 0.
     const playerHeight =
       musicPlayer && !musicPlayer.classList.contains("player-collapsed")
         ? musicPlayer.offsetHeight
@@ -542,24 +488,21 @@ function addEventListeners() {
     const availableHeight = window.innerHeight - playerHeight;
 
     infoModal.classList.remove("hidden");
-    infoModalWrapper.style.visibility = "hidden"; // Сначала прячем
-    infoModalWrapper.style.transform = "scale(0.95)"; // Начальное состояние для анимации
+    infoModalWrapper.style.visibility = "hidden";
+    infoModalWrapper.style.transform = "scale(0.95)";
 
     requestAnimationFrame(() => {
       const modalHeight = infoModalWrapper.offsetHeight;
       const modalWidth = infoModalWrapper.offsetWidth;
 
-      // Вертикальное центрирование в доступной области
       let topPosition = (availableHeight - modalHeight) / 2;
-      if (topPosition < 20) topPosition = 20; // Отступ сверху, чтобы не прилипало
+      if (topPosition < 20) topPosition = 20;
 
-      // Горизонтальное центрирование
       let leftPosition = (window.innerWidth - modalWidth) / 2;
 
       infoModalWrapper.style.top = `${topPosition}px`;
       infoModalWrapper.style.left = `${leftPosition}px`;
 
-      // Теперь показываем с анимацией
       infoModalWrapper.style.visibility = "visible";
       infoModal.classList.remove("opacity-0");
       infoModalWrapper.style.transform = "scale(1)";
@@ -610,7 +553,7 @@ function addEventListeners() {
     popover.addEventListener("mouseleave", hidePopover);
   }
 
-  // 2. ОСНОВНОЙ СЛУШАТЕЛЬ КЛИКОВ (Делегирование событий)
+  // 2. ОСНОВНОЙ СЛУШАТЕЛЬ КЛИКОВ
   document.body.addEventListener("click", async (e) => {
     const target = e.target;
 
@@ -625,7 +568,7 @@ function addEventListeners() {
 
     // --- ЗАКРЫТИЕ ОКНА АВТОРИЗАЦИИ ---
     if (target.closest("#auth-close-btn")) {
-      ui.showMainApp(); // Эта функция скрывает auth-view и показывает main-view
+      ui.showMainApp();
       return;
     }
 
@@ -634,17 +577,15 @@ function addEventListeners() {
       const work = window.state.view.currentWork;
       if (!work || !work.compositions) return;
 
-      // ШАГ 1: Собираем плейлист из ВСЕХ аудиозаписей этого произведения.
       const playlist = work.compositions
         .flatMap((comp) => {
-          // Для каждой записи добавляем полную информацию о ее "родителях"
           return comp.recordings
             .filter((r) => r.duration > 0)
             .map((rec) => ({
               ...rec,
               composition: {
                 ...comp,
-                work: work, // <-- ВОТ КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ
+                work: work,
               },
             }));
         })
@@ -657,7 +598,6 @@ function addEventListeners() {
         );
       }
 
-      // ШАГ 2: Запускаем первый трек, передавая в плеер ПОЛНОСТЬЮ собранный плейлист.
       player.handleTrackClick(playlist[0].id, 0, playlist);
       ui.showNotification(
         `Воспроизведение ${playlist.length} треков`,
@@ -669,7 +609,7 @@ function addEventListeners() {
 
     // 1. Полная очистка очереди
     if (target.closest("#clear-queue-btn")) {
-      e.preventDefault(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+      e.preventDefault();
       player.clearFullQueue();
     }
 
@@ -704,8 +644,6 @@ function addEventListeners() {
       if (!title)
         return ui.showNotification("Введите заголовок статьи", "error");
       if (!slug) return ui.showNotification("URL (Slug) обязателен", "error");
-
-      // Собираем теги из инпута в массив строк
 
       const tagsValue = document.getElementById("blog-tags").value;
       const tags = tagsValue
@@ -759,14 +697,11 @@ function addEventListeners() {
           await apiRequest(`/api/blog/${id}`, "DELETE");
           ui.showNotification("Статья удалена", "success");
 
-          // 1. Меняем URL в адресной строке
           router.navigate("/blog");
 
-          // 2. Принудительно обновляем состояние приложения
           state.view.current = "blog_list";
-          state.view.blogSlug = null; // Очищаем слаг удаленной статьи
+          state.view.blogSlug = null;
 
-          // 3. Принудительно загружаем список
           loadCurrentView();
         } catch (e) {
           ui.showNotification("Ошибка удаления: " + e.message, "error");
@@ -783,16 +718,12 @@ function addEventListeners() {
       if (!list || list.length === 0)
         return ui.showNotification("Список пуст", "info");
 
-      // Запускаем первый трек, а список передаем плееру
-      // (Плеер сам построит очередь из этого списка)
       player.handleTrackClick(list[0].id, 0, list);
       ui.showNotification(`Воспроизведение ${list.length} треков`, "success");
     }
 
     // 2. Перемешать (Shuffle)
     if (target.closest("#library-shuffle-btn")) {
-      // Берем текущие загруженные записи
-      // Важно: создаем копию массива, чтобы не ломать порядок в state.currentViewRecordings
       let shuffledList = [...state.currentViewRecordings];
 
       if (!shuffledList || shuffledList.length === 0)
@@ -804,14 +735,6 @@ function addEventListeners() {
         [shuffledList[i], shuffledList[j]] = [shuffledList[j], shuffledList[i]];
       }
 
-      // МЫ НЕ ПЕРЕРИСОВЫВАЕМ ИНТЕРФЕЙС!
-      // Список на экране остается старым (упорядоченным).
-
-      // Но в плеер мы отдаем перемешанную версию.
-      // Плеер будет играть треки в порядке из shuffledList.
-
-      // Запускаем первый трек из перемешанного списка
-      // 0 - это индекс в shuffledList, а не в визуальном списке
       player.handleTrackClick(shuffledList[0].id, 0, shuffledList);
 
       ui.showNotification("Воспроизведение в случайном порядке", "success");
@@ -838,14 +761,10 @@ function addEventListeners() {
       e.preventDefault();
       router.navigate(navLink.getAttribute("href"));
 
-      // === ГАРАНТИРОВАННОЕ ЗАКРЫТИЕ МЕНЮ ===
-      // Прямо здесь, после запуска навигации, мы находим панель и скрываем ее.
-      // Это самое надежное место.
       const mobileMenuPanel = document.getElementById("mobile-menu-panel");
       if (mobileMenuPanel) {
         mobileMenuPanel.classList.add("hidden");
       }
-      // ======================================
 
       return;
     }
@@ -856,12 +775,6 @@ function addEventListeners() {
       e.stopPropagation();
       const item = playBtn.closest(".recording-item");
 
-      // === ИСПРАВЛЕНИЕ START ===
-      // UI показывает только аудио (duration > 0), и индексы (data-index)
-      // расставлены относительно списка АУДИО.
-      // В стейте (state.currentViewRecordings) лежат ВСЕ записи (и видео тоже).
-      // Нужно передать плееру ТОЛЬКО аудио, чтобы индексы совпали.
-
       const playableList = state.currentViewRecordings.filter(
         (r) => r.duration > 0
       );
@@ -869,9 +782,8 @@ function addEventListeners() {
       player.handleTrackClick(
         parseInt(item.dataset.recordingId),
         parseInt(item.dataset.index),
-        playableList // <-- Передаем отфильтрованный список
+        playableList
       );
-      // === ИСПРАВЛЕНИЕ END ===
 
       return;
     }
@@ -888,7 +800,6 @@ function addEventListeners() {
     if (target.classList.contains("recording-checkbox")) {
       const row = target.closest(".recording-item");
       if (row) {
-        // Вызываем единую функцию, которая правильно управляет состоянием и стилями
         handleSelectionToggle(row);
       }
       return;
@@ -922,7 +833,7 @@ function addEventListeners() {
       }
     }
 
-    // --- СОЗДАНИЕ СУЩНОСТЕЙ (Кнопки внутри модалок) ---
+    // --- СОЗДАНИЕ СУЩНОСТЕЙ ---
     // 1. Композитор (СОЗДАНИЕ)
     const createComposerBtn = target.closest("#create-composer-btn");
     const place = document.getElementById("add-composer-city").value.trim();
@@ -936,7 +847,6 @@ function addEventListeners() {
         .value.trim();
       if (!nameRu) return ui.showNotification("Имя (RU) обязательно", "error");
 
-      // Получаем биографию из Quill
       const bioContent = window.quillEditor
         ? window.quillEditor.root.innerHTML
         : "";
@@ -1004,16 +914,12 @@ function addEventListeners() {
       const isExpanded = content.dataset.expanded === "true";
 
       if (isExpanded) {
-        // Сворачиваем
-        content.style.maxHeight = "15rem"; // 60 * 0.25rem (Tailwind max-h-60)
+        content.style.maxHeight = "15rem";
         content.dataset.expanded = "false";
         gradient.classList.remove("hidden");
         textSpan.textContent = "Читать далее";
         if (icon) icon.style.transform = "rotate(0deg)";
 
-        // Возвращаем кнопку на место (она абсолютная, но при сворачивании блок уменьшается)
-        // На самом деле, для кнопки лучше убрать absolute при разворачивании, чтобы она была в потоке.
-        // ДАВАЙТЕ УЛУЧШИМ ВЕРСТКУ В UI.JS (см. ниже)
       } else {
         // Разворачиваем
         content.style.maxHeight = content.scrollHeight + "px";
@@ -1036,19 +942,12 @@ function addEventListeners() {
       if (!nameRu)
         return ui.showNotification("Название (RU) обязательно", "error");
 
-      // Получаем историю из Quill
       const notesContent = window.quillEditor
         ? window.quillEditor.root.innerHTML
         : "";
 
-      // Получаем жанр и конвертируем (если нужно)
       const genreLabel = document.getElementById("add-work-genre").value;
-      // getGenreKeyByLabel должна быть доступна (либо импортирована, либо скопирована)
-      // Если она в ui.js и не экспортирована в window, лучше просто найти в массиве здесь
-      // Но для простоты, предположим, что ui.js подключен модулем и мы можем вызвать ui.getGenreKeyByLabel
-      // или просто продублируем логику поиска здесь для надежности:
       let genreKey = genreLabel;
-      // (Простейшая логика: если это не сработает, сервер примет как есть)
 
       const data = {
         name_ru: nameRu,
@@ -1056,10 +955,10 @@ function addEventListeners() {
           document.getElementById("add-work-name-orig").value.trim() || null,
         tonality:
           document.getElementById("add-work-tonality").value.trim() || null,
-        is_no_catalog: document.getElementById("add-work-no-catalog").checked, // <--- НОВОЕ
+        is_no_catalog: document.getElementById("add-work-no-catalog").checked,
         catalog_number:
           document.getElementById("add-work-catalog").value.trim() || null,
-        genre: genreLabel || null, // Отправляем то, что ввел юзер (или ключ, если он уже ключ)
+        genre: genreLabel || null,
         nickname:
           document.getElementById("add-work-nickname").value.trim() || null,
         publication_year:
@@ -1290,10 +1189,8 @@ function addEventListeners() {
       if (!w) return;
 
       // 1. Ищем подходящую часть для записи
-      // Сначала ищем спец-часть "Полное произведение" (№0)
       let targetComp = w.compositions.find((c) => c.sort_order === 0);
 
-      // Логика для одночастных (совместимость): если часть одна и она "обычная" (не 0), берем её
       if (
         !targetComp &&
         w.compositions.length === 1 &&
@@ -1302,7 +1199,6 @@ function addEventListeners() {
         targetComp = w.compositions[0];
       }
 
-      // Если подходящей части нет, создаем "Полное произведение" (№0)
       if (!targetComp) {
         try {
           const originalText = btn.innerHTML;
@@ -1315,13 +1211,13 @@ function addEventListeners() {
             {
               title_ru: "Полное произведение",
               title_original: "Complete Work",
-              sort_order: 0, // <--- ФЛАГ ПОЛНОГО ПРОИЗВЕДЕНИЯ
+              sort_order: 0,
               catalog_number: w.catalog_number,
             }
           );
 
           targetComp = newComp;
-          w.compositions.push(newComp); // Обновляем стейт локально
+          w.compositions.push(newComp);
 
           btn.innerHTML = originalText;
           btn.disabled = false;
@@ -1336,8 +1232,6 @@ function addEventListeners() {
       }
 
       if (targetComp) {
-        // ВАЖНО: Для модалки видео нужно установить currentComposition в стейт,
-        // так как кнопка "Сохранить" в модалке берет ID оттуда.
         state.view.currentComposition = targetComp;
 
         if (type === "audio") {
@@ -1360,7 +1254,6 @@ function addEventListeners() {
       const rec = state.currentViewRecordings.find((r) => r.id === rid);
 
       if (rec) {
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
         ui.showEditEntityModal("video_recording", rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Видеозапись обновлена", "success");
@@ -1370,7 +1263,6 @@ function addEventListeners() {
       return;
     }
 
-    // 2. Удалить видео
     const delVideoBtn = target.closest(".delete-video-btn");
     if (delVideoBtn) {
       e.preventDefault();
@@ -1541,7 +1433,6 @@ function addEventListeners() {
         });
 
       // ШАГ 3: ВЫЗЫВАЕМ ЕДИНУЮ ФУНКЦИЮ ОБНОВЛЕНИЯ СТИЛЕЙ
-      // Она пройдет по всем строкам и ПРАВИЛЬНО снимет фон, так как в state уже нет выделенных ID.
       ui.updateSelectionStyles();
     }
 
@@ -1557,7 +1448,6 @@ function addEventListeners() {
       if (tracks.length > 0) {
         player.playNextInQueue(tracks);
 
-        // Сбрасываем выделение
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
         document
@@ -1583,7 +1473,6 @@ function addEventListeners() {
       if (tracks.length > 0) {
         player.addToQueue(tracks);
 
-        // Сбрасываем выделение
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
         document
@@ -1628,31 +1517,25 @@ function addEventListeners() {
 
       const rec = state.currentViewRecordings.find((r) => r.id === id);
       if (rec) {
-        // === ИЗМЕНЕНИЯ ЗДЕСЬ ===
-        // 1. Сразу выходим из режима выделения и прячем панель
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
 
-        ui.updateSelectionBar(0); // Прячет панель
-        ui.updateSelectionStyles(); // Убирает синий фон у строки
+        ui.updateSelectionBar(0);
+        ui.updateSelectionStyles();
 
-        // Прячем чекбоксы
         document
           .querySelectorAll(".selection-checkbox-container")
           .forEach((el) => {
             el.classList.add("hidden");
             el.style.display = "";
           });
-        // =======================
 
         const type = rec.duration > 0 ? "audio_recording" : "video_recording";
 
-        // 2. И только потом открываем модалку
         ui.showEditEntityModal(type, rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Запись обновлена", "success");
 
-          // Здесь очистка уже не нужна, мы сделали её до открытия
           loadCurrentView();
         });
       }
@@ -1672,7 +1555,6 @@ function addEventListeners() {
           );
           ui.showNotification("Убрано из плейлиста", "success");
 
-          // Чистим локально и обновляем UI
           state.currentViewRecordings = state.currentViewRecordings.filter(
             (r) => !ids.includes(r.id)
           );
@@ -1707,14 +1589,12 @@ function addEventListeners() {
             ui.showNotification(`Удалено файлов: ${count}`, "success");
             document.getElementById("delete-modal").classList.add("hidden");
 
-            // ВАЖНО: Обновляем список ТОЛЬКО ПОСЛЕ подтверждения удаления
             state.selectedRecordingIds.clear();
             ui.updateSelectionBar(0);
             loadCurrentView();
           },
         });
       }
-      // УДАЛЕНЫ СТРОКИ ОЧИСТКИ ЗДЕСЬ, ОНИ ТЕПЕРЬ ВНУТРИ БЛОКОВ ВЫШЕ
     }
 
     // --- ОСТАЛЬНОЕ ---
@@ -1723,8 +1603,6 @@ function addEventListeners() {
       localStorage.removeItem("user_email");
       localStorage.removeItem("is_admin");
 
-      // ВАЖНО: Сначала переходим на корень, потом перезагружаем
-      // Это гарантирует, что после перезагрузки мы окажемся на Дашборде
       window.location.hash = "/";
       window.location.reload();
     }
@@ -1742,6 +1620,15 @@ function addEventListeners() {
 
   // --- КОНТЕКСТНОЕ МЕНЮ (Правый клик) ---
   document.body.addEventListener("contextmenu", (e) => {
+    if (window.innerWidth < 768) {
+      if (e.target.closest(".recording-item")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
+
+    // 2. Логика для ПК
     const item = e.target.closest(".recording-item");
     if (item) {
       e.preventDefault();
@@ -1830,7 +1717,6 @@ function addEventListeners() {
 
     targetRow.classList.remove("drag-over-top", "drag-over-bottom");
 
-    // Собираем новые ID и сохраняем
     const newOrderIds = Array.from(
       document.querySelectorAll(".recording-item")
     ).map((el) => parseInt(el.dataset.recordingId));
@@ -1886,12 +1772,9 @@ function addEventListeners() {
   document.addEventListener("dragover", (e) => {
     e.preventDefault();
 
-    // Ищем цель (над чем мы сейчас)
     const target = e.target.closest(".comp-sortable-item");
 
-    // Если мы не над элементом списка или навели на самого себя - ничего не делаем
     if (!target || target === draggedComp) {
-      // Важно: если мы "ушли" с элемента в пустоту, нужно очистить подсветку
       document
         .querySelectorAll(".drag-over-top, .drag-over-bottom")
         .forEach((el) => {
@@ -1900,24 +1783,19 @@ function addEventListeners() {
       return;
     }
 
-    // === ИСПРАВЛЕНИЕ: Сначала убираем подсветку со ВСЕХ элементов ===
     document
       .querySelectorAll(".drag-over-top, .drag-over-bottom")
       .forEach((el) => {
-        // Оставляем только текущий target, если мы над ним, но проще очистить всё и нарисовать заново
         if (el !== target) {
           el.classList.remove("drag-over-top", "drag-over-bottom");
         }
       });
-    // ===============================================================
 
     const rect = target.getBoundingClientRect();
     const offset = e.clientY - rect.top;
 
-    // Очищаем текущий (чтобы не было и top и bottom одновременно)
     target.classList.remove("drag-over-top", "drag-over-bottom");
 
-    // Рисуем линию
     if (offset < rect.height / 2) {
       target.classList.add("drag-over-top");
     } else {
@@ -1930,11 +1808,9 @@ function addEventListeners() {
     const target = e.target.closest(".comp-sortable-item");
     if (!target || !draggedComp || target === draggedComp) return;
 
-    // 1. Перемещаем элемент в DOM
-    const parent = target.parentNode; // Контейнер
+    const parent = target.parentNode;
     target.classList.remove("drag-over-top", "drag-over-bottom");
 
-    // Определяем куда вставлять
     const rect = target.getBoundingClientRect();
     const offset = e.clientY - rect.top;
 
@@ -1944,22 +1820,17 @@ function addEventListeners() {
       parent.insertBefore(draggedComp, target.nextSibling);
     }
 
-    // 2. === МАГИЯ: ВИЗУАЛЬНЫЙ ПЕРЕСЧЕТ НОМЕРОВ ===
-    // Берем все элементы в новом порядке
     const allItems = parent.querySelectorAll(".comp-sortable-item");
     const newIds = [];
 
     allItems.forEach((item, index) => {
-      // Обновляем цифру в кружочке (1, 2, 3...)
       const numberBadge = item.querySelector(".comp-sort-number");
       if (numberBadge) {
         numberBadge.textContent = index + 1;
       }
-      // Собираем ID для отправки
       newIds.push(parseInt(item.dataset.compId));
     });
 
-    // 3. Отправляем на сервер
     if (state.view.currentWork) {
       try {
         await apiRequest(
@@ -1969,7 +1840,6 @@ function addEventListeners() {
             composition_ids: newIds,
           }
         );
-        // ui.showNotification("Порядок сохранен", "success"); // Можно не показывать, чтобы не спамить
       } catch (err) {
         ui.showNotification("Ошибка сортировки", "error");
         console.error(err);
@@ -1978,8 +1848,6 @@ function addEventListeners() {
   });
 
   // --- УПРАВЛЕНИЕ ТАПАМИ НА МОБИЛЬНОМ И КЛИКАМИ ---
-
-  // --- ФИНАЛЬНАЯ, ОТЛАЖЕННАЯ ЛОГИКА ТАПОВ И КЛИКОВ ---
 
   let touchTimer = null;
   let isLongTouch = false;
@@ -2001,24 +1869,22 @@ function addEventListeners() {
       isLongTouch = false;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
-      // Запускаем таймер. Если он сработает -> это долгий тап
       touchTimer = setTimeout(() => {
-        isLongTouch = true; // Ставим флаг, что долгий тап СЛУЧИЛСЯ
+        isLongTouch = true;
         if (navigator.vibrate) navigator.vibrate(50);
-        handleSelectionToggle(row); // Выделяем
+        handleSelectionToggle(row);
       }, 500);
     },
     { passive: true }
   );
 
-  // 2. СДВИНУЛИ ПАЛЕЦ (Отменяем, если скролл)
   document.body.addEventListener(
     "touchmove",
     (e) => {
       if (!touchTimer) return;
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
-      if (Math.abs(x - touchStartX) > 10 || Math.abs(y - touchStartY) > 30) {
+      if (Math.abs(x - touchStartX) > 10 || Math.abs(y - touchStartY) > 50) {
         clearTimeout(touchTimer);
         touchTimer = null;
       }
@@ -2026,9 +1892,7 @@ function addEventListeners() {
     { passive: true }
   );
 
-  // 3. ОТПУСТИЛИ ПАЛЕЦ
   document.body.addEventListener("touchend", (e) => {
-    // Если сработал долгий тап (таймер выполнился) -> выходим, выделение уже произошло
     if (isLongTouch) {
       e.preventDefault();
       isLongTouch = false;
@@ -2037,14 +1901,12 @@ function addEventListeners() {
       return;
     }
 
-    // Если это короткий тап (таймер не успел сработать, мы его отменяем)
     if (touchTimer) {
       clearTimeout(touchTimer);
       touchTimer = null;
 
       const row = e.target.closest(".recording-item");
 
-      // Игнорируем кнопки внутри строки (Play, Лайк), у них свои обработчики click
       if (
         !row ||
         e.target.closest(".recording-play-pause-btn") ||
@@ -2053,20 +1915,13 @@ function addEventListeners() {
         return;
       }
 
-      // ЛОГИКА:
-      // 1. Если включен режим выделения -> короткий тап переключает чекбокс.
       if (window.state.isSelectionMode) {
         e.preventDefault();
         handleSelectionToggle(row);
       }
-      // 2. Если обычный режим -> НИЧЕГО НЕ ДЕЛАЕМ.
-      // (e.preventDefault НЕ вызываем, чтобы не блокировать скролл или системные жесты,
-      // но никакой свой код не запускаем).
-      // Воспроизведение сработает только если юзер попадет пальцем в кнопку Play (событие click).
     }
   });
 
-  // 4. Блокируем системное меню, чтобы не мешалось
   document.body.addEventListener("contextmenu", (e) => {
     if (window.innerWidth < 768 && e.target.closest(".recording-item")) {
       e.preventDefault();
@@ -2076,7 +1931,6 @@ function addEventListeners() {
   });
 }
 
-// --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ВЫДЕЛЕНИЯ ---
 function handleSelectionToggle(row) {
   if (!row) return;
   const id = parseInt(row.dataset.recordingId);
@@ -2084,17 +1938,14 @@ function handleSelectionToggle(row) {
 
   const checkbox = row.querySelector(".recording-checkbox");
 
-  // Включаем режим, если это первое выделение
   if (window.state.selectedRecordingIds.size === 0) {
     window.state.isSelectionMode = true;
-    // Показываем чекбоксы везде
     document.querySelectorAll(".selection-checkbox-container").forEach((el) => {
       el.classList.remove("hidden");
-      el.style.display = "flex"; // Принудительно
+      el.style.display = "flex";
     });
   }
 
-  // Переключаем ID в памяти
   let isSelected;
   if (window.state.selectedRecordingIds.has(id)) {
     window.state.selectedRecordingIds.delete(id);
@@ -2104,8 +1955,6 @@ function handleSelectionToggle(row) {
     isSelected = true;
   }
 
-  // === ВИЗУАЛ (ЖЕСТКАЯ ЗАЧИСТКА) ===
-  // Удаляем всё, что может мешать фону
   row.classList.remove(
     "bg-white",
     "bg-cyan-50",
@@ -2117,11 +1966,10 @@ function handleSelectionToggle(row) {
     row.classList.add("bg-cyan-50");
     if (checkbox) checkbox.checked = true;
   } else {
-    row.classList.add("bg-white"); // Возвращаем белый фон
+    row.classList.add("bg-white");
     if (checkbox) checkbox.checked = false;
   }
 
-  // Если сняли последнее выделение -> Выход из режима
   if (window.state.selectedRecordingIds.size === 0) {
     window.state.isSelectionMode = false;
     document.querySelectorAll(".selection-checkbox-container").forEach((el) => {
@@ -2162,7 +2010,6 @@ function showRecordingContextMenu(x, y, rid) {
   const isLoggedIn = !!localStorage.getItem("access_token");
   const isAdmin = localStorage.getItem("is_admin") === "true";
 
-  // Логика: если кликнули на невыделенный трек в обычном режиме -> сброс выделения
   if (!state.selectedRecordingIds.has(rid)) {
     if (!state.isSelectionMode) {
       state.selectedRecordingIds.clear();
@@ -2174,10 +2021,8 @@ function showRecordingContextMenu(x, y, rid) {
   const count = state.selectedRecordingIds.size;
   m.dataset.recordingId = rid;
 
-  // === ГЕНЕРАЦИЯ МЕНЮ ===
   let html = `<div class="py-1 min-w-[220px] bg-white rounded-lg shadow-xl border border-gray-100 font-medium text-sm text-gray-700">`;
 
-  // 1. ПУНКТЫ ДЛЯ ВСЕХ (ГОСТИ +)
   html += `
     <li data-action="play-next" class="px-4 py-3 hover:bg-cyan-50 cursor-pointer flex gap-3 items-center border-b border-gray-50">
         <i data-lucide="corner-down-right" class="w-4 h-4 text-cyan-600"></i> Играть следующим
@@ -2187,11 +2032,9 @@ function showRecordingContextMenu(x, y, rid) {
     </li>
   `;
 
-  // 2. ПУНКТЫ ДЛЯ ЗАРЕГИСТРИРОВАННЫХ
   if (isLoggedIn) {
     html += `<div class="border-t border-gray-100 my-1"></div>`;
 
-    // Список плейлистов
     let playlistsItems = "";
     if (state.playlists.length) {
       state.playlists.forEach((p) => {
@@ -2209,8 +2052,7 @@ function showRecordingContextMenu(x, y, rid) {
           <li class="relative group px-4 py-3 hover:bg-cyan-50 cursor-pointer flex justify-between items-center">
               <div class="flex gap-3 items-center"><i data-lucide="plus-square" class="w-4 h-4 text-blue-600"></i> В плейлист</div>
               <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
-              
-              <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: убрали ml-2 и добавили pl-3, чтобы создать "мост" для курсора -->
+
               <ul class="absolute left-full top-0 mt-[-4px] w-48 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block z-50 py-2 pl-3 -ml-1">
                   ${playlistsItems}
               </ul>
@@ -2218,10 +2060,8 @@ function showRecordingContextMenu(x, y, rid) {
       `;
   }
 
-  // 3. ПУНКТЫ ДЛЯ АДМИНОВ
   if (isAdmin) {
     html += `<div class="border-t border-gray-100 my-1"></div>`;
-    // Редактировать можно только 1 трек за раз
     if (count === 1) {
       html += `
            <li data-action="edit-recording" class="px-4 py-3 hover:bg-gray-50 cursor-pointer flex gap-3 items-center">
@@ -2248,24 +2088,19 @@ function showRecordingContextMenu(x, y, rid) {
 async function handleContextMenuAction(li) {
   const m = document.getElementById("context-menu");
 
-  // 1. Скрываем меню сразу
   ui.hideContextMenu(m);
 
   const act = li.dataset.action;
 
   const unselectItems = () => {
-    // 1. Проходимся по ID, которые были выделены (это источник правды)
     for (const id of state.selectedRecordingIds) {
-      // 2. Находим соответствующий элемент на странице
       const row = document.querySelector(
         `.recording-item[data-recording-id="${id}"]`
       );
       if (row) {
-        // 3. Убираем стили выделения
         row.classList.remove("bg-cyan-50", "border-cyan-200");
-        row.classList.add("border-gray-100"); // Возвращаем стандартную границу
+        row.classList.add("border-gray-100");
 
-        // 4. Снимаем галочку с чекбокса
         const checkbox = row.querySelector(
           `.recording-checkbox[data-id="${id}"]`
         );
@@ -2274,52 +2109,41 @@ async function handleContextMenuAction(li) {
         }
       }
     }
-    // 5. Очищаем сам массив ID
     state.selectedRecordingIds.clear();
-    // 6. Скрываем панель
     ui.updateSelectionBar(0);
   };
 
-  // Преобразуем ID записи и плейлиста в числа сразу
   const contextRid = parseInt(m.dataset.recordingId);
   const contextPid = parseInt(m.dataset.playlistId);
 
-  // Определяем, над какими записями производим действие.
   let targetIds = [];
 
-  // Если клик произошел по выделенной записи -> берем все выделенные
   if (state.selectedRecordingIds.has(contextRid)) {
-    // ВАЖНО: Array.from создает массив, map(Number) превращает строки в числа
     targetIds = Array.from(state.selectedRecordingIds).map((id) =>
       parseInt(id)
     );
   } else {
-    // Иначе берем только ту, по которой кликнули
     targetIds = [contextRid];
   }
 
-  // Получаем объекты записей (для плеера)
   const targetRecordings = state.currentViewRecordings.filter((r) =>
     targetIds.includes(r.id)
   );
 
-  // --- ДЕЙСТВИЯ ---
-
   if (act === "play-next") {
     player.playNextInQueue(targetRecordings);
-    unselectItems(); // <-- ИСПРАВЛЕНИЕ
+    unselectItems();
   }
 
   if (act === "add-to-queue") {
     player.addToQueue(targetRecordings);
-    unselectItems(); // <-- ИСПРАВЛЕНИЕ
+    unselectItems();
   }
 
   if (act === "edit-recording") {
     if (targetIds.length > 1) {
       ui.showNotification("Редактируйте записи по одной", "info");
     } else {
-      // Для редактирования берем объект
       const rec = state.currentViewRecordings.find((r) => r.id === contextRid);
       if (rec) {
         const recordingType =
@@ -2335,12 +2159,10 @@ async function handleContextMenuAction(li) {
     }
   }
 
-  // ДОБАВИТЬ В ПЛЕЙЛИСТ
   if (act === "add-to-playlist") {
-    const targetPid = parseInt(li.dataset.pid); // ID целевого плейлиста
+    const targetPid = parseInt(li.dataset.pid);
     let successCount = 0;
 
-    // Цикл добавления
     for (const rid of targetIds) {
       try {
         await apiRequest(
@@ -2360,7 +2182,6 @@ async function handleContextMenuAction(li) {
     unselectItems();
   }
 
-  // УБРАТЬ ИЗ ТЕКУЩЕГО ПЛЕЙЛИСТА
   if (act === "remove-from-playlist") {
     if (!contextPid) {
       ui.showNotification("Ошибка ID плейлиста", "error");
@@ -2368,7 +2189,6 @@ async function handleContextMenuAction(li) {
     }
 
     try {
-      // Отправляем массив чисел
       await apiRequest(
         `/api/playlists/${contextPid}/recordings-bulk-delete`,
         "POST",
@@ -2379,14 +2199,12 @@ async function handleContextMenuAction(li) {
 
       ui.showNotification(`Удалено треков: ${targetIds.length}`, "success");
 
-      // Обновляем локальный список (фильтруем удаленные)
       state.currentViewRecordings = state.currentViewRecordings.filter(
         (r) => !targetIds.includes(r.id)
       );
 
       unselectItems();
 
-      // Перерисовываем список
       ui.renderRecordingList(
         state.currentViewRecordings,
         document.getElementById("view-title-container").textContent,
@@ -2399,7 +2217,6 @@ async function handleContextMenuAction(li) {
     }
   }
 
-  // УДАЛИТЬ ФАЙЛ (Навсегда)
   if (act === "delete-recording") {
     const count = targetIds.length;
     const title = count === 1 ? "Удалить запись?" : `Удалить ${count} записей?`;
@@ -2458,7 +2275,6 @@ async function toggleFavorite(id, btn) {
 async function loadMoreComposers() {
   const { skip, limit } = state.composersPagination;
 
-  // Показываем спиннер на кнопке (опционально, для красоты)
   const btn = document.getElementById("load-more-composers-btn");
   if (btn) {
     btn.innerHTML = `<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div> Загрузка...`;
@@ -2470,16 +2286,12 @@ async function loadMoreComposers() {
       `/api/recordings/composers?skip=${skip}&limit=${limit}`
     );
 
-    // Если вернулось меньше, чем лимит, значит это конец списка
     if (newComposers.length < limit) {
       state.composersPagination.hasMore = false;
     }
 
-    // Увеличиваем отступ для следующего раза
     state.composersPagination.skip += limit;
 
-    // Рендерим (isAppend = true, если skip > limit, т.е. это не первая загрузка)
-    // Но проще проверять по skip: если skip == limit (после первого сложения), значит это была первая загрузка
     const isAppend = skip > 0;
     ui.renderComposerList(
       newComposers,
@@ -2488,7 +2300,6 @@ async function loadMoreComposers() {
       state.displayLanguage
     );
 
-    // Возвращаем кнопку в норму (renderComposerList пересоздает/скрывает её, но на всякий случай)
     if (btn && state.composersPagination.hasMore) {
       btn.innerHTML = `<span>Показать ещё</span> <i data-lucide="chevron-down" class="w-4 h-4"></i>`;
       btn.disabled = false;
@@ -2499,13 +2310,12 @@ async function loadMoreComposers() {
     ui.showNotification("Ошибка загрузки: " + e.message, "error");
   }
 }
-// Функция для загрузки библиотеки с учетом фильтров
+
 async function loadLibraryWithFilters(reset = false) {
   if (reset) {
     state.libraryFilters.page = 1;
     state.currentViewRecordings = [];
     state.libraryFilters.hasMore = true;
-    // Очищаем список визуально
     const list = document.getElementById("library-results-container");
     if (list)
       list.innerHTML =
@@ -2516,7 +2326,6 @@ async function loadLibraryWithFilters(reset = false) {
     state.libraryFilters;
   const skip = (page - 1) * limit;
 
-  // Строим URL
   let url = `/api/recordings/?skip=${skip}&limit=${limit}`;
   if (mediaType) url += `&media_type=${mediaType}`;
   if (composerId) url += `&composer_id=${composerId}`;
@@ -2540,15 +2349,13 @@ async function loadLibraryWithFilters(reset = false) {
       ];
     }
 
-    // Рендерим результат
     ui.renderLibraryContent(
       state.currentViewRecordings,
-      mediaType === "audio" ? "list" : "grid", // Аудио списком, Видео сеткой
+      mediaType === "audio" ? "list" : "grid",
       state.favoriteRecordingIds,
       reset
     );
 
-    // Обновляем кнопку "Показать еще"
     ui.updateLoadMoreButton(state.libraryFilters.hasMore);
   } catch (e) {
     console.error(e);
@@ -2556,20 +2363,15 @@ async function loadLibraryWithFilters(reset = false) {
   }
 }
 
-// Экспортируем функцию в window, чтобы вызывать из ui.js (onchange)
 window.applyLibraryFilter = (key, value) => {
   state.libraryFilters[key] = value;
-  loadLibraryWithFilters(true); // true = сброс и новая загрузка
+  loadLibraryWithFilters(true);
 };
 
 window.loadMoreLibrary = () => {
   state.libraryFilters.page += 1;
-  loadLibraryWithFilters(false); // false = дозагрузка
+  loadLibraryWithFilters(false);
 };
-
-// main.js
-
-// === ЛОГИКА YOUTUBE ПЛЕЕРА ===
 
 window.playYouTubeVideo = (videoId) => {
   if (!videoId) return;
@@ -2577,7 +2379,6 @@ window.playYouTubeVideo = (videoId) => {
   const modal = document.getElementById("video-player-modal");
   const container = document.getElementById("youtube-player-container");
 
-  // Встраиваем iframe с видео
   container.innerHTML = `
         <iframe class="w-full h-full"
                 src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0"
@@ -2586,27 +2387,24 @@ window.playYouTubeVideo = (videoId) => {
                 allowfullscreen>
         </iframe>`;
 
-  // Показываем модалку с анимацией
   modal.classList.remove("hidden");
   setTimeout(() => {
     modal.classList.remove("opacity-0");
     document.getElementById("video-modal-content").classList.remove("scale-95");
-  }, 10); // Небольшая задержка для CSS-анимации
+  }, 10);
 };
 
 function closeYouTubeVideo() {
   const modal = document.getElementById("video-player-modal");
   const container = document.getElementById("youtube-player-container");
 
-  // Прячем модалку
   modal.classList.add("opacity-0");
   document.getElementById("video-modal-content").classList.add("scale-95");
 
   setTimeout(() => {
     modal.classList.add("hidden");
-    // Очищаем iframe, чтобы остановить воспроизведение
     container.innerHTML = "";
-  }, 200); // Ждем завершения анимации
+  }, 200);
 }
 function setupDuplicateCheckers() {
   let debounceTimer;

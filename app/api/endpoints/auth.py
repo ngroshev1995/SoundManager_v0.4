@@ -43,10 +43,9 @@ def login_for_access_token(
 
     is_admin_flag = True if user.is_admin else False
 
-    # Возвращаем расширенные данные
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "is_admin": is_admin_flag,    # <-- Берем из БД
+        "is_admin": is_admin_flag,
         "username": user.email.split("@")[0]
     }

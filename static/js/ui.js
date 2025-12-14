@@ -1,5 +1,3 @@
-// static/js/ui.js
-
 const licenses = {
   "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/deed.ru",
   "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/deed.ru",
@@ -15,7 +13,6 @@ let selectedRecordingFile = null;
 let quillLoadingPromise = null;
 
 async function loadAndInitQuill(selectorId, content) {
-  // Если Quill еще не загружен, начинаем его загрузку
   if (!window.Quill && !quillLoadingPromise) {
     quillLoadingPromise = new Promise((resolve) => {
       const check = () => (window.Quill ? resolve() : setTimeout(check, 50));
@@ -23,7 +20,6 @@ async function loadAndInitQuill(selectorId, content) {
     });
   }
 
-  // Ждем завершения загрузки
   if (quillLoadingPromise) {
     await quillLoadingPromise;
   }
@@ -62,14 +58,11 @@ const GENRE_OPTIONS = [
   { value: "Cantata", label: "Кантата" },
 ];
 
-// 2. АВТОМАТИЧЕСКИЙ СЛОВАРЬ ПЕРЕВОДОВ
-// (Код сам создаст объект { "Symphony": "Симфония", ... } на основе списка выше)
 const GENRE_TRANSLATIONS = GENRE_OPTIONS.reduce((acc, item) => {
   acc[item.value] = item.label;
   return acc;
 }, {});
 
-// --- РАСШИРЕНИЕ QUILL (Для аудио) ---
 if (window.Quill) {
   const BlockEmbed = Quill.import("blots/block/embed");
 
@@ -79,9 +72,6 @@ if (window.Quill) {
       node.setAttribute("src", value);
       node.setAttribute("controls", "");
       node.setAttribute("preload", "metadata");
-
-      // Оставляем только классы Tailwind для отступов и ширины.
-      // Никаких жестких style="...", чтобы не мешать Plyr.js
       node.setAttribute("class", "w-full my-6 block");
 
       return node;
@@ -99,7 +89,6 @@ if (window.Quill) {
 }
 
 function isAdmin() {
-  // Ты не можешь быть админом, если ты не залогинен
   return isLoggedIn() && localStorage.getItem("is_admin") === "true";
 }
 
@@ -114,12 +103,11 @@ function slugify(text) {
     text
       .toString()
       .toLowerCase()
-      .replace(/\s+/g, "-") // Заменяем пробелы на -
-      .replace(/[^\w\-а-яё]+/g, "") // Удаляем все спецсимволы (кроме букв и -)
-      .replace(/--+/g, "-") // Заменяем множественные - на один
-      .replace(/^-+/, "") // Удаляем - в начале
-      .replace(/-+$/, "") // Удаляем - в конце
-      // Простая транслитерация
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-а-яё]+/g, "")
+      .replace(/--+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "")
       .replace(/а/g, "a")
       .replace(/б/g, "b")
       .replace(/в/g, "v")
@@ -159,7 +147,7 @@ function slugify(text) {
 function getGenreKeyByLabel(label) {
   if (!label) return null;
   const option = GENRE_OPTIONS.find((g) => g.label === label);
-  return option ? option.value : label; // Если нашли - возвращаем ключ (Symphony), если нет - то, что ввел юзер (Custom)
+  return option ? option.value : label;
 }
 
 function getYoutubeIcon(url) {
@@ -175,29 +163,24 @@ function getYoutubeIcon(url) {
 
 export function updateHeaderAuth() {
   const container = document.getElementById("header-auth-block");
-  // Десктопные ссылки
   const plLink = document.getElementById("nav-playlists-link");
   const favLink = document.getElementById("nav-favorites-link");
-  // Мобильные ссылки
   const mobilePlLink = document.getElementById("mobile-nav-playlists-link");
   const mobileFavLink = document.getElementById("mobile-nav-favorites-link");
 
   if (!container) return;
 
   if (!isLoggedIn()) {
-    // ГОСТЬ
     container.innerHTML = `
             <button id="show-login-modal-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-bold">
                 Войти
             </button>
         `;
-    // Скрываем личные разделы везде
     if (plLink) plLink.classList.add("hidden");
     if (favLink) favLink.classList.add("hidden");
     if (mobilePlLink) mobilePlLink.classList.add("hidden");
     if (mobileFavLink) mobileFavLink.classList.add("hidden");
   } else {
-    // ПОЛЬЗОВАТЕЛЬ
     const username =
       localStorage.getItem("user_email")?.split("@")[0] || "User";
     container.innerHTML = `
@@ -206,14 +189,12 @@ export function updateHeaderAuth() {
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
         `;
-    // Показываем личные разделы везде
     if (plLink) plLink.classList.remove("hidden");
     if (favLink) favLink.classList.remove("hidden");
     if (mobilePlLink) mobilePlLink.classList.remove("hidden");
     if (mobileFavLink) mobileFavLink.classList.remove("hidden");
   }
 
-  // Перерисовываем иконки в шапке
   if (window.lucide) lucide.createIcons();
 }
 
@@ -223,12 +204,11 @@ function getLocalizedText(entity, field, lang) {
   const originalField =
     field === "name" ? "original_name" : `${field}_original`;
 
-  // Приоритет: Русский -> Английский -> Оригинал
   if (lang === "ru" && entity[ruField]) return entity[ruField];
   if (entity[field]) return entity[field];
   if (entity[originalField]) return entity[originalField];
 
-  return entity[ruField] || ""; // Fallback
+  return entity[ruField] || "";
 }
 
 function getElements() {
@@ -262,7 +242,6 @@ export function showMainApp() {
   const authView = document.getElementById("auth-view");
   const mainView = document.getElementById("main-view");
 
-  // ВАЖНО: Убираем инлайн-стиль display, который ставит showAuthView
   authView.style.display = "none";
   authView.classList.add("hidden");
 
@@ -298,15 +277,12 @@ export function renderDashboard(data, lang = "ru") {
             class="w-full h-full object-cover transition-transform duration-[20000ms] ease-linear transform group-hover:scale-105"
           >
             <source src="/static/video/hero.mp4" type="video/mp4">
-            <!-- Если видео не поддерживается браузером, покажется картинка (poster) -->
           </video>
 
-          <!-- Затемняющий градиент (ОБЯЗАТЕЛЬНО ОСТАВИТЬ, иначе текст не будет читаться) -->
           <div class="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-slate-900/40"></div>
         </div>
 
         <div class="max-w-7xl mx-auto px-6 py-24 relative z-10">
-          <!-- ... (весь контент заголовка и поиска остается без изменений) ... -->
           <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight tracking-tight drop-shadow-lg">
             Ваша персональная<br /><span class="text-cyan-400">Филармония</span>
           </h1>
@@ -339,7 +315,6 @@ export function renderDashboard(data, lang = "ru") {
       </div>
     `;
 
-  // Stats Strip
   const statsHTML = `
        <div class="max-w-7xl mx-auto px-6 -mt-10 relative z-20 mb-12">
            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -377,7 +352,6 @@ export function renderDashboard(data, lang = "ru") {
     const cards = items
       .map((item) => {
         const cover = item.cover_art_url || "/static/img/placeholder.png";
-        // ССЫЛКА ПО ID
         return `
     <a href="/works/${item.slug || item.id}" data-navigo
        class="bg-white rounded-xl p-4 shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:border-cyan-200 group flex flex-col h-full">
@@ -501,7 +475,7 @@ export function renderRecordingList(
             isSelected ? "bg-cyan-50" : "border-b border-gray-100"
           } bg-white last:border-0 transition-colors cursor-pointer relative select-none"
                data-recording-id="${r.id}" data-index="${i}">
-  
+
                <!-- 1. Чекбокс -->
                <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
                  window.state?.isSelectionMode ? "flex" : "hidden md:flex"
@@ -511,14 +485,14 @@ export function renderRecordingList(
                  }" ${isSelected ? "checked" : ""}>
                </div>
                ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
-  
+
                <!-- 2. Play -->
                <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
                  r.id
                }">
                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                </div>
-  
+
                <!-- 3. Обложка -->
                 <div class="flex-shrink-0 mx-2 md:mx-4">
               <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy" alt="Обложка">
@@ -584,7 +558,7 @@ export function renderRecordingList(
       </div>`;
   }
 
-  // 2. БЛОК ВИДЕО (Если есть)
+  // 2. БЛОК ВИДЕО
   if (videoRecordings.length > 0) {
     const videoRows = videoRecordings
       .map((r) => {
@@ -650,7 +624,7 @@ export function renderRecordingList(
   if (window.lucide) window.lucide.createIcons();
 }
 
-// --- 3. RENDER COMPOSERS LIST (С ПОДГРУЗКОЙ) ---
+// --- 3. RENDER COMPOSERS LIST ---
 export function renderComposerList(
   composers,
   isAppend = false,
@@ -659,7 +633,6 @@ export function renderComposerList(
 ) {
   const { listEl } = getElements();
 
-  // Если это первая загрузка (не добавление), рисуем каркас страницы
   if (!isAppend) {
     const viewTitle = document.getElementById("view-title-container");
     viewTitle.classList.remove("hidden");
@@ -680,7 +653,6 @@ export function renderComposerList(
             </div>
         `;
 
-    // Рисуем контейнер для сетки и контейнер для кнопки
     listEl.innerHTML = `
         <div class="max-w-7xl mx-auto px-6 pb-10">
             <div id="composers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -696,7 +668,6 @@ export function renderComposerList(
       `;
   }
 
-  // Генерируем HTML карточек
   const cardsHtml = composers
     .map((c) => {
       const years = formatYearRange(c.year_born, c.year_died);
@@ -727,14 +698,11 @@ export function renderComposerList(
     })
     .join("");
 
-  // Вставляем карточки в сетку
   const grid = document.getElementById("composers-grid");
   if (grid) {
-    // Вставляем HTML в конец контейнера (не стирая старое)
     grid.insertAdjacentHTML("beforeend", cardsHtml);
   }
 
-  // Управляем кнопкой "Показать еще"
   const btnContainer = document.getElementById("composers-load-more-container");
   if (btnContainer) {
     if (hasMore) {
@@ -755,12 +723,10 @@ export function renderWorkList(works, composer, lang = "ru") {
   const nameRu = composer.name_ru;
   const nameOrig = composer.original_name;
 
-  // Оригинальное имя статично
   const originalNameHtml = nameOrig
     ? `<div class="text-gray-400 text-lg font-medium mt-1">${nameOrig}</div>`
     : "";
 
-  // Панель кнопок
   const actionsBar = isAdmin()
     ? `
       <div class="mt-6 flex flex-wrap gap-3">
@@ -777,21 +743,17 @@ export function renderWorkList(works, composer, lang = "ru") {
   `
     : "";
 
-  // 2. ФОРМИРУЕМ ШАПКУ (Apple Music Style)
+  // 2. ФОРМИРУЕМ ШАПКУ
   const bgImage = composer.portrait_url || "/static/img/placeholder.png";
 
   const header = `
         <div class="relative overflow-hidden rounded-3xl shadow-xl border border-gray-100 mb-8 group">
-            <!-- === ФОНОВЫЙ СЛОЙ (Backdrop) === -->
             <div class="absolute inset-0 z-0 pointer-events-none">
-                <!-- Размытая картинка -->
                 <div class="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-125 transition-transform duration-[2000ms] group-hover:scale-110"
                      style="background-image: url('${bgImage}')"></div>
-                <!-- Градиент для читаемости текста (Белый слева -> Прозрачный справа) -->
                 <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-white/20"></div>
             </div>
 
-            <!-- === КОНТЕНТ (Поверх фона) === -->
             <div class="relative z-10 p-8 flex flex-col md:flex-row gap-8 items-start">
             <div class="flex-shrink-0">
                 <img src="${bgImage}"
@@ -823,7 +785,7 @@ export function renderWorkList(works, composer, lang = "ru") {
         </div>
     `;
 
-  // БИОГРАФИЯ С ПРОВЕРКОЙ ПУСТОТЫ
+  // БИОГРАФИЯ
   let bioHtml = "";
   const hasBio =
     composer.notes && composer.notes.replace(/<[^>]*>/g, "").trim().length > 0;
@@ -844,7 +806,7 @@ export function renderWorkList(works, composer, lang = "ru") {
       </div>`;
   }
 
-  // 3. ФОРМИРУЕМ СПИСОК (С ГРУППИРОВКОЙ ПО ЖАНРАМ)
+  // 3. ФОРМИРУЕМ СПИСОК
   let content = "";
 
   if (!works || works.length === 0) {
@@ -853,17 +815,15 @@ export function renderWorkList(works, composer, lang = "ru") {
   } else {
     // --- ШАГ A: Группируем произведения ---
     const groups = {};
-    const uncategorizedKey = "OTHER"; // Ключ для "Без жанра"
+    const uncategorizedKey = "OTHER";
 
     works.forEach((w) => {
-      if (w.name === "Без сборника") return; // Пропускаем технические
+      if (w.name === "Без сборника") return;
 
       let key = w.genre || uncategorizedKey;
 
-      // Нормализация ключа (Symphony)
       if (key !== uncategorizedKey) {
         key = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
-        // Обратный поиск (на случай старых русских значений в базе)
         const entry = GENRE_OPTIONS.find(
           (opt) => opt.label === key || opt.value === key
         );
@@ -901,15 +861,12 @@ export function renderWorkList(works, composer, lang = "ru") {
     sortedKeys.forEach((genreKey) => {
       const groupWorks = groups[genreKey];
 
-      // Заголовок группы
       let groupTitle = "";
       if (genreKey === uncategorizedKey) {
         if (sortedKeys.length > 1) groupTitle = "Другие произведения";
       } else {
-        // 1. Пробуем найти точный перевод
         let translation = GENRE_TRANSLATIONS[genreKey];
 
-        // 2. Если нет, ищем без учета регистра среди ключей словаря
         if (!translation) {
           const lowerKey = genreKey.toLowerCase();
           const foundKey = Object.keys(GENRE_TRANSLATIONS).find(
@@ -923,7 +880,6 @@ export function renderWorkList(works, composer, lang = "ru") {
         groupTitle = translation || genreKey;
       }
 
-      // HTML карточек внутри группы
       const cardsHtml = groupWorks
         .map((w) => {
           const cover = w.cover_art_url || "/static/img/placeholder.png";
@@ -972,7 +928,6 @@ export function renderWorkList(works, composer, lang = "ru") {
         })
         .join("");
 
-      // Добавляем секцию в общий контент
       content += `
             <div class="mb-10 last:mb-0">
                 ${
@@ -1018,7 +973,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
   const nameRu = work.name_ru;
   const nameOrig = work.original_name;
 
-  // Каталог (с учетом флага "без номера")
   let catalogHtml = "";
   if (work.is_no_catalog) {
     catalogHtml = `<span class="text-gray-400 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-50 rounded-md border border-gray-100" title="Без номера по каталогу">б/н</span>`;
@@ -1052,7 +1006,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
   const composerLink = `/composers/${work.composer.slug || work.composer.id}`;
 
   // === 1. Проверяем, есть ли что играть ===
-  // Проходим по всем частям (compositions) и смотрим, есть ли у них хоть одна аудиозапись (duration > 0)
   const hasPlayableRecordings = work.compositions.some(
     (comp) => comp.recordings && comp.recordings.some((r) => r.duration > 0)
   );
@@ -1073,7 +1026,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
         ${
           isAdmin()
             ? `
-            <!-- НОВЫЕ КНОПКИ: Видео и Аудио раздельно -->
             <button id="add-work-video-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2 text-sm">
                 <i data-lucide="youtube" class="w-5 h-5"></i> <span>Видео</span>
             </button>
@@ -1081,7 +1033,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
                 <i data-lucide="upload-cloud" class="w-5 h-5"></i> <span>Аудио</span>
             </button>
             
-            <div class="w-px h-8 bg-gray-300 mx-1"></div> <!-- Разделитель -->
+            <div class="w-px h-8 bg-gray-300 mx-1"></div>
 
             <button id="add-composition-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
                 <i data-lucide="plus" class="w-4 h-4"></i> <span>Часть</span>
@@ -1175,14 +1127,11 @@ export async function renderCompositionGrid(work, lang = "ru") {
   // === 2. РАЗДЕЛЕНИЕ КОНТЕНТА ===
   const allComps = work.compositions || [];
 
-  // 1. Ищем спец-часть "Полное произведение" (№0)
   let fullWorkComp = allComps.find((c) => c.sort_order === 0);
 
-  // Флаг: нужно ли рисовать плеер (одночастное/целиком)
   let showPlayerBlock = false;
   let recs = [];
 
-  // Если спец-части нет, но есть ровно одна обычная часть - она кандидат на "одночастное"
   let candidateForSingle =
     !fullWorkComp && allComps.length === 1 ? allComps[0] : null;
 
@@ -1195,7 +1144,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
       );
       if (recs.length > 0) {
         showPlayerBlock = true;
-        // ИСПРАВЛЕНИЕ: Сохраняем ВСЕ записи, чтобы работало редактирование видео
         window.state.currentViewRecordings = recs;
       }
     } catch (e) {
@@ -1203,10 +1151,8 @@ export async function renderCompositionGrid(work, lang = "ru") {
     }
   }
 
-  // Флаг: действительно ли это одночастное произведение С ЗАПИСЯМИ?
   const hidePartsList = candidateForSingle && showPlayerBlock;
 
-  // Формируем список частей для отображения (убираем 0 и, если надо, единственную часть)
   const movementParts = hidePartsList
     ? []
     : allComps
@@ -1227,8 +1173,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
         .map((r, i) => {
           const isFav = window.state.favoriteRecordingIds.has(r.id);
           const isSelected = window.state.selectedRecordingIds.has(r.id);
-
-          // УБРАЛИ displayTitle, так как название уже есть в заголовке страницы
 
           return `
               <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 ${
@@ -1254,8 +1198,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
                   }">
                      <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                   </div>
-    
-                  <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: Только Исполнитель и Год -->
+
                   <div class="flex-1 min-w-0 ml-4">
                       <div class="font-bold text-gray-800 text-sm leading-tight break-words">
                          ${r.performers || "Исполнитель не указан"}
@@ -1313,8 +1256,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
              </div>`
             : "";
 
-          // УБРАЛИ displayTitle
-
           return `
           <div class="bg-white p-3 rounded-xl border border-gray-100 mb-3 shadow-sm hover:shadow-md transition-all">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1323,7 +1264,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
                       <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
                           <i data-lucide="youtube" class="w-5 h-5"></i>
                       </div>
-                      <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: Исполнитель жирным, год серым -->
                       <div class="min-w-0 flex-1">
                           <div class="font-bold text-gray-800 text-sm sm:text-lg leading-snug break-words">${
                             r.performers || "Исполнитель не указан"
@@ -1386,7 +1326,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
               )}</div>`
             : "";
 
-        // === НОВАЯ ЛОГИКА ИКОНОК ===
         let iconsHtml = "";
         if (c.has_audio) {
           iconsHtml += `<i data-lucide="disc" class="w-5 h-5 text-cyan-500" title="Есть аудиозаписи"></i>`;
@@ -1398,7 +1337,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
         const iconsContainer = iconsHtml
           ? `<div class="flex items-center gap-2 ml-4">${iconsHtml}</div>`
           : "";
-        // ============================
 
         const isUserAdmin = isAdmin();
         const draggableAttr = isUserAdmin ? 'draggable="true"' : "";
@@ -1413,24 +1351,24 @@ export async function renderCompositionGrid(work, lang = "ru") {
           }" data-navigo ${draggableAttr} data-comp-id="${c.id}"
              class="comp-sortable-item flex items-center p-3 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
 
-              <!-- 1. НОМЕР (Закрепляем ширину flex-shrink-0, чтобы не сжимался) -->
+              <!-- 1. НОМЕР -->
               <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3">
                   ${c.sort_order || "#"}
               </div>
 
-              <!-- 2. ТЕКСТ (flex-1 и min-w-0 заставляют блок занимать оставшееся место и переносить текст) -->
+              <!-- 2. ТЕКСТ -->
               <div class="flex-1 min-w-0 mr-2">
                   <div class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors break-words leading-tight">
                       ${getLocalizedText(c, "title", lang)}
                   </div>
                   
-                  <!-- Мета-информация (Тональность, Опус): flex-wrap разрешает перенос на новую строку -->
+                  <!-- Мета-информация (Тональность, Опус) -->
                   <div class="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
                       ${metaParts.join('<span class="text-gray-300">•</span>')}
                   </div>
               </div>
 
-              <!-- 3. ИКОНКИ (Справа, закрепляем flex-shrink-0) -->
+              <!-- 3. ИКОНКИ -->
               <div class="flex items-center flex-shrink-0 gap-2">
                   ${iconsContainer}
                   ${gripIcon}
@@ -1469,9 +1407,6 @@ export function renderCompositionDetailView(
   const titleOrig = composition.title_original;
   const work = composition.work;
 
-  // Если у части стоит "б/н" -> "б/н"
-  // Если у части есть номер -> номер
-  // Если у части ничего нет -> смотрим произведение (если там "б/н" -> "б/н", иначе номер)
   let effectiveCatalog = "";
   if (composition.is_no_catalog) {
     effectiveCatalog = "б/н";
@@ -1510,8 +1445,6 @@ export function renderCompositionDetailView(
 
   const workLink = `/works/${work.slug || work.id}`;
 
-  // --- HTML ШАПКИ (Apple Music Style) ---
-  // Берем обложку части или (если нет) произведения
   const bgImage =
     composition.cover_art_url ||
     work.cover_art_url ||
@@ -1555,7 +1488,6 @@ export function renderCompositionDetailView(
                           isAdmin()
                             ? `
                           <div class="mt-4">
-    <!-- Внутренний div сжимается по контенту (оформление здесь) -->
     <div class="inline-flex gap-2 bg-white/50 p-2 rounded-2xl backdrop-blur-sm border border-white/20 shadow-inner">
         <button id="delete-composition-btn" class="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm" title="Удалить часть">
             <i data-lucide="trash-2" class="w-5 h-5"></i>
@@ -1688,7 +1620,6 @@ export function renderCompositionDetailView(
 
           return `
            <div class="bg-white p-4 rounded-xl border border-gray-100 hover:border-red-200 hover:shadow-md transition-all mb-3 shadow-sm">
-                <!-- Адаптивный контейнер: Колонка на мобиле, Строка на ПК -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 
                     <!-- Левая часть: Иконка и Текст -->
@@ -1735,9 +1666,8 @@ export function renderCompositionDetailView(
   if (window.lucide) window.lucide.createIcons();
 }
 
-// --- STUBS & UTILS ---
+
 export function updatePlayerInfo(rec) {
-  // Определяем данные
   let title = "Выберите трек";
   let artist = "ClassicaLib";
   let cover = "/static/img/placeholder.png";
@@ -1762,7 +1692,6 @@ export function updatePlayerInfo(rec) {
       cover;
   }
 
-  // --- ОБНОВЛЕНИЕ МОБИЛЬНОЙ ВЕРСИИ (Бегущая строка) ---
   const mobTitleEl = document.getElementById("player-title-mobile");
   const mobArtistEl = document.getElementById("player-artist-mobile");
   const mobCover = document.getElementById("player-cover-art-mobile");
@@ -1775,15 +1704,12 @@ export function updatePlayerInfo(rec) {
     mobArtistEl.textContent = artist;
     mobCover.src = cover;
 
-    // Логика бегущей строки
     checkMarquee(document.getElementById("marquee-title-mobile"), mobTitleEl);
     checkMarquee(document.getElementById("marquee-artist-mobile"), mobArtistEl);
 
-    // Лайк
     renderLikeButton(mobFavContainer, recId);
   }
 
-  // --- ОБНОВЛЕНИЕ ДЕСКТОПНОЙ ВЕРСИИ (Статика) ---
   const deskTitleEl = document.getElementById("player-title-desktop");
   const deskArtistEl = document.getElementById("player-artist-desktop");
   const deskCover = document.getElementById("player-cover-art-desktop");
@@ -1793,7 +1719,7 @@ export function updatePlayerInfo(rec) {
 
   if (deskTitleEl) {
     deskTitleEl.textContent = title;
-    deskTitleEl.title = title; // Тултип при наведении
+    deskTitleEl.title = title;
     deskArtistEl.textContent = artist;
     deskArtistEl.title = artist;
     deskCover.src = cover;
@@ -1810,7 +1736,6 @@ export function updatePlayerInfo(rec) {
     return;
 
   if (rec) {
-    // Генерируем HTML для контента
     const licenseUrl = licenses[rec.license];
     const licenseHtml = licenseUrl
       ? `<a href="${licenseUrl}" target="_blank" class="text-cyan-400 hover:underline">${rec.license}</a>`
@@ -1887,7 +1812,6 @@ export function updatePlayerInfo(rec) {
 }
 
 export function updatePlayPauseIcon(isPlaying) {
-  // Массив суффиксов
   ["-mobile", "-desktop"].forEach((suffix) => {
     const playIcon = document.getElementById("play-icon" + suffix);
     const pauseIcon = document.getElementById("pause-icon" + suffix);
@@ -1940,7 +1864,6 @@ export function renderBreadcrumbs() {
 
   const view = window.state.view.current;
 
-  // 1. Если мы на главной (Дашборд), скрываем крошки
   if (view === "dashboard") {
     container.innerHTML = "";
     container.classList.add("hidden");
@@ -1949,10 +1872,8 @@ export function renderBreadcrumbs() {
 
   container.classList.remove("hidden");
 
-  // 2. Начальная точка (Корень)
   let crumbs = [{ label: "ClassicaLib", link: "/" }];
 
-  // 3. Строим путь в зависимости от страницы
   switch (view) {
     // --- КОМПОЗИТОРЫ ---
     case "composers":
@@ -1973,7 +1894,6 @@ export function renderBreadcrumbs() {
       break;
 
     case "work_detail":
-      // Путь: Композиторы -> Имя -> Произведение
       crumbs.push({ label: "Композиторы", link: "/composers" });
       const w = window.state.view.currentWork;
       if (w && w.composer) {
@@ -1987,7 +1907,6 @@ export function renderBreadcrumbs() {
       break;
 
     case "composition_detail":
-      // Путь: Композиторы -> Имя -> Произведение -> Часть
       crumbs.push({ label: "Композиторы", link: "/composers" });
       const c = window.state.view.currentComposition;
       if (c && c.work && c.work.composer) {
@@ -2030,8 +1949,6 @@ export function renderBreadcrumbs() {
       break;
     case "playlist":
       crumbs.push({ label: "Мои плейлисты", link: "/playlists" });
-      // Найти имя плейлиста сложнее, так как в state.view.playlistId только ID.
-      // Мы берем имя из заголовка страницы (хак, но работает без лишних запросов)
       const plTitle = document.querySelector("#view-title-container h2");
       const plName = plTitle
         ? plTitle.textContent.replace("Список", "").trim()
@@ -2053,18 +1970,15 @@ export function renderBreadcrumbs() {
     // --- БЛОГ (СПИСОК) ---
     case "blog_list":
       if (window.state.view.blogTagFilter) {
-        // Если выбран тег: Главная -> Блог -> Тег
         crumbs.push({ label: "Блог", link: "/blog" });
         crumbs.push({ label: `#${window.state.view.blogTagFilter}` });
       } else {
-        // Просто список: Главная -> Блог
         crumbs.push({ label: "Блог" });
       }
       break;
 
     // --- БЛОГ (СТАТЬЯ) ---
     case "blog_post":
-      // Путь: Главная -> Блог -> Название статьи
       crumbs.push({ label: "Блог", link: "/blog" });
       if (window.state.view.currentBlogPost) {
         crumbs.push({ label: window.state.view.currentBlogPost.title });
@@ -2076,15 +1990,9 @@ export function renderBreadcrumbs() {
       break;
   }
 
-  // 4. Генерируем HTML
   const html = crumbs
     .map((crumb, index) => {
       const isLast = index === crumbs.length - 1;
-
-      // СТИЛИ:
-      // Никаких truncate (не обрезаем)
-      // Никаких whitespace-nowrap (разрешаем перенос внутри текста)
-      // break-words (переносим длинные слова, если они не влезают)
       const textStyle = "text-sm font-medium leading-snug break-words";
 
       if (isLast) {
@@ -2100,18 +2008,13 @@ export function renderBreadcrumbs() {
     })
     .join("");
 
-  // КОНТЕЙНЕР:
-  // flex-wrap: элементы будут переноситься на новую строку, если не влезают в ширину.
-  // w-full: контейнер не шире экрана.
   container.innerHTML = `<div class="flex flex-wrap items-center gap-x-2 gap-y-1 w-full">${html}</div>`;
 
   if (window.lucide) window.lucide.createIcons();
 }
 
 export function setUserGreeting(email) {
-  // Берем имя до знака @
   const username = email.split("@")[0];
-  // Формируем красивое приветствие
   document.getElementById(
     "user-greeting"
   ).textContent = `Здравствуйте, ${username}! 👋`;
@@ -2122,7 +2025,6 @@ export function updateSelectedRecordingFile(f) {
     : "Файл не выбран";
 }
 
-// MODALS OPEN
 export async function showAddComposerModal() {
   const modal = document.getElementById("add-composer-modal");
   modal.classList.remove("hidden");
@@ -2131,7 +2033,6 @@ export async function showAddComposerModal() {
     .querySelectorAll("#add-composer-modal input")
     .forEach((i) => (i.value = ""));
 
-  // Используем новую асинхронную функцию
   await loadAndInitQuill("#add-composer-bio", "");
 
   const closeBtn = modal.querySelector(".close-button");
@@ -2146,28 +2047,23 @@ export async function showAddWorkModal() {
   const modal = document.getElementById("add-work-modal");
   modal.classList.remove("hidden");
 
-  // 1. Очистка всех текстовых полей
   document
     .querySelectorAll("#add-work-modal input")
     .forEach((i) => (i.value = ""));
 
-  // 2. === ИСПРАВЛЕНИЕ: СБРОС ЧЕКБОКСА Б/Н ===
   const noCatalogCheck = document.getElementById("add-work-no-catalog");
   const catalogInput = document.getElementById("add-work-catalog");
 
   if (noCatalogCheck) {
-    noCatalogCheck.checked = false; // Снимаем галочку
+    noCatalogCheck.checked = false;
   }
   if (catalogInput) {
-    catalogInput.disabled = false; // Разблокируем поле ввода
+    catalogInput.disabled = false;
   }
-  // =======================================
 
-  // 3. Очищаем поле жанра
   const genreInput = document.getElementById("add-work-genre");
   if (genreInput) genreInput.value = "";
 
-  // 4. Заполнение списка жанров
   const datalist = document.getElementById("genre-options");
   if (datalist) {
     datalist.innerHTML = "";
@@ -2178,10 +2074,8 @@ export async function showAddWorkModal() {
     });
   }
 
-  // 5. +++ ИЗМЕНЕНИЕ: Динамическая загрузка и инициализация Quill +++
   await loadAndInitQuill("#add-work-notes", "");
 
-  // 6. Закрытие
   const closeBtn = modal.querySelector(".close-button");
   const newClose = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newClose, closeBtn);
@@ -2195,30 +2089,23 @@ export function showAddCompositionModal() {
   const modal = document.getElementById("add-composition-modal");
   modal.classList.remove("hidden");
 
-  // 1. Сбрасываем все инпуты
   modal.querySelectorAll("input").forEach((i) => (i.value = ""));
 
   const currentWork = window.state?.view?.currentWork;
-
-  // 2. === ЛОГИКА НАСЛЕДОВАНИЯ Б/Н ===
   const noCatalogCheck = document.getElementById("add-composition-no-catalog");
   const catalogInput = document.getElementById("add-composition-catalog");
 
   if (noCatalogCheck && catalogInput) {
     if (currentWork && currentWork.is_no_catalog) {
-      // Если у родителя "б/н", ставим галочку и блокируем поле
       noCatalogCheck.checked = true;
       catalogInput.disabled = true;
       catalogInput.value = "";
     } else {
-      // Иначе сбрасываем в дефолт
       noCatalogCheck.checked = false;
       catalogInput.disabled = false;
     }
   }
-  // ==================================
 
-  // 3. Вычисляем следующий порядковый номер
   let nextOrder = 1;
 
   if (
@@ -2236,11 +2123,9 @@ export function showAddCompositionModal() {
 }
 
 export function showAddAudioModal(id) {
-  // Переименована
   document.getElementById("add-recording-composition-id").value = id;
   const modal = document.getElementById("add-audio-modal");
   modal.classList.remove("hidden");
-  // Сбрасываем все поля
   modal
     .querySelectorAll("input:not([type=hidden])")
     .forEach((i) => (i.value = ""));
@@ -2250,8 +2135,6 @@ export function showAddAudioModal(id) {
 }
 
 export function showAddVideoModal(id) {
-  // Новая функция
-  // Мы не используем hidden input здесь, так как ID берется из state в main.js
   const modal = document.getElementById("add-video-modal");
   modal.classList.remove("hidden");
   modal.querySelectorAll("input").forEach((i) => (i.value = ""));
@@ -2269,11 +2152,9 @@ export async function showEditEntityModal(type, data, onSave) {
     "px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-cyan-200 transition-all";
   let confirmBtnText = "Сохранить";
 
-  // Сброс кнопки
   const newBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
 
-  // Настройка закрытия
   modal.querySelectorAll(".close-button").forEach((btn) => {
     const newClose = btn.cloneNode(true);
     btn.parentNode.replaceChild(newClose, btn);
@@ -2323,7 +2204,7 @@ export async function showEditEntityModal(type, data, onSave) {
             </div>
         </div>
 
-        <!-- ГЕОГРАФИЯ (НОВЫЙ БЛОК) -->
+        <!-- ГЕОГРАФИЯ -->
         <div class="mt-4 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Место рождения</label>
             <input id="edit-place" class="w-full border border-gray-300 p-2 rounded-lg mb-2" value="${
@@ -2352,7 +2233,7 @@ export async function showEditEntityModal(type, data, onSave) {
         <!-- Биография (Quill) -->
         <div>
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Биография</label>
-            <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+            <div>
                 <div id="edit-notes" class="h-64"></div>
             </div>
         </div>
@@ -2360,10 +2241,7 @@ export async function showEditEntityModal(type, data, onSave) {
   } else if (type === "work") {
     modalTitle = "Редактировать произведение";
 
-    // Конвертация жанра для отображения
     const displayGenre = GENRE_TRANSLATIONS[data.genre] || data.genre;
-
-    // Опции для datalist
     const genreOptionsHtml = GENRE_OPTIONS.map(
       (g) => `<option value="${g.label}"></option>`
     ).join("");
@@ -2396,7 +2274,7 @@ export async function showEditEntityModal(type, data, onSave) {
                 }">
             </div>
 
-            <!-- КАТАЛОГ (Один раз, внутри сетки) -->
+            <!-- КАТАЛОГ -->
             <div>
                 <div class="flex justify-between items-end mb-1">
                     <label class="block text-xs font-bold text-gray-500 uppercase">Каталог (Op.)</label>
@@ -2415,7 +2293,7 @@ export async function showEditEntityModal(type, data, onSave) {
     }>
             </div>
 
-            <!-- ЖАНР (Input + Datalist) -->
+            <!-- ЖАНР -->
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Жанр</label>
                 <input type="text" id="edit-work-genre" list="edit-genre-options"
@@ -2448,7 +2326,7 @@ export async function showEditEntityModal(type, data, onSave) {
 
         <!-- Quill Container -->
         <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">История и факты</label>
-        <div class="bg-white rounded-lg border border-gray-300 overflow-hidden">
+        <div>
             <div id="edit-work-notes" class="h-64"></div>
         </div></div>
       `;
@@ -2575,7 +2453,6 @@ export async function showEditEntityModal(type, data, onSave) {
   // --- ИНИЦИАЛИЗАЦИЯ QUILL ---
   if (type === "composer" || type === "work") {
     const selectorId = type === "work" ? "#edit-work-notes" : "#edit-notes";
-    // +++ ИЗМЕНЕНИЕ: Используем новую асинхронную функцию +++
     await loadAndInitQuill(selectorId, data.notes);
   }
 
@@ -2614,7 +2491,6 @@ export async function showEditEntityModal(type, data, onSave) {
           ? window.quillEditor.root.innerHTML
           : "";
 
-        // Конвертация жанра
         const genreInputValue =
           document.getElementById("edit-work-genre").value;
         const genreKey = getGenreKeyByLabel(genreInputValue);
@@ -2683,10 +2559,8 @@ export async function showEditEntityModal(type, data, onSave) {
         payload = { name: document.getElementById("edit-playlist-name").value };
       }
 
-      // 1. Отправка данных
       await onSave(payload);
 
-      // 2. Отправка файла (если выбран)
       const fileInput = document.getElementById("edit-cover-file");
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
@@ -2716,7 +2590,6 @@ export async function showEditEntityModal(type, data, onSave) {
     } catch (e) {
       window.showNotification("Ошибка: " + e.message, "error");
     } finally {
-      // А блок finally ВСЕГДА возвращает кнопку в исходное состояние
       newBtn.disabled = false;
       newBtn.textContent = originalText;
     }
@@ -2734,13 +2607,12 @@ export function showDeleteModal({
   const modal = document.getElementById("delete-modal");
   if (!modal) return;
 
-  // 1. Клонируем кнопку, чтобы сбросить старые слушатели
   const oldBtn = document.getElementById("confirm-delete-btn");
   const btn = oldBtn.cloneNode(true);
   oldBtn.parentNode.replaceChild(btn, oldBtn);
 
-  btn.textContent = "Удалить навсегда"; // Возвращаем исходный текст
-  btn.classList.remove("opacity-75", "cursor-wait"); // Убираем крутящийся курсор
+  btn.textContent = "Удалить навсегда";
+  btn.classList.remove("opacity-75", "cursor-wait");
   btn.disabled = false;
 
   document.getElementById("delete-modal-title").textContent = title;
@@ -2749,7 +2621,6 @@ export function showDeleteModal({
   const input = document.getElementById("delete-verification-input");
   const cont = document.getElementById("delete-verification-container");
 
-  // Настройка инпута
   if (verificationString) {
     cont.classList.remove("hidden");
     document.getElementById("delete-verification-target").textContent =
@@ -2758,7 +2629,6 @@ export function showDeleteModal({
     btn.disabled = true;
     btn.classList.add("opacity-50", "cursor-not-allowed");
 
-    // Также клонируем инпут, чтобы сбросить старые oninput
     const newInput = input.cloneNode(true);
     input.parentNode.replaceChild(newInput, input);
 
@@ -2774,29 +2644,23 @@ export function showDeleteModal({
     btn.classList.remove("opacity-50", "cursor-not-allowed");
   }
 
-  // 2. Вешаем обработчик
   btn.onclick = async (e) => {
     e.preventDefault();
 
-    // Блокируем интерфейс
     const originalText = btn.textContent;
     btn.textContent = "Удаление...";
     btn.disabled = true;
     btn.classList.add("opacity-75", "cursor-wait");
 
     try {
-      // Вызываем функцию подтверждения (API запрос)
       await onConfirm();
-      // При успехе main.js сам закроет модалку
     } catch (err) {
       console.error("Delete failed:", err);
 
-      // ВАЖНО: Если ошибка, возвращаем кнопку в исходное состояние!
       btn.textContent = originalText;
       btn.disabled = false;
       btn.classList.remove("opacity-75", "cursor-wait");
 
-      // Показываем ошибку
       if (window.showNotification) {
         window.showNotification(err.message || "Ошибка удаления", "error");
       } else {
@@ -2836,15 +2700,12 @@ export function showContextMenu(x, y, menu) {
 }
 export function hideContextMenu(menu) {
   if (!menu) return;
-  // ВАЖНО: Сначала убираем инлайн-стиль, который перекрывает класс
   menu.style.display = "none";
   menu.classList.add("hidden");
 }
 
 export function initPlayerToggle() {
   const player = document.getElementById("music-player");
-
-  // Кнопки закрытия (Desktop и Mobile)
   const closeBtnDesktop = document.getElementById("player-toggle-btn");
   const closeBtnMobile = document.getElementById("player-toggle-btn-mobile");
 
@@ -2853,7 +2714,6 @@ export function initPlayerToggle() {
 
   if (!player) return;
 
-  // Общая функция закрытия
   const closePlayer = () => {
     player.classList.remove("player-expanded");
     player.classList.add("player-collapsed");
@@ -2870,11 +2730,9 @@ export function initPlayerToggle() {
     }
   };
 
-  // Вешаем обработчики на обе кнопки
   if (closeBtnDesktop) closeBtnDesktop.onclick = closePlayer;
   if (closeBtnMobile) closeBtnMobile.onclick = closePlayer;
 
-  // Логика разворачивания
   if (restoreBtn) {
     restoreBtn.onclick = () => {
       openPlayer();
@@ -2889,16 +2747,13 @@ export function openPlayer() {
 
   if (!player) return;
 
-  // Разворачиваем плеер
   player.classList.remove("player-collapsed");
   player.classList.add("player-expanded");
 
-  // Добавляем отступ контенту
   if (mainContent) {
     mainContent.classList.add("pb-32");
   }
 
-  // ПРЯЧЕМ кнопку разворачивания (она больше не нужна)
   if (restoreBtn) {
     restoreBtn.classList.add(
       "opacity-0",
@@ -2968,12 +2823,9 @@ export function renderPlaylistsOverview(playlists) {
   if (window.lucide) window.lucide.createIcons();
 }
 
-// Управление панелью массовых действий
 export function updateSelectionBar(count, context) {
   const bar = document.getElementById("selection-bar");
   const countEl = document.getElementById("selection-count");
-
-  // Кнопки
   const queueNextBtn = document.getElementById("bulk-play-next-btn"); // Играть следующим
   const queueEndBtn = document.getElementById("bulk-add-queue-btn"); // В конец
   const playlistBtn = document.getElementById("bulk-add-playlist-btn");
@@ -2989,32 +2841,25 @@ export function updateSelectionBar(count, context) {
   if (count > 0) {
     bar.classList.remove("translate-y-full");
     countEl.textContent = `${count}`;
-
-    // 1. ОЧЕРЕДЬ: Видна всем (и гостям тоже, так как очередь локальная)
     queueNextBtn.classList.remove("hidden");
     queueEndBtn.classList.remove("hidden");
 
-    // 2. ПЛЕЙЛИСТЫ: Только залогиненным
     if (isLoggedIn) {
       playlistBtn.classList.remove("hidden");
     } else {
       playlistBtn.classList.add("hidden");
     }
 
-    // 3. РЕДАКТИРОВАНИЕ: Только админ и ТОЛЬКО если выбран 1 трек
     if (isAdmin && count === 1) {
       editBtn.classList.remove("hidden");
     } else {
       editBtn.classList.add("hidden");
     }
 
-    // 4. УДАЛЕНИЕ
-    // Если мы внутри плейлиста -> кнопку видят все владельцы (залогиненные)
     if (context === "playlist") {
       delBtn.classList.remove("hidden");
       if (delText) delText.textContent = "Убрать";
     }
-    // Если в общей библиотеке -> только админы
     else {
       if (isAdmin) {
         delBtn.classList.remove("hidden");
@@ -3030,14 +2875,12 @@ export function updateSelectionBar(count, context) {
   }
 }
 
-// Мод  алка выбора плейлиста (для массового добавления)
 export function showSelectPlaylistModal(playlists, onSelect) {
-  const modal = document.getElementById("edit-modal"); // Используем то же окно
+  const modal = document.getElementById("edit-modal");
   const content = document.getElementById("edit-modal-content");
   const title = document.getElementById("edit-modal-title");
   const confirmBtn = document.getElementById("confirm-edit-btn");
 
-  // Скрываем кнопку "Сохранить", она тут не нужна, выбор по клику
   confirmBtn.classList.add("hidden");
 
   title.textContent = "Добавить в плейлист";
@@ -3058,20 +2901,18 @@ export function showSelectPlaylistModal(playlists, onSelect) {
       .join("");
     content.innerHTML = `<div class="border rounded-xl overflow-hidden">${list}</div>`;
 
-    // Вешаем обработчики на строки
     content.querySelectorAll(".playlist-option").forEach((el) => {
       el.onclick = () => {
         onSelect(el.dataset.pid);
         modal.classList.add("hidden");
-        confirmBtn.classList.remove("hidden"); // Возвращаем кнопку для других модалок
+        confirmBtn.classList.remove("hidden");
       };
     });
   }
 
-  // Обработчик закрытия (крестик)
   const closeBtn = modal.querySelector(".close-button");
   const tempClose = () => {
-    confirmBtn.classList.remove("hidden"); // Возвращаем кнопку
+    confirmBtn.classList.remove("hidden");
   };
   closeBtn.addEventListener("click", tempClose, { once: true });
 
@@ -3194,9 +3035,6 @@ export function renderSearchResults(data, favoriteIds = new Set()) {
   // 4. Записи (Recordings)
   if (data.recordings.length > 0) {
     hasResults = true;
-    // Используем логику генерации строк из renderRecordingList, но упрощенно
-    // Чтобы не дублировать код, можно вызвать renderRecordingList в отдельный div,
-    // но здесь мы соберем вручную для контроля верстки.
     const items = data.recordings
       .map((r, i) => {
         const isFav = favoriteIds.has(r.id);
@@ -3245,13 +3083,10 @@ export function renderSearchResults(data, favoriteIds = new Set()) {
   if (window.lucide) window.lucide.createIcons();
 }
 export function renderLibraryHub() {
-  // 1. ВОТ ЭТА СТРОКА БЫЛА ПОТЕРЯНА. ОНА ОБЯЗАТЕЛЬНА:
   const { listEl } = getElements();
-
   const viewTitle = document.getElementById("view-title-container");
   if (viewTitle) {
     viewTitle.classList.remove("hidden");
-    // Центрируем заголовок
     viewTitle.innerHTML = `
         <div class="text-center">
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Медиатека</h2>
@@ -3309,14 +3144,11 @@ export function renderLibraryHub() {
   if (window.lucide) window.lucide.createIcons();
 }
 function initQuill(selectorId, content) {
-  // 1. Находим контейнер
   const container = document.querySelector(selectorId);
   if (!container) return;
 
-  // 2. Логика очистки
   if (container.classList.contains("ql-container")) {
     const parent = container.parentNode;
-    // Удаляем старый тулбар, который Quill создает ПЕРЕД контейнером
     const oldToolbar = parent.querySelector(".ql-toolbar");
     if (oldToolbar) {
       oldToolbar.remove();
@@ -3338,7 +3170,6 @@ function initQuill(selectorId, content) {
     parent.appendChild(newDiv);
   }
 
-  // Обработчик картинок
   const imageHandler = () => {
     const input = document.createElement("input");
     input.setAttribute("type", "file");
@@ -3365,7 +3196,6 @@ function initQuill(selectorId, content) {
     };
   };
 
-  // Обработчик аудио
   const audioHandler = () => {
     const id = prompt("Введите ID записи (число):");
     if (id && !isNaN(parseInt(id))) {
@@ -3378,7 +3208,6 @@ function initQuill(selectorId, content) {
     }
   };
 
-  // 3. Инициализация
   window.quillEditor = new Quill(selectorId, {
     theme: "snow",
     placeholder: "Введите текст...",
@@ -3389,7 +3218,7 @@ function initQuill(selectorId, content) {
           ["bold", "italic", "underline", "strike"],
           [{ list: "ordered" }, { list: "bullet" }],
           [{ align: [] }],
-          ["link", "image", "video", "audio"], // Кнопка есть в конфиге
+          ["link", "image", "video", "audio"],
           ["clean"],
         ],
         handlers: {
@@ -3400,15 +3229,12 @@ function initQuill(selectorId, content) {
     },
   });
 
-  // === 4. ВСТАВКА ИКОНКИ ВРУЧНУЮ (Бронебойный метод) ===
-  // Находим тулбар, который относится к этому редактору (он предыдущий сосед)
   const wrapper = document.querySelector(selectorId).parentElement;
   const toolbar = wrapper.querySelector(".ql-toolbar");
 
   if (toolbar) {
     const audioBtn = toolbar.querySelector(".ql-audio");
     if (audioBtn) {
-      // Вставляем SVG прямо внутрь кнопки
       audioBtn.innerHTML = `
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #444;">
                 <path d="M9 18V5l12-2v13"></path>
@@ -3416,7 +3242,6 @@ function initQuill(selectorId, content) {
                 <circle cx="18" cy="16" r="3"></circle>
             </svg>
           `;
-      // Добавляем ховер эффект через JS, чтобы наверняка
       audioBtn.onmouseenter = () =>
         (audioBtn.querySelector("svg").style.color = "#06b6d4");
       audioBtn.onmouseleave = () =>
@@ -3424,7 +3249,6 @@ function initQuill(selectorId, content) {
     }
   }
 
-  // 5. Вставка контента
   if (content && content !== "null" && content !== "undefined") {
     window.quillEditor.clipboard.dangerouslyPasteHTML(0, content);
   }
@@ -3501,7 +3325,6 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const featuredCover =
     featuredPost.cover_image_url || "/static/img/placeholder.png";
 
-  // 1. ГЕНЕРАЦИЯ ТЕГОВ ДЛЯ ГЛАВНОЙ КАРТОЧКИ (Стиль Glassmorphism)
   const featuredTagsHtml =
     featuredPost.tags && featuredPost.tags.length > 0
       ? `<div class="flex flex-wrap gap-2 mb-3 relative z-10">
@@ -3527,9 +3350,6 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   `
     : "";
 
-  // 2. ОБНОВЛЕННЫЙ HTML ГЛАВНОЙ КАРТОЧКИ
-  // h-[500px] - фиксированная высота для мобильных
-  // md:h-auto md:aspect-[2.4/1] - автовысота и широкое соотношение для ПК
   const featuredHtml = `
     <!-- aspect-square (квадрат) для мобильных, md:aspect-[2.4/1] (широкий) для ПК -->
     <div class="group relative mb-12 w-full aspect-square md:aspect-[2.4/1] rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform translate-z-0">
@@ -3540,7 +3360,7 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
             <!-- Фон -->
             <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('${featuredCover}')"></div>
             
-            <!-- Градиент (Усилен снизу) -->
+            <!-- Градиент -->
             <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
             
             <!-- Контент -->
@@ -3554,15 +3374,12 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
                 <!-- Теги -->
                 ${featuredTagsHtml}
 
-                <!-- Заголовок: 
-                     text-xl (поменьше) на мобильных, text-4xl на ПК.
-                     line-clamp-4 (до 4 строк) на мобильных. -->
+                <!-- Заголовок -->
                 <h2 class="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black leading-tight drop-shadow-lg mb-2 line-clamp-4 md:line-clamp-none">
                     ${featuredPost.title}
                 </h2>
                 
-                <!-- Описание:
-                     Ограничено 2 строками (line-clamp-2), чтобы не вытеснять заголовок -->
+                <!-- Описание -->
                 <p class="text-sm md:text-lg opacity-90 leading-relaxed line-clamp-2 max-w-3xl font-medium text-gray-200">
                   ${featuredPost.summary || ""}
                 </p>
@@ -3616,20 +3433,17 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
                     <!-- Теги -->
                     ${postTagsHtml}
                     
-                    <!-- ЗАГОЛОВОК (ИЗМЕНЕНИЯ) -->
-                    <!-- text-lg (поменьше) на мобильных, text-xl на ПК -->
-                    <!-- line-clamp-3 (до 3 строк), чтобы длинные названия влезали -->
+                    <!-- ЗАГОЛОВОК -->
                     <h3 class="text-lg md:text-xl font-bold text-gray-900 mb-2 group-hover:text-cyan-700 transition-colors line-clamp-3 leading-tight">
                       ${post.title}
                     </h3>
                     
-                    <!-- ОПИСАНИЕ (ИЗМЕНЕНИЯ) -->
-                    <!-- line-clamp-2 (уменьшили до 2 строк), чтобы освободить место заголовку -->
+                    <!-- ОПИСАНИЕ -->
                     <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-2 flex-1">
                       ${post.summary || ""}
                     </p>
                     
-                    <!-- Кнопка "Читать далее" (прижата к низу благодаря mt-auto) -->
+                    <!-- Кнопка "Читать далее" -->
                     <div class="mt-auto text-cyan-600 font-bold text-sm flex items-center gap-1">
                         Читать далее <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </div>
@@ -3667,7 +3481,6 @@ export async function renderBlogPost(post) {
     `;
 
   // 2. КОНТЕНТ
-  // Исправлено: удалены комментарии /* ... */ внутри class, добавлены стили prose
   const content = `
         <div class="max-w-4xl mx-auto px-6 pb-20">
             <div class="prose prose-lg prose-cyan max-w-none text-gray-800 leading-relaxed
@@ -3680,7 +3493,6 @@ export async function renderBlogPost(post) {
 
   listEl.innerHTML = header + content;
 
-  // === ИНИЦИАЛИЗАЦИЯ PLYR ===
   const audioElements = Array.from(document.querySelectorAll(".prose audio"));
 
   if (audioElements.length > 0) {
@@ -3703,12 +3515,10 @@ export async function renderBlogPost(post) {
   if (window.lucide) window.lucide.createIcons();
 }
 
-// Функция открытия модалки блога
 export async function showBlogModal(post = null) {
   const modal = document.getElementById("blog-modal");
   modal.classList.remove("hidden");
 
-  // Очистка/Заполнение
   document.getElementById("blog-post-id").value = post ? post.id : "";
   const titleInput = document.getElementById("blog-title");
   const slugInput = document.getElementById("blog-slug");
@@ -3727,22 +3537,17 @@ export async function showBlogModal(post = null) {
     ? post.meta_keywords
     : "";
 
-  // Заполнение поля тегов
   const tagsInput = document.getElementById("blog-tags");
   tagsInput.value =
     post && post.tags ? post.tags.map((t) => t.name).join(", ") : "";
 
-  // +++ ИЗМЕНЕНИЕ: Динамическая загрузка и инициализация Quill +++
   await loadAndInitQuill("#blog-content", post ? post.content : "");
 
-  // === АВТО-ГЕНЕРАЦИЯ SLUG ===
-  // Только для новых статей, чтобы не ломать ссылки старых
   titleInput.oninput = (e) => {
     if (!post) {
       slugInput.value = slugify(e.target.value);
     }
   };
-  // ==========================
 
   const closeBtn = modal.querySelector(".close-button");
   const newClose = closeBtn.cloneNode(true);
@@ -3753,26 +3558,22 @@ export async function showBlogModal(post = null) {
 export function renderLibraryPageStructure(title, composers) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
-  // Скрываем старый заголовок, мы его перенесем внутрь сетки
   viewTitle.classList.add("hidden");
 
-  // Генерация опций для селекта (для мобильных и топ-бара)
   const composerOptions = composers
     .map((c) => `<option value="${c.id}">${c.name_ru}</option>`)
     .join("");
 
-  // Хардкод популярных жанров для сайдбара
   const quickGenres = [
     { label: "Симфонии", value: "Symphony", icon: "music-2" },
     { label: "Концерты", value: "Concerto", icon: "mic-2" }, // mic используем как метафору солиста
     { label: "Сонаты", value: "Sonata", icon: "book-open" },
     { label: "Опера", value: "Opera", icon: "mic" },
     { label: "Камерная", value: "Chamber", icon: "users" },
-    { label: "Фортепиано", value: "Piano", icon: "music" }, // Нужно будет добавить фильтр по инструменту, пока используем это как жанр
+    { label: "Фортепиано", value: "Piano", icon: "music" },
     { label: "Духовная", value: "Mass", icon: "church" },
   ];
 
-  // Генерируем HTML для ссылок в сайдбаре
   const sidebarGenresHtml = quickGenres
     .map(
       (g) => `
@@ -3785,7 +3586,6 @@ export function renderLibraryPageStructure(title, composers) {
     )
     .join("");
 
-  // Берем первые 8 композиторов для "Быстрого доступа"
   const sidebarComposersHtml = composers
     .slice(0, 8)
     .map(
@@ -3850,7 +3650,7 @@ export function renderLibraryPageStructure(title, composers) {
                 </div>
             </aside>
 
-            <!-- === ЦЕНТРАЛЬНАЯ ЧАСТЬ (Список) === -->
+            <!-- === ЦЕНТРАЛЬНАЯ ЧАСТЬ === -->
             <div class="flex-1 w-full min-w-0">
 
                 <!-- 1. Верхняя панель (Поиск и сортировка) -->
@@ -3864,7 +3664,7 @@ export function renderLibraryPageStructure(title, composers) {
                                    onchange="window.applyLibraryFilter('search', this.value)">
                         </div>
 
-                        <!-- Фильтры (Для мобильных они важны, для десктопа дублируют сайдбар, но нужны для тонкой настройки) -->
+                        <!-- Фильтры -->
                         <div class="flex flex-wrap gap-2 pb-1 md:pb-0">
                             <select class="flex-1 min-w-0 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer lg:hidden"
                                     onchange="window.applyLibraryFilter('composerId', this.value)">
@@ -3971,7 +3771,6 @@ export function renderLibraryContent(
           r.composition.work.cover_art_url ||
           "/static/img/placeholder.png";
 
-        // --- ИЗМЕНЕНИЕ 1: Год записи ---
         const yearHtml = r.recording_year
           ? `<span class="text-gray-300 mx-1">•</span><span>${r.recording_year}</span>`
           : "";
@@ -4010,7 +3809,7 @@ export function renderLibraryContent(
                       <span>${performerText}</span>
                       <span class="text-gray-300 mx-1">•</span>
                       <span>${composerName}</span>
-                      ${yearHtml} <!-- Добавили год сюда -->
+                      ${yearHtml}
                    </div>
                </div>
 
@@ -4051,7 +3850,6 @@ export function renderLibraryContent(
         const composerName = r.composition.work.composer.name_ru;
         const youtubeId = r.youtube_url.split("v=")[1]?.split("&")[0];
 
-        // --- ИЗМЕНЕНИЕ 2: Формируем строки для Солиста и Дирижера ---
         let extraInfoHtml = "";
 
         if (r.lead_performer) {
@@ -4134,13 +3932,9 @@ export function updateLoadMoreButton(hasMore) {
   }
 }
 
-// static/js/ui.js -> renderQueue
-
 export function renderQueue(nowPlaying, queue) {
   const container = document.getElementById("queue-list");
   if (!container) return;
-
-  // Создаем внутреннюю структуру с помощью Flexbox
   let nowPlayingHtml = "";
   if (nowPlaying) {
     const comp = nowPlaying.composition;
@@ -4184,7 +3978,6 @@ export function renderQueue(nowPlaying, queue) {
           "/static/img/placeholder.png";
         return `
     <div class="flex items-center gap-3 p-2 border-b border-gray-100 last:border-0 group hover:bg-gray-50 transition-colors">
-        <!-- Вот что мы добавили: -->
         <img src="${cover}" class="w-10 h-10 rounded-md object-cover flex-shrink-0">
         
         <div class="min-w-0 flex-1">
@@ -4204,7 +3997,6 @@ export function renderQueue(nowPlaying, queue) {
           <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Далее</h3>
           <button id="clear-queue-btn" class="text-xs text-cyan-600 hover:underline font-bold">Очистить</button>
       </div>
-      <!-- Этот div будет растягиваться и скроллиться -->
       <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg bg-white pr-1">
         ${queueItems}
       </div>
@@ -4221,7 +4013,6 @@ export function renderQueue(nowPlaying, queue) {
       '<p class="text-center text-sm text-gray-400 mt-8">Начните воспроизведение, чтобы увидеть очередь</p>';
   }
 
-  // Собираем всё вместе в Flexbox контейнер
   container.innerHTML = `
     <div class="flex flex-col h-full">
       ${nowPlayingHtml}
@@ -4236,7 +4027,6 @@ export function renderComposersMap(composers) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
 
-  // 1. Рисуем шапку (ПО ЦЕНТРУ)
   viewTitle.classList.remove("hidden");
   viewTitle.innerHTML = `
         <div class="w-full mb-6 border-b border-gray-200 pb-4 flex flex-col items-center text-center">
@@ -4248,26 +4038,20 @@ export function renderComposersMap(composers) {
         </div>
     `;
 
-  // 2. Создаем контейнер для карты
-  // Важно задать фиксированную высоту (например, h-[600px] или calc)
   listEl.innerHTML = `
         <div class="max-w-7xl mx-auto px-6 pb-10">
             <div id="composers-map" class="w-full h-[70vh] rounded-2xl shadow-xl border-4 border-white z-0 relative"></div>
         </div>
     `;
 
-  // 3. Инициализируем Leaflet (ждем немного, чтобы DOM обновился)
   setTimeout(() => {
-    // Если карта уже была, удаляем её (иначе будет ошибка Leaflet)
     if (mapInstance) {
       mapInstance.remove();
       mapInstance = null;
     }
 
-    // Центрируем карту на Европе
     mapInstance = L.map("composers-map").setView([48.5, 15.0], 5);
 
-    // Добавляем красивый слой карты (CartoDB Voyager - светлая, чистая карта)
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       {
@@ -4278,34 +4062,27 @@ export function renderComposersMap(composers) {
       }
     ).addTo(mapInstance);
 
-    // 4. Группируем композиторов по координатам
-    // Ключ: "lat,lng", Значение: [Composer1, Composer2]
     const grouped = {};
 
     composers.forEach((c) => {
       if (c.latitude && c.longitude) {
-        // Округляем немного, чтобы близкие точки слиплись
         const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`;
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(c);
       }
     });
 
-    // 5. Добавляем маркеры
     Object.keys(grouped).forEach((key) => {
       const group = grouped[key];
       const [lat, lng] = key.split(",");
       const first = group[0];
 
-      // Формируем HTML для попапа
       let popupContent = `<div class="text-center min-w-[150px]">`;
 
-      // Заголовок города
       if (first.place_of_birth) {
         popupContent += `<div class="font-bold text-sm text-gray-500 mb-2 uppercase tracking-wide border-b pb-1">${first.place_of_birth}</div>`;
       }
 
-      // Список композиторов в этом городе
       group.forEach((c) => {
         const portrait = c.portrait_url || "/static/img/placeholder.png";
         popupContent += `
@@ -4326,7 +4103,6 @@ export function renderComposersMap(composers) {
       });
       popupContent += `</div>`;
 
-      // Создаем маркер
       L.marker([lat, lng]).addTo(mapInstance).bindPopup(popupContent);
     });
 
@@ -4342,7 +4118,6 @@ export function updateSelectionStyles() {
     const isSelected =
       window.state && window.state.selectedRecordingIds.has(id);
 
-    // Сброс классов конфликтующих фонов
     row.classList.remove(
       "bg-white",
       "bg-cyan-50",
@@ -4382,50 +4157,39 @@ function renderLikeButton(container, recId) {
 function checkMarquee(wrapper, contentSpan) {
   if (!wrapper || !contentSpan) return;
 
-  // Сбрасываем клон, если был
   const existingClone = wrapper.querySelector(".marquee-clone");
   if (existingClone) existingClone.remove();
   wrapper.classList.remove("is-long");
 
-  // Проверяем ширину
-  // Небольшая задержка, чтобы DOM обновился после смены текста
   setTimeout(() => {
     if (contentSpan.scrollWidth > wrapper.clientWidth) {
       wrapper.classList.add("is-long");
 
-      // Создаем клон для бесшовной прокрутки
       const clone = contentSpan.cloneNode(true);
       clone.classList.add("marquee-clone");
-      clone.removeAttribute("id"); // ID должен быть уникальным
+      clone.removeAttribute("id");
       wrapper.appendChild(clone);
     }
   }, 50);
 }
-// В файл ui.js (можно в конец)
 
 export function updateTrackRowIcon(recordingId, isPlaying) {
-  // 1. Сначала сбрасываем ВСЕ иконки на Play
   document.querySelectorAll(".recording-play-pause-btn").forEach((btn) => {
-    // Проверяем размер иконки (в списке композиций она больше)
     const size =
       btn.querySelector("svg")?.getAttribute("width") === "24"
         ? "w-6 h-6"
         : "w-5 h-5";
-    // Используем data-lucide для статической разметки или innerHTML для динамики
     btn.innerHTML = `<i data-lucide="play" class="${size} fill-current"></i>`;
   });
 
-  // 2. Если ничего не играет, просто обновляем иконки и уходим
   if (!recordingId) {
     if (window.lucide) window.lucide.createIcons();
     return;
   }
 
-  // 3. Находим кнопку текущего трека
   const currentBtn = document.getElementById(`list-play-btn-${recordingId}`);
 
   if (currentBtn) {
-    // Определяем размер иконки
     const size = currentBtn
       .closest(".recording-item")
       ?.querySelector(".text-lg")
@@ -4439,6 +4203,5 @@ export function updateTrackRowIcon(recordingId, isPlaying) {
     }
   }
 
-  // Перерисовываем иконки
   if (window.lucide) window.lucide.createIcons();
 }

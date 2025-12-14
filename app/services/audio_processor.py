@@ -1,4 +1,3 @@
-# app/services/audio_processor.py
 import shutil
 from pathlib import Path
 from fastapi import UploadFile
@@ -10,9 +9,8 @@ from app.schemas.music import RecordingCreate
 from app import crud
 
 MUSIC_DIR = Path("static/music")
-COVERS_DIR = Path("static/covers/recordings")  # Эта папка больше не используется для новых обложек
+COVERS_DIR = Path("static/covers/recordings")
 WORKS_COVERS_DIR = Path("static/covers/works")
-
 MUSIC_DIR.mkdir(parents=True, exist_ok=True)
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
 WORKS_COVERS_DIR.mkdir(parents=True, exist_ok=True)
@@ -33,8 +31,6 @@ def save_and_process_audio(db: Session, upload_file: UploadFile):
     """
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
-
-    # Используем временное хранилище, чтобы не создавать "мусор" в основной папке
     temp_path = temp_dir / upload_file.filename
 
     try:
@@ -50,7 +46,6 @@ def save_and_process_audio(db: Session, upload_file: UploadFile):
                 duration = int(audio.info.length)
         except Exception as e:
             print(f"[ERROR] Could not read duration for {upload_file.filename}: {e}")
-            # Можно решить, что делать в этом случае, например, бросать ошибку или возвращать 0
 
         return temp_path, duration, file_hash
 

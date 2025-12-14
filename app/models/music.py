@@ -1,12 +1,9 @@
-# app/models/music.py
-
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean, select, func, Float
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.ext.associationproxy import association_proxy
 from app.db.base import Base, recording_favorites_association
 
 
-# --- COMPOSER ---
 class Composer(Base):
     __tablename__ = "composers"
     id = Column(Integer, primary_key=True, index=True)
@@ -18,11 +15,9 @@ class Composer(Base):
     year_died = Column(Integer, nullable=True)
     portrait_url = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
-
-    place_of_birth = Column(String, nullable=True)  # Название города (например, "Вена, Австрия")
-    latitude = Column(Float, nullable=True)  # Широта (например, 48.2082)
-    longitude = Column(Float, nullable=True)  # Долгота (например, 16.3738)
-
+    place_of_birth = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     works = relationship("Work", back_populates="composer", cascade="all, delete-orphan")
 
     @property
@@ -31,7 +26,6 @@ class Composer(Base):
         if not self.year_born and not self.year_died:
             return "default"
 
-        # За точку отсчета берем середину жизни или одну из известных дат
         peak_year = 0
         if self.year_born and self.year_died:
             peak_year = (self.year_born + self.year_died) // 2
@@ -48,7 +42,6 @@ class Composer(Base):
         return "modern"
 
 
-# --- WORK ---
 class Work(Base):
     __tablename__ = "works"
     id = Column(Integer, primary_key=True, index=True)
@@ -70,7 +63,6 @@ class Work(Base):
     compositions = relationship("Composition", back_populates="work", cascade="all, delete-orphan")
 
 
-# --- RECORDING (ПЕРЕНЕСЛИ ВВЕРХ) ---
 class Recording(Base):
     __tablename__ = "recordings"
     id = Column(Integer, primary_key=True, index=True)
@@ -82,13 +74,11 @@ class Recording(Base):
     file_hash = Column(String, unique=True, index=True, nullable=True)
     composition_id = Column(Integer, ForeignKey("compositions.id"), nullable=False)
 
-    conductor = Column(String, nullable=True)  # Дирижёр
-    license = Column(String, nullable=True)  # Название лицензии, e.g., "CC BY 4.0"
-    source_text = Column(String, nullable=True)  # Текст-анкор для источника
-    source_url = Column(String, nullable=True)  # Ссылка на источник
-    lead_performer = Column(String, nullable=True)  # Ведущий исполнитель
-
-    # SQLAlchemy умный: когда имя класса в кавычках ("Composition"), он найдет его позже.
+    conductor = Column(String, nullable=True)
+    license = Column(String, nullable=True)
+    source_text = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
+    lead_performer = Column(String, nullable=True)
     composition = relationship("Composition", back_populates="recordings")
 
     playlist_associations = relationship(
@@ -98,7 +88,6 @@ class Recording(Base):
     )
     playlists = association_proxy("playlist_associations", "playlist")
 
-    # SQLAlchemy также найдет "User" позже.
     favorited_by = relationship(
         "User",
         secondary=recording_favorites_association,
@@ -106,13 +95,11 @@ class Recording(Base):
     )
 
 
-# --- COMPOSITION (ТЕПЕРЬ ИДЕТ ПОСЛЕ RECORDING) ---
 class Composition(Base):
     __tablename__ = "compositions"
     id = Column(Integer, primary_key=True, index=True)
     slug = Column(String, unique=True, index=True, nullable=True)
 
-    # Теперь Python знает, что такое Recording, и ошибки нет.
     has_audio = column_property(
         select(func.count(1))
         .where(Recording.composition_id == id)
