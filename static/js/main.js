@@ -80,7 +80,6 @@ async function fetchUserProfile() {
   try {
     const userEmail = localStorage.getItem("user_email");
     if (userEmail) ui.setUserGreeting(userEmail);
-
   } catch (e) {
     console.error(e);
   }
@@ -354,7 +353,7 @@ async function loadCurrentView() {
           pl.recordings,
           pl.name,
           0,
-          {},
+          { isPlaylist: true },
           state.favoriteRecordingIds
         );
         break;
@@ -919,7 +918,6 @@ function addEventListeners() {
         gradient.classList.remove("hidden");
         textSpan.textContent = "Читать далее";
         if (icon) icon.style.transform = "rotate(0deg)";
-
       } else {
         // Разворачиваем
         content.style.maxHeight = content.scrollHeight + "px";
@@ -1597,6 +1595,108 @@ function addEventListeners() {
       }
     }
 
+    // --- МОБИЛЬНАЯ СОРТИРОВКА ПЛЕЙЛИСТА ---
+    const sortUpBtn = target.closest(".sort-up-btn");
+    const sortDownBtn = target.closest(".sort-down-btn");
+
+    if (sortUpBtn || sortDownBtn) {
+      // 1. Определяем направление
+      const isUp = !!sortUpBtn;
+      const btn = isUp ? sortUpBtn : sortDownBtn;
+      const index = parseInt(btn.dataset.index);
+
+      // 2. Проверяем границы (нельзя поднять первый и опустить последний)
+      const list = window.state.currentViewRecordings;
+      if ((isUp && index === 0) || (!isUp && index === list.length - 1)) {
+        return; // Ничего не делаем
+      }
+
+      // 3. Меняем местами элементы в массиве
+      const swapIndex = isUp ? index - 1 : index + 1;
+      const temp = list[index];
+      list[index] = list[swapIndex];
+      list[swapIndex] = temp;
+
+      // 4. Оптимистично перерисовываем интерфейс (мгновенная реакция)
+      // Нам нужно знать ID плейлиста и название, берем из стейта или DOM
+      const playlistId = window.state.view.playlistId;
+      const playlistName =
+        document
+          .querySelector("#view-title-container h2")
+          ?.textContent?.replace("Список", "")
+          .trim() || "Плейлист";
+
+      ui.renderRecordingList(
+        list,
+        playlistName,
+        0,
+        { isPlaylist: true },
+        window.state.favoriteRecordingIds
+      );
+
+      // 5. Отправляем новый порядок на сервер (в фоне)
+      try {
+        const newOrderIds = list.map((r) => r.id);
+        await apiRequest(`/api/playlists/${playlistId}/reorder`, "PUT", {
+          recording_ids: newOrderIds,
+        });
+      } catch (err) {
+        ui.showNotification("Ошибка сохранения порядка", "error");
+        // Если ошибка - лучше перезагрузить страницу, чтобы вернуть как было
+        loadCurrentView();
+      }
+      return;
+    }
+
+    // --- МОБИЛЬНАЯ СОРТИРОВКА ЧАСТЕЙ ПРОИЗВЕДЕНИЯ ---
+    const compUpBtn = target.closest(".comp-sort-up-btn");
+    const compDownBtn = target.closest(".comp-sort-down-btn");
+
+    if (compUpBtn || compDownBtn) {
+      // Мы уже не внутри ссылки <a>, но на всякий случай останавливаем всплытие
+      e.stopPropagation();
+
+      const isUp = !!compUpBtn;
+      const btn = isUp ? compUpBtn : compDownBtn;
+      const index = parseInt(btn.dataset.index);
+
+      const work = window.state.view.currentWork;
+      if (!work) return;
+
+      // Важно: фильтруем так же, как при рендере, чтобы индексы совпали
+      let parts = work.compositions
+        .filter((c) => c.sort_order !== 0)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+      if ((isUp && index === 0) || (!isUp && index === parts.length - 1))
+        return;
+
+      const swapIndex = isUp ? index - 1 : index + 1;
+      const temp = parts[index];
+      parts[index] = parts[swapIndex];
+      parts[swapIndex] = temp;
+
+      // Локальное обновление для мгновенной реакции
+      parts.forEach((p, i) => {
+        p.sort_order = i + 1;
+      });
+
+      ui.renderCompositionGrid(work, window.state.displayLanguage);
+
+      try {
+        const newIds = parts.map((c) => c.id);
+        await apiRequest(
+          `/api/recordings/works/${work.id}/reorder-compositions`,
+          "PUT",
+          { composition_ids: newIds }
+        );
+      } catch (err) {
+        ui.showNotification("Ошибка сортировки: " + err.message, "error");
+        loadCurrentView();
+      }
+      return;
+    }
+
     // --- ОСТАЛЬНОЕ ---
     if (target.closest("#logout-btn")) {
       localStorage.removeItem("access_token");
@@ -1653,72 +1753,100 @@ function addEventListeners() {
       ui.updateSelectedRecordingFile(e.target.files[0])
     );
 
-  // --- DRAG & DROP (Сортировка плейлиста) ---
-  let draggedItem = null;
+  // --- ЛОГИКА DRAG & DROP ДЛЯ ПЛЕЙЛИСТОВ (Идентична странице произведения) ---
+  let draggedPlaylistItem = null; // <--- ИМЯ ПЕРЕМЕННОЙ
 
+  // 1. НАЧАЛО ПЕРЕТАСКИВАНИЯ
   document.addEventListener("dragstart", (e) => {
-    if (
-      e.target.classList.contains("recording-item") &&
-      state.view.current === "playlist"
-    ) {
-      draggedItem = e.target;
-      e.target.classList.add("opacity-50");
-      e.dataTransfer.effectAllowed = "move";
-    }
+    // Ищем ТОЛЬКО наш спец. класс. Если это не он - выходим.
+    const target = e.target.closest(".playlist-sortable-item");
+    if (!target) return;
+
+    draggedPlaylistItem = target; // <--- ИСПРАВЛЕНО (было draggedPlaylistRow)
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", ""); // Нужно для Firefox
+
+    // Делаем полупрозрачным с задержкой, чтобы драг-имидж успел создаться
+    setTimeout(() => {
+      target.classList.add("dragging-active");
+    }, 0);
   });
 
+  // 2. КОНЕЦ ПЕРЕТАСКИВАНИЯ
   document.addEventListener("dragend", (e) => {
-    if (draggedItem) {
-      draggedItem.classList.remove("opacity-50");
+    if (draggedPlaylistItem) {
+      // <--- ИСПРАВЛЕНО
+      draggedPlaylistItem.classList.remove("dragging-active"); // <--- ИСПРАВЛЕНО
+
+      // Чистим все синие линии на странице
       document
         .querySelectorAll(".drag-over-top, .drag-over-bottom")
         .forEach((el) => {
           el.classList.remove("drag-over-top", "drag-over-bottom");
         });
-      draggedItem = null;
+
+      draggedPlaylistItem = null; // <--- ИСПРАВЛЕНО
     }
   });
 
+  // 3. DRAG OVER
   document.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    const targetRow = e.target.closest(".recording-item");
-    if (
-      !targetRow ||
-      targetRow === draggedItem ||
-      state.view.current !== "playlist"
-    )
-      return;
+    if (!draggedPlaylistItem) return;
 
-    const rect = targetRow.getBoundingClientRect();
+    e.preventDefault();
+
+    const target = e.target.closest(".playlist-sortable-item");
+
+    if (!target || target === draggedPlaylistItem) {
+      document.querySelectorAll(".playlist-sortable-item").forEach((el) => {
+        el.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+      return;
+    }
+
+    // 2. Очищаем визуальные эффекты ТОЛЬКО с других элементов
+    document.querySelectorAll(".playlist-sortable-item").forEach((el) => {
+      if (el !== target) {
+        el.classList.remove("drag-over-top", "drag-over-bottom");
+      }
+    });
+
+    // 3. Рисуем линию на текущей цели
+    const rect = target.getBoundingClientRect();
     const offset = e.clientY - rect.top;
 
-    targetRow.classList.remove("drag-over-top", "drag-over-bottom");
+    target.classList.remove("drag-over-top", "drag-over-bottom");
+
     if (offset < rect.height / 2) {
-      targetRow.classList.add("drag-over-top");
+      target.classList.add("drag-over-top");
     } else {
-      targetRow.classList.add("drag-over-bottom");
+      target.classList.add("drag-over-bottom");
     }
   });
 
+  // 4. БРОСОК (DROP)
   document.addEventListener("drop", async (e) => {
+    if (!draggedPlaylistItem) return;
+
     e.preventDefault();
-    const targetRow = e.target.closest(".recording-item");
-    if (!targetRow || !draggedItem || state.view.current !== "playlist") return;
+    const target = e.target.closest(".playlist-sortable-item");
 
-    const list = document
-      .getElementById("composition-list")
-      .querySelector("div > div");
+    if (!target || target === draggedPlaylistItem) return;
 
-    if (targetRow.classList.contains("drag-over-top")) {
-      list.insertBefore(draggedItem, targetRow);
+    const parent = target.parentNode;
+
+    if (target.classList.contains("drag-over-top")) {
+      parent.insertBefore(draggedPlaylistItem, target);
     } else {
-      list.insertBefore(draggedItem, targetRow.nextSibling);
+      parent.insertBefore(draggedPlaylistItem, target.nextSibling);
     }
 
-    targetRow.classList.remove("drag-over-top", "drag-over-bottom");
+    // Убираем линии
+    target.classList.remove("drag-over-top", "drag-over-bottom");
 
+    // Собираем новые ID для сохранения
     const newOrderIds = Array.from(
-      document.querySelectorAll(".recording-item")
+      parent.querySelectorAll(".playlist-sortable-item")
     ).map((el) => parseInt(el.dataset.recordingId));
 
     try {
@@ -1729,8 +1857,10 @@ function addEventListeners() {
       );
     } catch (err) {
       ui.showNotification("Ошибка сохранения порядка", "error");
+      console.error(err);
     }
   });
+
   // --- ЛОГИКА ЧЕКБОКСА "БЕЗ НОМЕРА" ---
   const setupNoCatalogToggle = (checkId, inputId) => {
     const checkbox = document.getElementById(checkId);
@@ -1770,6 +1900,8 @@ function addEventListeners() {
   });
 
   document.addEventListener("dragover", (e) => {
+    if (!draggedComp) return;
+
     e.preventDefault();
 
     const target = e.target.closest(".comp-sortable-item");

@@ -99,49 +99,47 @@ function isLoggedIn() {
 // --- HELPERS ---
 
 function slugify(text) {
-  return (
-    text
-      .toString()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w\-а-яё]+/g, "")
-      .replace(/--+/g, "-")
-      .replace(/^-+/, "")
-      .replace(/-+$/, "")
-      .replace(/а/g, "a")
-      .replace(/б/g, "b")
-      .replace(/в/g, "v")
-      .replace(/г/g, "g")
-      .replace(/д/g, "d")
-      .replace(/е/g, "e")
-      .replace(/ё/g, "e")
-      .replace(/ж/g, "zh")
-      .replace(/з/g, "z")
-      .replace(/и/g, "i")
-      .replace(/й/g, "y")
-      .replace(/к/g, "k")
-      .replace(/л/g, "l")
-      .replace(/м/g, "m")
-      .replace(/н/g, "n")
-      .replace(/о/g, "o")
-      .replace(/п/g, "p")
-      .replace(/р/g, "r")
-      .replace(/с/g, "s")
-      .replace(/т/g, "t")
-      .replace(/у/g, "u")
-      .replace(/ф/g, "f")
-      .replace(/х/g, "h")
-      .replace(/ц/g, "c")
-      .replace(/ч/g, "ch")
-      .replace(/ш/g, "sh")
-      .replace(/щ/g, "sch")
-      .replace(/ъ/g, "")
-      .replace(/ы/g, "y")
-      .replace(/ь/g, "")
-      .replace(/э/g, "e")
-      .replace(/ю/g, "yu")
-      .replace(/я/g, "ya")
-  );
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-а-яё]+/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
+    .replace(/а/g, "a")
+    .replace(/б/g, "b")
+    .replace(/в/g, "v")
+    .replace(/г/g, "g")
+    .replace(/д/g, "d")
+    .replace(/е/g, "e")
+    .replace(/ё/g, "e")
+    .replace(/ж/g, "zh")
+    .replace(/з/g, "z")
+    .replace(/и/g, "i")
+    .replace(/й/g, "y")
+    .replace(/к/g, "k")
+    .replace(/л/g, "l")
+    .replace(/м/g, "m")
+    .replace(/н/g, "n")
+    .replace(/о/g, "o")
+    .replace(/п/g, "p")
+    .replace(/р/g, "r")
+    .replace(/с/g, "s")
+    .replace(/т/g, "t")
+    .replace(/у/g, "u")
+    .replace(/ф/g, "f")
+    .replace(/х/g, "h")
+    .replace(/ц/g, "c")
+    .replace(/ч/g, "ch")
+    .replace(/ш/g, "sh")
+    .replace(/щ/g, "sch")
+    .replace(/ъ/g, "")
+    .replace(/ы/g, "y")
+    .replace(/ь/g, "")
+    .replace(/э/g, "e")
+    .replace(/ю/g, "yu")
+    .replace(/я/g, "ya");
 }
 
 function getGenreKeyByLabel(label) {
@@ -183,9 +181,31 @@ export function updateHeaderAuth() {
   } else {
     const username =
       localStorage.getItem("user_email")?.split("@")[0] || "User";
+
+    // flex items-center: выравнивает кнопку выхода и текст по вертикали
+    container.className = "flex items-center gap-2";
+
     container.innerHTML = `
-            <span class="hidden sm:inline text-sm font-bold opacity-90">Здравствуйте, ${username}!</span>
-            <button id="logout-btn" class="ml-2 bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors" title="Выйти">
+            <!-- ТЕКСТОВОЙ БЛОК -->
+            <div class="flex flex-col items-end justify-center">
+                 
+                 <!-- МОБИЛЬНАЯ ВЕРСИЯ: -->
+                 <!-- break-words: разрешает перенос слов -->
+                 <!-- max-w-[100px]: ограничивает ширину, чтобы вызвать перенос, а не сдвиг кнопок -->
+                 <!-- leading-tight: уменьшает расстояние между строками -->
+                 <span class="md:hidden text-xs font-bold opacity-90 text-right break-words max-w-[100px] leading-tight">
+                    Здравствуйте, ${username}! 👋
+                 </span>
+                 
+                 <!-- ПК ВЕРСИЯ (без изменений) -->
+                 <span class="hidden md:inline text-sm font-bold opacity-90 whitespace-nowrap">
+                    Здравствуйте, ${username}! 👋
+                 </span>
+            </div>
+            
+            <!-- КНОПКА ВЫХОДА -->
+            <!-- self-center гарантирует, что кнопка останется по центру, даже если текст станет в 3 строки -->
+            <button id="logout-btn" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 self-center" title="Выйти">
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
         `;
@@ -445,12 +465,10 @@ export function renderRecordingList(
     const audioRows = audioRecordings
       .map((r, i) => {
         const isFav = favoriteRecordingIds.has(r.id);
-
         const isFullWork = r.composition.sort_order === 0;
         const compName = isFullWork
           ? getLocalizedText(r.composition.work, "name", lang)
           : getLocalizedText(r.composition, "title", lang);
-
         const compoName = getLocalizedText(
           r.composition.work.composer,
           "name",
@@ -469,13 +487,18 @@ export function renderRecordingList(
         }`;
         const isSelected =
           window.state && window.state.selectedRecordingIds.has(r.id);
+        const draggableAttr = options.isPlaylist ? 'draggable="true"' : "";
+        const sortableClass = options.isPlaylist
+          ? "playlist-sortable-item"
+          : "";
 
         return `
-          <div class="recording-item group flex items-center p-3 hover:bg-gray-50 select-none ${
-            isSelected ? "bg-cyan-50" : "border-b border-gray-100"
-          } bg-white last:border-0 transition-colors cursor-pointer relative select-none"
+          <div class="recording-item ${sortableClass} relative group flex items-center p-3 hover:bg-gray-50 ${
+          isSelected ? "bg-cyan-50" : "border-b border-gray-100"
+        } bg-white last:border-0 transition-colors cursor-pointer select-none first:rounded-t-xl last:rounded-b-xl" 
+               ${draggableAttr}
                data-recording-id="${r.id}" data-index="${i}">
-
+  
                <!-- 1. Чекбокс -->
                <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
                  window.state?.isSelectionMode ? "flex" : "hidden md:flex"
@@ -485,14 +508,14 @@ export function renderRecordingList(
                  }" ${isSelected ? "checked" : ""}>
                </div>
                ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
-
+  
                <!-- 2. Play -->
                <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
                  r.id
                }">
                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                </div>
-
+  
                <!-- 3. Обложка -->
                 <div class="flex-shrink-0 mx-2 md:mx-4">
               <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy" alt="Обложка">
@@ -526,7 +549,27 @@ export function renderRecordingList(
                }
   
                <!-- 5. Правая часть -->
-               <div class="flex items-center ml-auto pl-3 flex-shrink-0">
+               <div class="flex items-center ml-auto pl-3 flex-shrink-0 gap-3">
+                    
+                    <!-- === МОБИЛЬНАЯ СОРТИРОВКА (ТОЛЬКО В ПЛЕЙЛИСТЕ) === -->
+                    ${
+                      options.isPlaylist
+                        ? `
+                    <div class="flex flex-col gap-1 md:hidden mr-2">
+                        <button class="sort-up-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
+                                data-index="${i}">
+                            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                        </button>
+                        <button class="sort-down-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
+                                data-index="${i}">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    `
+                        : ""
+                    }
+                    <!-- ================================================ -->
+
                     <div class="hidden md:flex items-center">
                         ${
                           isLoggedIn()
@@ -554,7 +597,7 @@ export function renderRecordingList(
     htmlContent += `
       <div class="mb-10">
           <h3 class="text-lg font-bold mb-4 text-gray-700 flex items-center gap-2"><i data-lucide="disc" class="w-5 h-5 text-cyan-600"></i> Аудиозаписи</h3>
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">${audioRows}</div>
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100">${audioRows}</div>
       </div>`;
   }
 
@@ -1303,19 +1346,18 @@ export async function renderCompositionGrid(work, lang = "ru") {
   let partsListHtml = "";
   if (movementParts.length > 0) {
     const list = movementParts
-      .map((c) => {
+      .map((c, index) => {
+        // <--- Важно: добавлен index
         const metaParts = [];
         if (c.tonality)
           metaParts.push(
             `<span class="font-medium text-gray-600">${c.tonality}</span>`
           );
-
         if (c.is_no_catalog) {
           metaParts.push(`<span class="text-gray-400">б/н</span>`);
         } else if (c.catalog_number) {
           metaParts.push(`<span>${c.catalog_number}</span>`);
         }
-
         if (c.composition_year)
           metaParts.push(`<span>${c.composition_year}</span>`);
 
@@ -1327,12 +1369,10 @@ export async function renderCompositionGrid(work, lang = "ru") {
             : "";
 
         let iconsHtml = "";
-        if (c.has_audio) {
+        if (c.has_audio)
           iconsHtml += `<i data-lucide="disc" class="w-5 h-5 text-cyan-500" title="Есть аудиозаписи"></i>`;
-        }
-        if (c.has_video) {
+        if (c.has_video)
           iconsHtml += `<i data-lucide="youtube" class="w-5 h-5 text-red-500" title="Есть видеозаписи"></i>`;
-        }
 
         const iconsContainer = iconsHtml
           ? `<div class="flex items-center gap-2 ml-4">${iconsHtml}</div>`
@@ -1340,41 +1380,61 @@ export async function renderCompositionGrid(work, lang = "ru") {
 
         const isUserAdmin = isAdmin();
         const draggableAttr = isUserAdmin ? 'draggable="true"' : "";
-        const cursorClass = isUserAdmin ? "cursor-move" : "cursor-pointer";
+        const cursorClass = "cursor-pointer"; // Палец для всех
+
+        // !!! ИСПРАВЛЕНИЕ 1: Скрываем шесть точек на мобильных (hidden md:block)
         const gripIcon = isUserAdmin
-          ? `<i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500 ml-4"></i>`
+          ? `<i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500 ml-4 hidden md:block"></i>`
           : ``;
 
+        // Кнопки для мобильной сортировки
+        const sortButtons = isUserAdmin
+          ? `
+          <div class="flex flex-col gap-1 md:hidden ml-3 border-l border-gray-100 pl-3">
+              <button class="comp-sort-up-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
+                      data-index="${index}">
+                  <i data-lucide="chevron-up" class="w-4 h-4"></i>
+              </button>
+              <button class="comp-sort-down-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
+                      data-index="${index}">
+                  <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+          </div>
+      `
+          : "";
+
+        // !!! ИСПРАВЛЕНИЕ 2: Меняем структуру. Главный тег - DIV, ссылка только на тексте.
         return `
-          <a href="/compositions/${
-            c.slug || c.id
-          }" data-navigo ${draggableAttr} data-comp-id="${c.id}"
-             class="comp-sortable-item flex items-center p-3 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
+        <div ${draggableAttr} data-comp-id="${c.id}"
+           class="comp-sortable-item flex items-center p-3 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
 
-              <!-- 1. НОМЕР -->
-              <div class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3">
-                  ${c.sort_order || "#"}
-              </div>
-
-              <!-- 2. ТЕКСТ -->
-              <div class="flex-1 min-w-0 mr-2">
-                  <div class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors break-words leading-tight">
-                      ${getLocalizedText(c, "title", lang)}
-                  </div>
-                  
-                  <!-- Мета-информация (Тональность, Опус) -->
-                  <div class="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
-                      ${metaParts.join('<span class="text-gray-300">•</span>')}
-                  </div>
-              </div>
-
-              <!-- 3. ИКОНКИ -->
-              <div class="flex items-center flex-shrink-0 gap-2">
-                  ${iconsContainer}
-                  ${gripIcon}
-              </div>
+            <!-- Номер (часть ссылки) -->
+            <a href="/compositions/${
+              c.slug || c.id
+            }" data-navigo class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3 block">
+                ${c.sort_order || "#"}
             </a>
-      `;
+
+            <!-- Текст (Основная ссылка) -->
+            <a href="/compositions/${
+              c.slug || c.id
+            }" data-navigo class="flex-1 min-w-0 mr-2 block">
+                <div class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors break-words leading-tight">
+                    ${getLocalizedText(c, "title", lang)}
+                </div>
+                <div class="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
+                    ${metaHtml}
+                </div>
+            </a>
+
+            <!-- Иконки и действия (Вне ссылки!) -->
+            <div class="flex items-center flex-shrink-0">
+                ${iconsContainer}
+                ${gripIcon} <!-- Теперь скрыт на мобильных -->
+                ${sortButtons} <!-- Кнопки теперь работают корректно -->
+            </div>
+        </div>
+    `;
       })
       .join("");
 
@@ -1665,7 +1725,6 @@ export function renderCompositionDetailView(
   }
   if (window.lucide) window.lucide.createIcons();
 }
-
 
 export function updatePlayerInfo(rec) {
   let title = "Выберите трек";
@@ -2859,8 +2918,7 @@ export function updateSelectionBar(count, context) {
     if (context === "playlist") {
       delBtn.classList.remove("hidden");
       if (delText) delText.textContent = "Убрать";
-    }
-    else {
+    } else {
       if (isAdmin) {
         delBtn.classList.remove("hidden");
         if (delText) delText.textContent = "Удалить";
