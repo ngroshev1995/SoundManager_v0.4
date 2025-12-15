@@ -135,7 +135,7 @@
 </div>
 
 <!-- Main View -->
-<div id="main-view" class="hidden flex flex-col h-full">
+<div id="main-view" class="hidden flex flex-col h-full overflow-y-auto">
     <header
             class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg flex-shrink-0 z-40"
     >
@@ -285,7 +285,7 @@
 
     <!-- Main Content -->
     <main
-            class="flex-1 overflow-y-auto relative flex flex-col transition-[padding] duration-300"
+            class="flex-1 relative flex flex-col transition-[padding] duration-300"
             id="main-content"
     >
         <div id="content-header" class="max-w-7xl mx-auto px-6 pt-6">
@@ -300,9 +300,10 @@
                 id="pagination-container"
                 class="py-8 flex justify-center space-x-2 pb-32"
         ></div>
+    </main>
 
-        <footer
-                class="bg-gray-800 text-white mt-auto border-t border-gray-700 pb-32"
+    <footer
+                class="bg-gray-800 text-white mt-auto border-t border-gray-700 pb-[98px]"
         >
             <div class="max-w-7xl mx-auto px-6 py-12">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -352,7 +353,6 @@
                 </div>
             </div>
         </footer>
-    </main>
 
     <button
             id="restore-player-btn"

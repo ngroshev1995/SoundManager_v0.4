@@ -2777,7 +2777,7 @@ export function initPlayerToggle() {
     player.classList.remove("player-expanded");
     player.classList.add("player-collapsed");
 
-    if (mainContent) mainContent.classList.remove("pb-32");
+    if (mainContent) mainContent.classList.remove("pb-98");
 
     if (restoreBtn) {
       restoreBtn.classList.remove(
@@ -2810,7 +2810,7 @@ export function openPlayer() {
   player.classList.add("player-expanded");
 
   if (mainContent) {
-    mainContent.classList.add("pb-32");
+    mainContent.classList.add("pb-[98px]");
   }
 
   if (restoreBtn) {

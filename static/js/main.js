@@ -229,7 +229,7 @@ function setupRouter() {
 }
 
 async function loadCurrentView() {
-  document.getElementById("main-content").scrollTop = 0;
+  document.getElementById("main-view").scrollTop = 0;
 
   if (!state.view.current) return;
 
