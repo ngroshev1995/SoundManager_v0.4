@@ -3816,42 +3816,61 @@ export function renderLibraryContent(
 
   // --- ЛОГИКА ДЛЯ СПИСКА (АУДИО) ---
   if (type === "list") {
-    const rows = recordings
-      .map((r, i) => {
+    const rows = recordings.map((r, i) => {
         const isFav = favs.has(r.id);
         const compTitle = r.composition.title_ru || r.composition.title;
         const composerName = r.composition.work.composer.name_ru;
         const performerText = r.performers || "Исполнитель не указан";
-        const isSelected =
-          window.state && window.state.selectedRecordingIds.has(r.id);
-        const cover =
-          r.composition.cover_art_url ||
-          r.composition.work.cover_art_url ||
-          "/static/img/placeholder.png";
+        const isSelected = window.state && window.state.selectedRecordingIds.has(r.id);
+        const cover = r.composition.cover_art_url || r.composition.work.cover_art_url || "/static/img/placeholder.png";
+        const yearHtml = r.recording_year ? `<span class="text-gray-300 mx-1">•</span><span>${r.recording_year}</span>` : "";
 
-        const yearHtml = r.recording_year
-          ? `<span class="text-gray-300 mx-1">•</span><span>${r.recording_year}</span>`
-          : "";
+        // === НОВАЯ ЛОГИКА ===
+        const isSingleMovement = r.composition.sort_order === 0;
+
+        let mainTitleLink, mainTitleText, subtitleHtml;
+
+        const composerLink = `<a href="/composers/${r.composition.work.composer.slug || r.composition.work.composer.id}" data-navigo class="hover:underline hover:text-cyan-600">${composerName}</a>`;
+        const workLink = `<a href="/works/${r.composition.work.slug || r.composition.work.id}" data-navigo class="hover:underline hover:text-cyan-600">${r.composition.work.name_ru}</a>`;
+
+        if (isSingleMovement) {
+            // Если это одночастное произведение (как Багатель)
+            mainTitleLink = `/works/${r.composition.work.slug || r.composition.work.id}`;
+            mainTitleText = r.composition.work.name_ru; // Главный заголовок - название произведения
+            // В подписи убираем дублирование названия произведения
+            subtitleHtml = `
+                ${composerLink}
+                <span class="text-gray-300 mx-1">•</span>
+                <span>${performerText}</span>
+                ${yearHtml}
+            `;
+        } else {
+            // Если это часть большого произведения (как часть сонаты)
+            mainTitleLink = `/compositions/${r.composition.slug || r.composition.id}`;
+            mainTitleText = compTitle; // Главный заголовок - название части
+            // В подписи оставляем все как было
+            subtitleHtml = `
+                ${composerLink}
+                <span class="text-gray-300 mx-1">•</span>
+                ${workLink}
+                <span class="text-gray-300 mx-1">•</span>
+                <span>${performerText}</span>
+                ${yearHtml}
+            `;
+        }
+        // === КОНЕЦ НОВОЙ ЛОГИКИ ===
 
         return `
-          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 select-none ${
-            isSelected ? "bg-cyan-50" : "border-b border-gray-100"
-          } bg-white last:border-0 transition-colors cursor-pointer"
+          <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 select-none ${ isSelected ? "bg-cyan-50" : "border-b border-gray-100" } bg-white last:border-0 transition-colors cursor-pointer"
                data-recording-id="${r.id}" data-index="${i}">
 
-               <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
-                 window.state?.isSelectionMode ? "flex" : "hidden md:flex"
-               }">
-                 <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                   r.id
-                 }" ${isSelected ? "checked" : ""}>
+               <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${ window.state?.isSelectionMode ? "flex" : "hidden md:flex" }">
+                 <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${r.id}" ${isSelected ? "checked" : ""}>
                </div>
-               
+
                ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
 
-               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
-                 r.id
-               }">
+               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${r.id}">
                   <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                </div>
 
@@ -3861,37 +3880,23 @@ export function renderLibraryContent(
 
                <div class="flex-1 min-w-0">
                    <div class="font-bold text-gray-800 text-sm leading-tight break-words">
-                      ${compTitle}
+                      <a href="${mainTitleLink}" data-navigo class="hover:underline hover:text-cyan-600">${mainTitleText}</a>
                    </div>
                    <div class="text-xs text-gray-500 mt-0.5 break-words">
-                      <span>${performerText}</span>
-                      <span class="text-gray-300 mx-1">•</span>
-                      <span>${composerName}</span>
-                      ${yearHtml}
+                      ${subtitleHtml}
                    </div>
                </div>
 
                <div class="flex items-center ml-auto pl-3 flex-shrink-0">
                     <div class="hidden md:flex items-center">
-                        ${
-                          isLoggedIn()
-                            ? `
-                            <button class="favorite-btn p-2 mr-2 ${
-                              isFav
-                                ? "text-red-500"
-                                : "text-gray-300 hover:text-red-400"
-                            }" data-recording-id="${r.id}">
-                                <i data-lucide="heart" class="w-4 h-4 ${
-                                  isFav ? "fill-current" : ""
-                                }"></i>
-                            </button>`
-                            : '<div class="w-10"></div>'
+                        ${ isLoggedIn() ? `
+                            <button class="favorite-btn p-2 mr-2 ${ isFav ? "text-red-500" : "text-gray-300 hover:text-red-400" }" data-recording-id="${r.id}">
+                                <i data-lucide="heart" class="w-4 h-4 ${ isFav ? "fill-current" : "" }"></i>
+                            </button>` : '<div class="w-10"></div>'
                         }
                     </div>
-                    
-                    <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
-                      r.duration
-                    )}</div>
+
+                    <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(r.duration)}</div>
                </div>
           </div>`;
       })

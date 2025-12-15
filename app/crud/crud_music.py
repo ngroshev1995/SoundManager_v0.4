@@ -96,7 +96,12 @@ def create_recording_for_composition(
         duration=duration,
         file_path=file_path,
         file_hash=file_hash,
-        composition_id=composition_id
+        composition_id=composition_id,
+        lead_performer = rec_in.lead_performer,
+        conductor = rec_in.conductor,
+        license = rec_in.license,
+        source_text = rec_in.source_text,
+        source_url = rec_in.source_url
     )
     db.add(db_obj)
     db.commit()

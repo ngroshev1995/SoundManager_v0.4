@@ -492,24 +492,25 @@
         </div>
 
         <!-- DESKTOP LAYOUT -->
-        <div
-                class="player-layout-desktop items-center justify-between w-full h-20 px-6 max-w-[1800px] mx-auto"
-        >
+        <div class="player-layout-desktop items-center justify-between w-full h-20 px-6 max-w-[1800px] mx-auto">
+
             <div class="flex items-center gap-4 w-[30%] min-w-[220px]">
                 <img
                         id="player-cover-art-desktop"
                         src="/static/img/placeholder.png"
-                        class="w-14 h-14 rounded-lg object-cover shadow-md bg-gray-200"
+                        class="w-14 h-14 rounded-lg object-cover shadow-md bg-gray-200 flex-shrink-0"
                 />
                 <div class="min-w-0 flex-1">
+                    <!-- УБРАЛИ truncate -->
                     <div
-                            class="font-bold text-gray-900 text-sm truncate"
+                            class="font-bold text-gray-900 text-sm"
                             id="player-title-desktop"
                     >
                         Выберите трек
                     </div>
+                    <!-- УБРАЛИ truncate -->
                     <div
-                            class="text-xs text-gray-500 truncate"
+                            class="text-xs text-gray-500"
                             id="player-artist-desktop"
                     >
                         ClassicaLib
@@ -520,9 +521,9 @@
                         class="flex-shrink-0"
                 ></div>
             </div>
-            <div
-                    class="flex flex-col items-center justify-center w-[40%] max-w-2xl gap-1"
-            >
+
+            <!-- Центральный блок без изменений -->
+            <div class="flex flex-col items-center justify-center w-[40%] max-w-2xl gap-1">
                 <div class="flex items-center gap-6">
                     <button class="text-gray-400 hover:text-cyan-600 p-1">
                         <i data-lucide="shuffle" class="w-4 h-4"></i>
@@ -584,9 +585,9 @@
                     <span id="total-time-desktop" class="w-9">0:00</span>
                 </div>
             </div>
-            <div
-                    class="flex items-center justify-end gap-3 w-[30%] min-w-[220px]"
-            >
+
+            <!-- Правый блок без изменений -->
+            <div class="flex items-center justify-end gap-3 w-[30%] min-w-[220px]">
                 <button
                         id="queue-btn-desktop"
                         class="p-2 text-gray-400 hover:text-cyan-600"
