@@ -1,6 +1,6 @@
 import app.utils as utils
 import uuid
-from typing import List, Any, Optional, Literal
+from typing import List, Any, Optional, Literal, Union
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Form, Response, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload, contains_eager
@@ -323,17 +323,29 @@ def get_random_playable_work(
     return result
 
 
-@router.get("/", response_model=schemas.music.RecordingPage)
+@router.get("/", response_model=Union[schemas.music.RecordingPage, schemas.music.LibraryPage])
 def list_recordings(
         skip: int = 0,
         limit: int = 20,
         q: Optional[str] = None,
         media_type: Optional[Literal["audio", "video"]] = None,
+        group_by: Optional[Literal["work", "recording"]] = "recording",
         composer_id: Optional[int] = None,
         genre: Optional[str] = None,
+        epoch: Optional[str] = None, # <--- 1. ДОБАВИЛИ ПАРАМЕТР
         sort_by: Optional[Literal["newest", "oldest"]] = "newest",
         db: Session = Depends(get_db)
 ):
+    # РЕЖИМ 1: ГРУППИРОВКА ПО ПРОИЗВЕДЕНИЯМ (Только для Аудио/Медиатеки)
+    if group_by == "work" and (media_type == "audio" or media_type is None):
+        # <--- 2. ПЕРЕДАЕМ EPOCH В CRUD
+        # ВНИМАНИЕ: Если файл app/crud/music.py не обновлен, здесь будет ошибка!
+        # Вам нужно будет скинуть мне app/crud/music.py следующим сообщением.
+        return crud.music.get_library_works(
+            db, skip=skip, limit=limit, q=q, composer_id=composer_id, genre=genre, epoch=epoch
+        )
+
+    # РЕЖИМ 2: ПЛОСКИЙ СПИСОК (Старая логика)
     query = (
         db.query(models.music.Recording)
         .join(models.music.Composition, models.music.Recording.composition_id == models.music.Composition.id)
@@ -354,20 +366,12 @@ def list_recordings(
 
     if q:
         search_term = q.lower()
-
         query = query.filter(
             or_(
                 func.lower_utf8(models.music.Recording.performers).contains(search_term),
-
                 func.lower_utf8(models.music.Composition.title_ru).contains(search_term),
-                func.lower_utf8(models.music.Composition.title_original).contains(search_term),
-
                 func.lower_utf8(models.music.Work.name_ru).contains(search_term),
-                func.lower_utf8(models.music.Work.original_name).contains(search_term),
-                func.lower_utf8(models.music.Work.nickname).contains(search_term),
-
-                func.lower_utf8(models.music.Composer.name_ru).contains(search_term),
-                func.lower_utf8(models.music.Composer.original_name).contains(search_term)
+                func.lower_utf8(models.music.Composer.name_ru).contains(search_term)
             )
         )
 
@@ -377,6 +381,10 @@ def list_recordings(
     if genre:
         query = query.filter(models.music.Work.genre == genre)
 
+    # <--- 3. ФИЛЬТРАЦИЯ ПО ЭПОХЕ (ДЛЯ ПЛОСКОГО СПИСКА)
+    if epoch:
+        query = query.filter(models.music.Composer.epoch == epoch)
+
     if sort_by == "newest":
         query = query.order_by(models.music.Recording.id.desc())
     elif sort_by == "oldest":
@@ -385,8 +393,7 @@ def list_recordings(
     total = query.count()
     items = query.offset(skip).limit(limit).all()
 
-    return {"total": total, "recordings": items}
-
+    return {"total": total, "recordings": items, "items": []}
 
 # --- ПРОЧЕЕ ---
 @router.get("/stream/{rid}")

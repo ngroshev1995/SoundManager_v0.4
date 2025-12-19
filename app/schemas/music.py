@@ -1,6 +1,21 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+class GenreBase(BaseModel):
+    name: str
+
+class GenreCreate(GenreBase):
+    pass
+
+class Genre(GenreBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+
+class GenreTypoCheck(BaseModel):
+    similar: Optional[str] = None
+
 
 class ComposerBase(BaseModel):
     name: Optional[str] = None
@@ -20,7 +35,7 @@ class WorkBase(BaseModel):
     original_name: Optional[str] = None
     catalog_number: Optional[str] = None
     tonality: Optional[str] = None
-    genre: Optional[str] = None
+    genre_id: Optional[int] = None
     nickname: Optional[str] = None
     is_no_catalog: Optional[bool] = False
     publication_year: Optional[int] = None
@@ -146,6 +161,7 @@ class WorkSimple(WorkBase):
     id: int
     slug: Optional[str] = None
     name_ru: Optional[str] = None
+    genre: Optional[Genre] = None
 
     class Config:
         from_attributes = True
@@ -174,6 +190,7 @@ class WorkWithComposer(WorkBase):
     composer_id: int
     cover_art_url: Optional[str] = None
     composer: ComposerSimple
+    genre: Optional[Genre] = None
     class Config:
         from_attributes = True
 
@@ -195,6 +212,7 @@ class Work(WorkBase):
     cover_art_url: Optional[str] = None
     composer: Composer
     compositions: List[CompositionSimple] = []
+    genre: Optional[Genre] = None
 
     class Config:
         from_attributes = True
@@ -235,3 +253,43 @@ class ComposerWithWorks(Composer):
 
 class CompositionReorder(BaseModel):
     composition_ids: List[int]
+
+
+# 1. Специальная схема Произведения, включающая Композитора
+class WorkForPlayer(WorkSimple):
+    composer: ComposerSimple
+    class Config:
+        from_attributes = True
+
+# 2. Специальная схема Части, включающая Произведение
+class CompositionForPlayer(CompositionSimple):
+    work: WorkForPlayer
+    class Config:
+        from_attributes = True
+
+# 3. Обновленная схема Записи для библиотеки
+class RecordingForLibrary(RecordingBase):
+    id: int
+    duration: int
+    # Важно: используем расширенную схему CompositionForPlayer, а не CompositionSimple
+    composition: CompositionForPlayer
+    file_path: str
+
+    class Config:
+        from_attributes = True
+
+class WorkLibraryItem(WorkBase):
+    id: int
+    slug: Optional[str] = None
+    cover_art_url: Optional[str] = None
+    composer: ComposerSimple
+    recordings: List[RecordingForLibrary] = []
+    genre: Optional[Genre] = None
+
+
+    class Config:
+        from_attributes = True
+
+class LibraryPage(BaseModel):
+    total: int
+    items: List[WorkLibraryItem]

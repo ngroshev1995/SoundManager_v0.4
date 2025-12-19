@@ -1,3 +1,30 @@
+// Проверка и регистрация CSS @property для плавной анимации градиентов
+try {
+  if (typeof CSS.registerProperty !== "function") {
+    console.warn(
+      "CSS.registerProperty is not supported. Gradient animations might be jerky."
+    );
+  } else {
+    const register = (name, syntax, initial) => {
+      try {
+        CSS.registerProperty({
+          name,
+          syntax,
+          inherits: true,
+          initialValue: initial,
+        });
+      } catch (e) {
+        /* Уже зарегистрировано, игнорируем */
+      }
+    };
+    register("--gradient-top", "<color>", "oklch(100% 0 0 / 0.6)");
+    register("--gradient-middle", "<color>", "oklch(100% 0 0 / 0.9)");
+    register("--gradient-bottom", "<color>", "oklch(100% 0 0 / 1.0)");
+  }
+} catch (e) {
+  console.error("Failed to register CSS properties", e);
+}
+
 import { apiRequest } from "./api.js";
 import { initAuth } from "./auth.js";
 import * as ui from "./ui.js";
@@ -7,7 +34,8 @@ window.apiRequest = apiRequest;
 window.showNotification = ui.showNotification;
 window.player = player;
 
-const router = new Navigo("/", { hash: true });
+const router = new Navigo("/");
+window.router = router;
 
 let state = {
   playlists: [],
@@ -15,6 +43,7 @@ let state = {
   selectedRecordingIds: new Set(),
   favoriteRecordingIds: new Set(),
   favoritesLoaded: false,
+  currentCoverUrl: "/static/img/placeholder.png",
   composersPagination: {
     skip: 0,
     limit: 12,
@@ -32,15 +61,17 @@ let state = {
   pagination: { currentPage: 1, itemsPerPage: 50, totalPages: 1 },
   displayLanguage: "ru",
   lastSelectedId: null,
+  allGenres: [],
   libraryFilters: {
     page: 1,
-    limit: 20,
+    limit: 10,
     mediaType: null,
     composerId: "",
     genre: "",
-    sortBy: "newest",
+    epoch: "",
     search: "",
     hasMore: true,
+    viewMode: "list",
   },
   composersList: [],
 };
@@ -49,13 +80,19 @@ window.state = state;
 
 document.addEventListener("DOMContentLoaded", main);
 
-function main() {
+async function main() {
   const token = localStorage.getItem("access_token");
 
   player.initPlayer();
   addEventListeners();
   setupDuplicateCheckers();
   if (window.lucide) window.lucide.createIcons();
+
+  try {
+    state.allGenres = await apiRequest("/api/genres/");
+  } catch (e) {
+    console.error("Failed to load genres:", e);
+  }
 
   initAuth(() => {
     ui.showMainApp();
@@ -69,11 +106,7 @@ function main() {
   setupRouter();
   ui.updateHeaderAuth();
   ui.showMainApp();
-  if (!window.location.hash || window.location.hash === "#/") {
-    state.view.current = "dashboard";
-  }
-
-  loadCurrentView();
+  router.resolve();
 }
 
 async function fetchUserProfile() {
@@ -224,8 +257,6 @@ function setupRouter() {
       },
     })
     .resolve();
-
-  if (!window.location.hash) router.navigate("/");
 }
 
 async function loadCurrentView() {
@@ -387,6 +418,7 @@ async function loadCurrentView() {
         state.libraryFilters.mediaType = "audio";
         state.libraryFilters.composerId = "";
         state.libraryFilters.genre = "";
+        state.libraryFilters.epoch = "";
         state.libraryFilters.search = "";
 
         ui.renderLibraryPageStructure("Аудиоархив", state.composersList);
@@ -403,6 +435,7 @@ async function loadCurrentView() {
         state.libraryFilters.mediaType = "video";
         state.libraryFilters.composerId = "";
         state.libraryFilters.genre = "";
+        state.libraryFilters.epoch = "";
         state.libraryFilters.search = "";
 
         ui.renderLibraryPageStructure("Видеозал", state.composersList);
@@ -479,6 +512,20 @@ function addEventListeners() {
 
   // --- ЛОГИКА ДЛЯ МОБИЛЬНОГО ОКНА ---
   const openInfoModal = () => {
+    // 1. Определяем, открыт ли полноэкранный плеер
+    const fullPlayer = document.getElementById("mobile-full-player");
+    const isFullScreen =
+      fullPlayer && !fullPlayer.classList.contains("translate-y-full");
+
+    // 2. Сначала ЧИСТИМ оба класса, чтобы избежать конфликтов
+    infoModal.classList.remove("z-[70]", "z-[200]");
+
+    // 3. Добавляем нужный класс в зависимости от режима
+    if (isFullScreen) {
+      infoModal.classList.add("z-[200]"); // Поверх плеера (у плеера z-[100])
+    } else {
+      infoModal.classList.add("z-[70]"); // Стандартный уровень
+    }
     const musicPlayer = document.getElementById("music-player");
     const playerHeight =
       musicPlayer && !musicPlayer.classList.contains("player-collapsed")
@@ -518,6 +565,19 @@ function addEventListeners() {
 
   if (openInfoBtn) openInfoBtn.addEventListener("click", openInfoModal);
   if (closeInfoBtn) closeInfoBtn.addEventListener("click", closeInfoModal);
+
+  const fullPlayerInfoBtn = document.getElementById("full-player-info-btn");
+  if (fullPlayerInfoBtn) {
+    // Удаляем старые клики (на всякий случай)
+    const newBtn = fullPlayerInfoBtn.cloneNode(true);
+    fullPlayerInfoBtn.parentNode.replaceChild(newBtn, fullPlayerInfoBtn);
+
+    // Вешаем прямой вызов окна
+    newBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openInfoModal();
+    });
+  }
 
   // --- ЛОГИКА ДЛЯ ДЕСКТОПНОЙ ПОДСКАЗКИ ---
   if (infoPopoverContainer && infoBtnDesktop && popover) {
@@ -599,7 +659,7 @@ function addEventListeners() {
 
       player.handleTrackClick(playlist[0].id, 0, playlist);
       ui.showNotification(
-        `Воспроизведение ${playlist.length} треков`,
+        `Воспроизведение ${playlist.length} записей`,
         "success"
       );
     }
@@ -607,7 +667,10 @@ function addEventListeners() {
     // === УПРАВЛЕНИЕ ОЧЕРЕДЬЮ ===
 
     // 1. Полная очистка очереди
-    if (target.closest("#clear-queue-btn")) {
+    if (
+      target.closest("#clear-queue-btn") ||
+      target.closest("#full-player-clear-queue-btn")
+    ) {
       e.preventDefault();
       player.clearFullQueue();
     }
@@ -713,30 +776,92 @@ function addEventListeners() {
 
     // 1. Слушать всё (текущие результаты фильтра)
     if (target.closest("#library-play-all-btn")) {
-      const list = state.currentViewRecordings;
+      let list = state.currentViewRecordings;
+
+      if (
+        state.view.current === "library_audio" &&
+        list.length > 0 &&
+        list[0].recordings
+      ) {
+        list = list.flatMap((work) => {
+          // 1. Создаем карту частей (compositions) для поиска метаданных части
+          const compMap = new Map(
+            (work.compositions || []).map((c) => [c.id, c])
+          );
+
+          return (work.recordings || []).map((rec) => ({
+            ...rec,
+            composition: {
+              // Берем данные части из карты или оставляем старые
+              ...(compMap.get(rec.composition_id) || rec.composition || {}),
+              // САМОЕ ГЛАВНОЕ: Прикрепляем родительское произведение
+              work: work,
+            },
+          }));
+        });
+      }
+
       if (!list || list.length === 0)
         return ui.showNotification("Список пуст", "info");
 
-      player.handleTrackClick(list[0].id, 0, list);
-      ui.showNotification(`Воспроизведение ${list.length} треков`, "success");
+      // Фильтруем только играбельные
+      const playableList = list.filter((r) => r.duration > 0);
+
+      if (playableList.length === 0)
+        return ui.showNotification("Нет доступных записей", "info");
+
+      player.handleTrackClick(playableList[0].id, 0, playableList);
+      ui.showNotification(
+        `Воспроизведение ${playableList.length} записей`,
+        "success"
+      );
     }
 
-    // 2. Перемешать (Shuffle)
-    if (target.closest("#library-shuffle-btn")) {
-      let shuffledList = [...state.currentViewRecordings];
+    // --- ПЛЕЙЛИСТЫ / ИЗБРАННОЕ: СЛУШАТЬ ВСЁ ---
+    if (target.closest("#playlist-play-all-btn")) {
+      const list = state.currentViewRecordings;
+      const playable = list.filter((r) => r.duration > 0);
 
-      if (!shuffledList || shuffledList.length === 0)
-        return ui.showNotification("Список пуст", "info");
+      if (playable.length === 0)
+        return ui.showNotification("Нет записей", "info");
 
-      // Алгоритм тасования (мешаем копию)
-      for (let i = shuffledList.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledList[i], shuffledList[j]] = [shuffledList[j], shuffledList[i]];
-      }
+      player.handleTrackClick(playable[0].id, 0, playable);
+      ui.showNotification(
+        `Запуск плейлиста (${playable.length} записей)`,
+        "success"
+      );
+    }
 
-      player.handleTrackClick(shuffledList[0].id, 0, shuffledList);
+    // --- ПЛЕЙЛИСТЫ: ПЕРЕМЕШАТЬ (НОВАЯ ЛОГИКА) ---
+    if (target.closest("#playlist-shuffle-btn")) {
+      const list = state.currentViewRecordings;
+      const playable = list.filter((r) => r.duration > 0);
+
+      if (playable.length === 0)
+        return ui.showNotification("Нет записей", "info");
+
+      // Используем специальную функцию для старта вразнобой
+      player.playRandom(playable);
 
       ui.showNotification("Воспроизведение в случайном порядке", "success");
+    }
+
+    // --- КНОПКИ ПЕРЕМЕШИВАНИЯ ВНУТРИ ПЛЕЕРА (Десктоп и Мобайл) ---
+    if (
+      target.closest("#shuffle-btn-desktop") ||
+      target.closest("#full-player-shuffle-btn")
+    ) {
+      // Просто переключаем режим.
+      // Логика внутри toggleShuffle сама разберется с "хвостом" очереди.
+      player.toggleShuffle();
+    }
+
+    // --- КНОПКИ ПОВТОРА (Repeat) ---
+    if (
+      target.closest("#repeat-btn-desktop") ||
+      target.closest("#full-player-repeat-btn")
+    ) {
+      player.toggleRepeat();
     }
 
     // --- КОНТЕКСТНОЕ МЕНЮ ---
@@ -773,16 +898,60 @@ function addEventListeners() {
     if (playBtn) {
       e.stopPropagation();
       const item = playBtn.closest(".recording-item");
+      const clickedId = parseInt(item.dataset.recordingId);
 
-      const playableList = state.currentViewRecordings.filter(
-        (r) => r.duration > 0
-      );
+      let playableList = [];
+      let clickedIndex = -1;
 
-      player.handleTrackClick(
-        parseInt(item.dataset.recordingId),
-        parseInt(item.dataset.index),
-        playableList
-      );
+      const workAccordion = playBtn.closest('[id^="work-content-"]');
+
+      if (workAccordion) {
+        // --- НОВАЯ ЛОГИКА ДЛЯ ВИДА "СПИСОК" ---
+        const workId = parseInt(workAccordion.id.replace("work-content-", ""));
+
+        const workData = state.currentViewRecordings.find(
+          (w) => w.id === workId
+        );
+
+        if (workData && workData.recordings) {
+          const compositionMap = new Map(
+            (workData.compositions || []).map((c) => [c.id, c])
+          );
+          playableList = workData.recordings
+            .map((rec) => {
+              const fullComposition = compositionMap.get(rec.composition_id);
+              return {
+                ...rec,
+                composition: {
+                  ...(fullComposition || rec.composition),
+                  work: workData,
+                },
+              };
+            })
+            .sort(
+              (a, b) => a.composition.sort_order - b.composition.sort_order
+            );
+        }
+      } else {
+        // --- СТАРАЯ ЛОГИКА (для плейлистов, избранного и т.д.) ---
+        playableList = state.currentViewRecordings || [];
+      }
+
+      playableList = playableList.filter((r) => r.duration > 0);
+      clickedIndex = playableList.findIndex((r) => r.id === clickedId);
+
+      if (clickedIndex !== -1) {
+        player.handleTrackClick(clickedId, clickedIndex, playableList);
+      } else {
+        const singleTrack = state.currentViewRecordings
+          .flatMap((w) => w.recordings || [w])
+          .find((r) => r.id === clickedId);
+        if (singleTrack) {
+          player.handleTrackClick(clickedId, 0, [singleTrack]);
+        } else {
+          console.error("Запись не найдена в текущем списке воспроизведения");
+        }
+      }
 
       return;
     }
@@ -940,37 +1109,56 @@ function addEventListeners() {
       if (!nameRu)
         return ui.showNotification("Название (RU) обязательно", "error");
 
-      const notesContent = window.quillEditor
-        ? window.quillEditor.root.innerHTML
-        : "";
-
-      const genreLabel = document.getElementById("add-work-genre").value;
-      let genreKey = genreLabel;
-
-      const data = {
-        name_ru: nameRu,
-        original_name:
-          document.getElementById("add-work-name-orig").value.trim() || null,
-        tonality:
-          document.getElementById("add-work-tonality").value.trim() || null,
-        is_no_catalog: document.getElementById("add-work-no-catalog").checked,
-        catalog_number:
-          document.getElementById("add-work-catalog").value.trim() || null,
-        genre: genreLabel || null,
-        nickname:
-          document.getElementById("add-work-nickname").value.trim() || null,
-        publication_year:
-          parseInt(document.getElementById("add-work-year-start").value) ||
-          null,
-        publication_year_end:
-          parseInt(document.getElementById("add-work-year-end").value) || null,
-        notes: notesContent,
-      };
+      const genreName = document
+        .getElementById("add-work-genre-input")
+        .value.trim();
 
       createWorkBtn.disabled = true;
-      createWorkBtn.textContent = "Создание...";
+      createWorkBtn.textContent = "Проверка жанра...";
 
       try {
+        let genreId = null;
+        // Если жанр введен, отправляем его на проверку/создание
+        if (genreName) {
+          const genre = await apiRequest("/api/genres/check-create", "POST", {
+            name: genreName,
+          });
+          genreId = genre.id;
+
+          // Обновляем наш локальный список жанров, если появился новый
+          if (!state.allGenres.find((g) => g.id === genre.id)) {
+            state.allGenres.push(genre);
+            state.allGenres.sort((a, b) => a.name.localeCompare(b.name));
+          }
+        }
+
+        createWorkBtn.textContent = "Создание произведения...";
+
+        const notesContent = window.quillEditor
+          ? window.quillEditor.root.innerHTML
+          : "";
+
+        const data = {
+          name_ru: nameRu,
+          original_name:
+            document.getElementById("add-work-name-orig").value.trim() || null,
+          tonality:
+            document.getElementById("add-work-tonality").value.trim() || null,
+          is_no_catalog: document.getElementById("add-work-no-catalog").checked,
+          catalog_number:
+            document.getElementById("add-work-catalog").value.trim() || null,
+          genre_id: genreId, // <-- Используем ID жанра
+          nickname:
+            document.getElementById("add-work-nickname").value.trim() || null,
+          publication_year:
+            parseInt(document.getElementById("add-work-year-start").value) ||
+            null,
+          publication_year_end:
+            parseInt(document.getElementById("add-work-year-end").value) ||
+            null,
+          notes: notesContent,
+        };
+
         const newWork = await apiRequest(
           `/api/recordings/composers/${cId}/works`,
           "POST",
@@ -1434,59 +1622,79 @@ function addEventListeners() {
       ui.updateSelectionStyles();
     }
 
-    // --- НОВЫЕ КНОПКИ ОЧЕРЕДИ В ПАНЕЛИ ---
-
-    // 1. Играть следующим (Массово)
-    if (target.closest("#bulk-play-next-btn")) {
+    // === ПОМОЩНИК: Поиск треков для массовых действий (ВСТАВИТЬ СЮДА) ===
+    const getSelectedTracksForBulk = () => {
       const ids = Array.from(state.selectedRecordingIds).map(Number);
-      const tracks = state.currentViewRecordings.filter((r) =>
-        ids.includes(r.id)
-      );
+
+      // Сценарий 1: Мы в Медиатеке (Аудио), где список сгруппирован по Произведениям
+      if (
+        state.view.current === "library_audio" &&
+        state.currentViewRecordings.length > 0 &&
+        state.currentViewRecordings[0].recordings
+      ) {
+        let found = [];
+        for (const work of state.currentViewRecordings) {
+          if (!work.recordings) continue;
+          // Ищем совпадения внутри произведения
+          const matches = work.recordings.filter((r) => ids.includes(r.id));
+          if (matches.length > 0) {
+            // Обогащаем данными (Composition + Work), чтобы плеер знал контекст
+            const compMap = new Map(
+              (work.compositions || []).map((c) => [c.id, c])
+            );
+            found.push(
+              ...matches.map((r) => ({
+                ...r,
+                composition: {
+                  ...(compMap.get(r.composition_id) || r.composition),
+                  work: work,
+                },
+              }))
+            );
+          }
+        }
+        return found;
+      }
+
+      // Сценарий 2: Плоский список (Плейлисты, Избранное, Поиск)
+      return state.currentViewRecordings.filter((r) => ids.includes(r.id));
+    };
+
+    // 1. Играть следующим
+    if (target.closest("#bulk-play-next-btn")) {
+      const tracks = getSelectedTracksForBulk();
 
       if (tracks.length > 0) {
         player.playNextInQueue(tracks);
 
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
+        ui.updateSelectionBar(0);
+        ui.updateSelectionStyles();
         document
           .querySelectorAll(".selection-checkbox-container")
           .forEach((el) => el.classList.add("hidden"));
-        document.querySelectorAll(".recording-item").forEach((row) => {
-          row.classList.remove("bg-cyan-100/60");
-          row.classList.add("bg-white");
-          const cb = row.querySelector(".recording-checkbox");
-          if (cb) cb.checked = false;
-        });
-        ui.updateSelectionBar(0);
       }
     }
 
-    // 2. В конец очереди (Массово)
+    // 2. В конец очереди
     if (target.closest("#bulk-add-queue-btn")) {
-      const ids = Array.from(state.selectedRecordingIds).map(Number);
-      const tracks = state.currentViewRecordings.filter((r) =>
-        ids.includes(r.id)
-      );
+      const tracks = getSelectedTracksForBulk();
 
       if (tracks.length > 0) {
         player.addToQueue(tracks);
 
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
+        ui.updateSelectionBar(0);
+        ui.updateSelectionStyles();
         document
           .querySelectorAll(".selection-checkbox-container")
           .forEach((el) => el.classList.add("hidden"));
-        document.querySelectorAll(".recording-item").forEach((row) => {
-          row.classList.remove("bg-cyan-100/60");
-          row.classList.add("bg-white");
-          const cb = row.querySelector(".recording-checkbox");
-          if (cb) cb.checked = false;
-        });
-        ui.updateSelectionBar(0);
       }
     }
 
-    // 2. В плейлист
+    // 3. В плейлист (тут изменений не требовалось, но оставляем для целостности)
     if (target.closest("#bulk-add-playlist-btn")) {
       ui.showSelectPlaylistModal(state.playlists, async (targetPid) => {
         const ids = Array.from(state.selectedRecordingIds).map(Number);
@@ -1500,40 +1708,41 @@ function addEventListeners() {
             count++;
           } catch (e) {}
         }
-        ui.showNotification(`Добавлено треков: ${count}`, "success");
+        ui.showNotification(`Добавлено записей: ${count}`, "success");
         state.selectedRecordingIds.clear();
         ui.updateSelectionBar(0);
+
+        // Добавлено для корректного сброса интерфейса
+        state.isSelectionMode = false;
+        ui.updateSelectionStyles();
+        document
+          .querySelectorAll(".selection-checkbox-container")
+          .forEach((el) => el.classList.add("hidden"));
+
         loadCurrentView();
       });
     }
 
-    // --- МАССОВОЕ РЕДАКТИРОВАНИЕ (В ПАНЕЛИ) ---
+    // 4. Редактировать (для Админа)
     if (target.closest("#bulk-edit-btn")) {
-      const iterator = state.selectedRecordingIds.values();
-      const id = iterator.next().value;
-      if (!id) return;
+      const tracks = getSelectedTracksForBulk();
+      const rec = tracks[0]; // Берем первый
 
-      const rec = state.currentViewRecordings.find((r) => r.id === id);
       if (rec) {
         state.selectedRecordingIds.clear();
         state.isSelectionMode = false;
 
         ui.updateSelectionBar(0);
         ui.updateSelectionStyles();
-
         document
           .querySelectorAll(".selection-checkbox-container")
-          .forEach((el) => {
-            el.classList.add("hidden");
-            el.style.display = "";
-          });
+          .forEach((el) => el.classList.add("hidden"));
 
         const type = rec.duration > 0 ? "audio_recording" : "video_recording";
 
         ui.showEditEntityModal(type, rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Запись обновлена", "success");
-
           loadCurrentView();
         });
       }
@@ -1593,6 +1802,41 @@ function addEventListeners() {
           },
         });
       }
+    }
+
+    // --- ПЛЕЙ ИЗ СЕТКИ (Grid Card Play) ---
+    const gridPlayBtn = target.closest(".grid-work-play-btn");
+    if (gridPlayBtn) {
+      e.stopPropagation();
+      const workId = parseInt(gridPlayBtn.dataset.workId);
+      const work = state.currentViewRecordings.find((w) => w.id === workId);
+
+      if (work && work.recordings && work.recordings.length > 0) {
+        const compositionMap = new Map(
+          (work.compositions || []).map((c) => [c.id, c])
+        );
+
+        const tracksWithContext = work.recordings.map((rec) => {
+          const fullComposition = compositionMap.get(rec.composition_id);
+          return {
+            ...rec,
+            composition: {
+              ...(fullComposition || rec.composition),
+              work: work,
+            },
+          };
+        });
+
+        const playableTracks = tracksWithContext.filter((r) => r.duration > 0);
+
+        if (playableTracks.length > 0) {
+          player.handleTrackClick(playableTracks[0].id, 0, playableTracks);
+          ui.showNotification(`Воспроизведение: ${work.name_ru}`, "success");
+        } else {
+          ui.showNotification("Нет доступных записей", "info");
+        }
+      }
+      return;
     }
 
     // --- МОБИЛЬНАЯ СОРТИРОВКА ПЛЕЙЛИСТА ---
@@ -1703,7 +1947,7 @@ function addEventListeners() {
       localStorage.removeItem("user_email");
       localStorage.removeItem("is_admin");
 
-      window.location.hash = "/";
+      window.location.href = "/";
       window.location.reload();
     }
     if (target.closest("#queue-btn"))
@@ -2061,6 +2305,211 @@ function addEventListeners() {
       return false;
     }
   });
+
+  // --- ЛОГИКА ПОЛНОЭКРАННОГО МОБИЛЬНОГО ПЛЕЕРА (ИСПРАВЛЕННАЯ ВЕРСИЯ) ---
+
+  // 1. Открытие плеера по клику на контейнер (кроме кнопок)
+  document.body.addEventListener("click", (e) => {
+    const playerContainer = e.target.closest("#music-player-mobile");
+    if (playerContainer) {
+      // Не открывать, если кликнули на кнопку
+      if (e.target.closest("button") || e.target.closest("a")) {
+        return;
+      }
+      if (window.openMobileFullPlayer) window.openMobileFullPlayer();
+    }
+  });
+
+  // 2. Закрытие плеера
+  document
+    .getElementById("close-full-player-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.closeMobileFullPlayer) window.closeMobileFullPlayer();
+    });
+
+  // 3. Кнопки управления (Play/Pause/Next/Prev)
+  document
+    .getElementById("full-play-pause-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (player.togglePlayPause) player.togglePlayPause();
+    });
+  document.getElementById("full-prev-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (player.playPrev) player.playPrev();
+  });
+  document.getElementById("full-next-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (player.playNext) player.playNext();
+  });
+
+  // 4. Ползунок (Seekbar)
+  const fullSeekbar = document.getElementById("full-player-seekbar");
+  if (fullSeekbar) {
+    fullSeekbar.addEventListener("input", (e) => {
+      e.stopPropagation();
+      if (player.seekTo) player.seekTo(e.target.value);
+    });
+  }
+
+  // 5. Кнопка "Очередь"
+  document
+    .getElementById("full-player-toggle-queue-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.toggleMobileQueue) window.toggleMobileQueue();
+    });
+
+  // 6. Кнопка "Информация" (i)
+  document
+    .getElementById("full-player-info-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.openMobileInfo) window.openMobileInfo();
+    });
+
+  // 7. Кнопка "Добавить в плейлист" в полноэкранном плеере
+  document
+    .getElementById("full-player-add-playlist-btn")
+    ?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const playerEl = document.getElementById("mobile-full-player");
+      const trackId = parseInt(playerEl.dataset.trackId);
+      const isLoggedIn = !!localStorage.getItem("access_token");
+
+      if (!isLoggedIn) {
+        return ui.showNotification(
+          "Войдите, чтобы добавлять записи в плейлисты",
+          "info"
+        );
+      }
+
+      if (trackId) {
+        // ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ
+        ui.showFullPlayerPlaylistModal(state.playlists, async (targetPid) => {
+          try {
+            await apiRequest(
+              `/api/playlists/${targetPid}/recordings/${trackId}`,
+              "POST"
+            );
+            ui.showNotification("Запись добавлена в плейлист", "success");
+          } catch (error) {
+            ui.showNotification(error.message, "error");
+          }
+        });
+      }
+    });
+
+  // --- ЛОГИКА СВАЙПОВ В ПОЛНОЭКРАННОМ ПЛЕЕРЕ (КАРУСЕЛЬНАЯ ВЕРСИЯ С ОТСТУПАМИ) ---
+  const artView = document.getElementById("full-player-art-view");
+  if (artView) {
+    // Находим новые DIV-обертки
+    const wrappers = artView.querySelectorAll(".swipe-cover-wrapper");
+    const coverPrevWrapper = wrappers[0];
+    const coverCurrentWrapper = wrappers[1];
+    const coverNextWrapper = wrappers[2];
+
+    let touchStartX = 0;
+    let isSwiping = false;
+    const swipeThreshold = artView.offsetWidth / 4;
+
+    const resetCoverPositions = (animated = false) => {
+      const gap = 8; // p-2 = 0.5rem = 8px. Можно настроить, если нужно.
+
+      wrappers.forEach((wrapper) => {
+        if (wrapper) {
+          wrapper.style.transition = animated
+            ? "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+            : "none";
+        }
+      });
+      // Сдвигаем предыдущую обложку влево на 100% ширины ПЛЮС отступ
+      if (coverPrevWrapper)
+        coverPrevWrapper.style.transform = `translateX(calc(-100% - ${gap}px))`;
+      // Текущая остается по центру
+      if (coverCurrentWrapper)
+        coverCurrentWrapper.style.transform = `translateX(0%)`;
+      // Сдвигаем следующую обложку вправо на 100% ширины ПЛЮС отступ
+      if (coverNextWrapper)
+        coverNextWrapper.style.transform = `translateX(calc(100% + ${gap}px))`;
+    };
+
+    resetCoverPositions();
+
+    artView.addEventListener(
+      "touchstart",
+      (e) => {
+        touchStartX = e.touches[0].clientX;
+        isSwiping = true;
+        wrappers.forEach((wrapper) => {
+          if (wrapper) wrapper.style.transition = "none";
+        });
+      },
+      { passive: true }
+    );
+
+    artView.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!isSwiping) return;
+        const currentX = e.touches[0].clientX;
+        const deltaX = currentX - touchStartX;
+
+        if (coverPrevWrapper)
+          coverPrevWrapper.style.transform = `translateX(${
+            -artView.offsetWidth + deltaX
+          }px)`;
+        if (coverCurrentWrapper)
+          coverCurrentWrapper.style.transform = `translateX(${deltaX}px)`;
+        if (coverNextWrapper)
+          coverNextWrapper.style.transform = `translateX(${
+            artView.offsetWidth + deltaX
+          }px)`;
+      },
+      { passive: true }
+    );
+
+    artView.addEventListener("touchend", (e) => {
+      if (!isSwiping) return;
+      isSwiping = false;
+
+      wrappers.forEach((wrapper) => {
+        if (wrapper)
+          wrapper.style.transition =
+            "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+      });
+
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+
+      if (Math.abs(deltaX) > swipeThreshold) {
+        if (deltaX < 0) {
+          if (coverCurrentWrapper)
+            coverCurrentWrapper.style.transform = `translateX(-100%)`;
+          if (coverNextWrapper)
+            coverNextWrapper.style.transform = `translateX(0%)`;
+
+          setTimeout(() => {
+            if (window.player) window.player.playNext();
+            resetCoverPositions();
+          }, 300);
+        } else {
+          if (coverCurrentWrapper)
+            coverCurrentWrapper.style.transform = `translateX(100%)`;
+          if (coverPrevWrapper)
+            coverPrevWrapper.style.transform = `translateX(0%)`;
+
+          setTimeout(() => {
+            if (window.player) window.player.playPrev();
+            resetCoverPositions();
+          }, 300);
+        }
+      } else {
+        // Неудачный свайп, возвращаем все на место
+        resetCoverPositions(true);
+      }
+    });
+  }
 }
 
 function handleSelectionToggle(row) {
@@ -2258,9 +2707,41 @@ async function handleContextMenuAction(li) {
     targetIds = [contextRid];
   }
 
-  const targetRecordings = state.currentViewRecordings.filter((r) =>
-    targetIds.includes(r.id)
-  );
+  let targetRecordings = [];
+
+  if (
+    state.view.current === "library_audio" &&
+    state.currentViewRecordings.length > 0 &&
+    state.currentViewRecordings[0].recordings
+  ) {
+    // РЕЖИМ БИБЛИОТЕКИ (МАССИВ ПРОИЗВЕДЕНИЙ)
+    for (const idToFind of targetIds) {
+      for (const work of state.currentViewRecordings) {
+        const foundRecording = work.recordings.find((r) => r.id === idToFind);
+        if (foundRecording) {
+          const compositionMap = new Map(
+            (work.compositions || []).map((c) => [c.id, c])
+          );
+          const fullComposition = compositionMap.get(
+            foundRecording.composition_id
+          );
+          targetRecordings.push({
+            ...foundRecording,
+            composition: {
+              ...(fullComposition || foundRecording.composition),
+              work: work,
+            },
+          });
+          break;
+        }
+      }
+    }
+  } else {
+    // ОБЫЧНЫЙ РЕЖИМ (ПЛЕЙЛИСТЫ, ИЗБРАННОЕ И Т.Д.)
+    targetRecordings = state.currentViewRecordings.filter((r) =>
+      targetIds.includes(r.id)
+    );
+  }
 
   if (act === "play-next") {
     player.playNextInQueue(targetRecordings);
@@ -2276,17 +2757,26 @@ async function handleContextMenuAction(li) {
     if (targetIds.length > 1) {
       ui.showNotification("Редактируйте записи по одной", "info");
     } else {
-      const rec = state.currentViewRecordings.find((r) => r.id === contextRid);
+      // ИСПРАВЛЕНИЕ: Берем запись из уже подготовленного массива targetRecordings.
+      // Он корректно работает и для плоских списков, и для вложенных (Аудиоархив).
+      const rec = targetRecordings[0];
+
       if (rec) {
         const recordingType =
           rec.duration > 0 ? "audio_recording" : "video_recording";
         ui.showEditEntityModal(recordingType, rec, async (data) => {
           await apiRequest(`/api/recordings/${rec.id}`, "PUT", data);
           ui.showNotification("Запись обновлена", "success");
+
+          // Сбрасываем выделение, чтобы интерфейс обновился чисто
           state.selectedRecordingIds.clear();
           ui.updateSelectionBar(0);
+
           loadCurrentView();
         });
+      } else {
+        // На всякий случай, если запись не найдена
+        console.error("Recording object not found for ID:", contextRid);
       }
     }
   }
@@ -2308,7 +2798,7 @@ async function handleContextMenuAction(li) {
     }
 
     if (successCount > 0) {
-      ui.showNotification(`Добавлено треков: ${successCount}`, "success");
+      ui.showNotification(`Добавлено записей: ${successCount}`, "success");
     }
 
     unselectItems();
@@ -2329,7 +2819,7 @@ async function handleContextMenuAction(li) {
         }
       );
 
-      ui.showNotification(`Удалено треков: ${targetIds.length}`, "success");
+      ui.showNotification(`Удалено записей: ${targetIds.length}`, "success");
 
       state.currentViewRecordings = state.currentViewRecordings.filter(
         (r) => !targetIds.includes(r.id)
@@ -2454,41 +2944,54 @@ async function loadLibraryWithFilters(reset = false) {
         '<div class="flex justify-center py-10"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div></div>';
   }
 
-  const { page, limit, mediaType, composerId, genre, sortBy, search } =
+  const { page, limit, mediaType, composerId, genre, epoch, search } =
     state.libraryFilters;
   const skip = (page - 1) * limit;
 
   let url = `/api/recordings/?skip=${skip}&limit=${limit}`;
-  if (mediaType) url += `&media_type=${mediaType}`;
+
+  if (mediaType) {
+    url += `&media_type=${mediaType}`;
+    if (mediaType === "audio") {
+      url += "&group_by=work";
+    }
+  }
+
   if (composerId) url += `&composer_id=${composerId}`;
   if (genre) url += `&genre=${genre}`;
-  if (sortBy) url += `&sort_by=${sortBy}`;
+  if (epoch) url += `&epoch=${epoch}`;
   if (search) url += `&q=${encodeURIComponent(search)}`;
 
   try {
     const data = await apiRequest(url);
 
-    if (data.recordings.length < limit) {
+    const incomingItems = data.items || data.recordings || [];
+
+    if (incomingItems.length < limit) {
       state.libraryFilters.hasMore = false;
     }
 
     if (reset) {
-      state.currentViewRecordings = data.recordings;
+      state.currentViewRecordings = incomingItems;
     } else {
       state.currentViewRecordings = [
         ...state.currentViewRecordings,
-        ...data.recordings,
+        ...incomingItems,
       ];
     }
 
     ui.renderLibraryContent(
-      state.currentViewRecordings,
+      reset ? data : { ...data, items: state.currentViewRecordings }, // hack для сохранения структуры
       mediaType === "audio" ? "list" : "grid",
       state.favoriteRecordingIds,
       reset
     );
 
     ui.updateLoadMoreButton(state.libraryFilters.hasMore);
+
+    if (typeof ui.updateSidebarActiveStates === "function") {
+      ui.updateSidebarActiveStates();
+    }
   } catch (e) {
     console.error(e);
     ui.showNotification("Ошибка загрузки: " + e.message, "error");
@@ -2498,6 +3001,29 @@ async function loadLibraryWithFilters(reset = false) {
 window.applyLibraryFilter = (key, value) => {
   state.libraryFilters[key] = value;
   loadLibraryWithFilters(true);
+};
+
+window.setLibraryViewMode = (mode) => {
+  state.libraryFilters.viewMode = mode;
+
+  // Обновляем кнопки (визуально)
+  document.querySelectorAll(".view-mode-btn").forEach((btn) => {
+    if (btn.dataset.mode === mode) {
+      btn.classList.add("bg-cyan-100", "text-cyan-700");
+      btn.classList.remove("text-gray-500", "hover:bg-gray-100");
+    } else {
+      btn.classList.remove("bg-cyan-100", "text-cyan-700");
+      btn.classList.add("text-gray-500", "hover:bg-gray-100");
+    }
+  });
+
+  // Перерисовываем контент
+  ui.renderLibraryContent(
+    state.currentViewRecordings,
+    state.libraryFilters.mediaType === "audio" ? "list" : "grid", // Это тип данных
+    state.favoriteRecordingIds,
+    false // reset
+  );
 };
 
 window.loadMoreLibrary = () => {
@@ -2626,3 +3152,92 @@ function setupDuplicateCheckers() {
     });
   }
 }
+window.playRecording = (recordingId) => {
+  const btn = document.getElementById(`list-play-btn-${recordingId}`);
+  if (btn) {
+    btn.click();
+  } else {
+    console.warn("Button not found, trying fallback play");
+  }
+};
+
+window.playPerformanceFromModal = (firstTrackId) => {
+  const work = window.state.tempWorkForModal;
+  if (!work) return;
+
+  let allTracks = [];
+  work.compositions.forEach((comp) => {
+    if (comp.recordings) {
+      comp.recordings.forEach((r) => {
+        if (r.duration > 0) {
+          r.composition = comp;
+          r.composition.work = work;
+          allTracks.push(r);
+        }
+      });
+    }
+  });
+
+  allTracks.sort((a, b) => a.composition.sort_order - b.composition.sort_order);
+
+  const targetTrack = allTracks.find((t) => t.id === firstTrackId);
+  if (!targetTrack) return;
+
+  const targetKey =
+    (targetTrack.performers || "") + (targetTrack.recording_year || "");
+  const performanceTracks = allTracks.filter((t) => {
+    const key = (t.performers || "") + (t.recording_year || "");
+    return key === targetKey;
+  });
+
+  if (performanceTracks.length > 0) {
+    // Запускаем
+    window.player.handleTrackClick(
+      performanceTracks[0].id,
+      0,
+      performanceTracks
+    );
+
+    const modal = document.getElementById("versions-modal");
+    modal.querySelector(".modal-overlay").classList.add("opacity-0");
+    modal
+      .querySelector(".modal-content")
+      .classList.add("opacity-0", "scale-95");
+    setTimeout(() => modal.classList.add("hidden"), 300);
+
+    ui.showNotification("Исполнение загружено", "success");
+  }
+};
+// === ЛОГИКА КАСТОМНОГО ВЫПАДАЮЩЕГО СПИСКА ===
+
+// 1. Открыть/Закрыть
+window.toggleComposerDropdown = (e) => {
+  e.stopPropagation(); // Чтобы клик не ушел в document и не закрыл сразу же
+  const dropdown = document.getElementById("composer-custom-dropdown");
+  if (dropdown) {
+    dropdown.classList.toggle("hidden");
+    // Обновляем иконки, так как контент был скрыт
+    if (!dropdown.classList.contains("hidden") && window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+};
+
+// 2. Выбрать композитора
+window.selectLibraryComposer = (id) => {
+  // Применяем фильтр (функция из ui.js/main.js логики)
+  window.applyLibraryFilter("composerId", id);
+
+  // Закрываем список
+  const dropdown = document.getElementById("composer-custom-dropdown");
+  if (dropdown) dropdown.classList.add("hidden");
+};
+
+// 3. Закрыть при клике вне списка
+document.addEventListener("click", (e) => {
+  const dropdown = document.getElementById("composer-custom-dropdown");
+  // Если клик был НЕ по кнопке и список открыт -> закрываем
+  if (dropdown && !dropdown.classList.contains("hidden")) {
+    dropdown.classList.add("hidden");
+  }
+});

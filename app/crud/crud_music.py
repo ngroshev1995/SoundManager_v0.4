@@ -3,7 +3,8 @@ from app.utils import generate_unique_slug, delete_file_by_url
 import os
 from pathlib import Path
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_, func
 
 from app import models, schemas
 
@@ -21,6 +22,92 @@ def _delete_physical_files(file_paths: List[str]):
                 print(f"Deleted file: {clean_path}")
         except Exception as e:
             print(f"Error deleting file {path}: {e}")
+
+
+def get_library_works(
+        db: Session,
+        skip: int = 0,
+        limit: int = 20,
+        q: Optional[str] = None,
+        composer_id: Optional[int] = None,
+        genre: Optional[str] = None,
+        epoch: Optional[str] = None  # <--- 1. ДОБАВЛЕН АРГУМЕНТ
+):
+    """
+    Получает список Произведений (Work), у которых есть хотя бы одна аудиозапись.
+    Подгружает записи жадно (Eager loading).
+    """
+    # 1. Сначала находим ID произведений
+    query = (
+        db.query(models.music.Work.id)
+        .join(models.music.Composition)
+        .join(models.music.Recording)
+        .join(models.music.Composer)
+        .filter(models.music.Recording.duration > 0)
+    )
+
+    if q:
+        search_term = q.lower()
+        query = query.filter(
+            or_(
+                func.lower_utf8(models.music.Work.name_ru).contains(search_term),
+                func.lower_utf8(models.music.Work.original_name).contains(search_term),
+                func.lower_utf8(models.music.Composer.name_ru).contains(search_term),
+                func.lower_utf8(models.music.Recording.performers).contains(search_term)
+            )
+        )
+
+    if composer_id:
+        query = query.filter(models.music.Work.composer_id == composer_id)
+
+    if genre:
+        query = query.filter(models.music.Work.genre == genre)
+
+    # <--- 2. ДОБАВЛЕН ФИЛЬТР ПО ЭПОХЕ
+    if epoch:
+        query = query.filter(models.music.Composer.epoch == epoch)
+
+    query = query.group_by(models.music.Work.id).order_by(models.music.Work.id.desc())
+
+    total = query.count()
+    work_ids_tuples = query.offset(skip).limit(limit).all()
+    work_ids = [t[0] for t in work_ids_tuples]
+
+    if not work_ids:
+        return {"total": 0, "items": []}
+
+    # 2. Теперь делаем "тяжелый" запрос только для выбранных ID
+    works = (
+        db.query(models.music.Work)
+        .options(
+            joinedload(models.music.Work.composer),
+            joinedload(models.music.Work.compositions).joinedload(models.music.Composition.recordings)
+        )
+        .filter(models.music.Work.id.in_(work_ids))
+        .order_by(models.music.Work.id.desc())
+        .all()
+    )
+
+    # 3. Подготовка данных для Pydantic
+    result_items = []
+    for w in works:
+        all_recs = []
+        for comp in w.compositions:
+            # Явно связываем Work с Composition для Pydantic схемы
+            comp.work = w
+
+            for rec in comp.recordings:
+                if rec.duration > 0:
+                    # Явно связываем Composition с Recording
+                    rec.composition = comp
+                    all_recs.append(rec)
+
+        if not all_recs and q: continue
+
+        w.recordings = all_recs
+        result_items.append(w)
+
+    return {"total": total, "items": result_items}
 
 
 # --- CREATE Functions ---

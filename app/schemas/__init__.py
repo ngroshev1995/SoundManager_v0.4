@@ -4,7 +4,7 @@ from .music import (
     Work, WorkCreate, WorkUpdate, WorkWithComposer,
     Composition, CompositionCreate, CompositionUpdate, CompositionSimple,
     Recording, RecordingCreate, RecordingUpdate, RecordingPage,
-    BulkRecordingRequest, FullRecordingDetailsUpdate
+    BulkRecordingRequest, FullRecordingDetailsUpdate, Genre, GenreCreate, GenreBase
 )
 from .playlist import Playlist, PlaylistCreate, PlaylistUpdate
 from .token import Token, TokenData

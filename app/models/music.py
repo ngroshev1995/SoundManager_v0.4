@@ -1,7 +1,15 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean, select, func, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Boolean, select, func, Float, case, and_
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from app.db.base import Base, recording_favorites_association
+
+class Genre(Base):
+    __tablename__ = "genres"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+
+    works = relationship("Work", back_populates="genre")
 
 
 class Composer(Base):
@@ -20,9 +28,9 @@ class Composer(Base):
     longitude = Column(Float, nullable=True)
     works = relationship("Work", back_populates="composer", cascade="all, delete-orphan")
 
-    @property
+    @hybrid_property
     def epoch(self) -> str:
-        """Определяет музыкальную эпоху на основе годов жизни."""
+        """Определяет музыкальную эпоху на основе годов жизни (Python логика)."""
         if not self.year_born and not self.year_died:
             return "default"
 
@@ -41,6 +49,29 @@ class Composer(Base):
 
         return "modern"
 
+    @epoch.expression
+    def epoch(cls):
+        """
+        Объясняет базе данных, как вычислять эпоху в SQL-запросе.
+        Используется для фильтрации: .filter(Composer.epoch == 'romantic')
+        """
+        # Логика: если есть оба года, берем среднее. Иначе берем тот, который есть.
+        peak_year = case(
+            (
+                and_(cls.year_born.isnot(None), cls.year_died.isnot(None)),
+                (cls.year_born + cls.year_died) / 2
+            ),
+            else_=func.coalesce(cls.year_born, cls.year_died, 0)
+        )
+
+        return case(
+            (peak_year == 0, "default"),
+            (peak_year < 1750, "baroque"),
+            (peak_year < 1820, "classical"),
+            (peak_year < 1910, "romantic"),
+            else_="modern"
+        )
+
 
 class Work(Base):
     __tablename__ = "works"
@@ -50,7 +81,8 @@ class Work(Base):
     name_ru = Column(String, index=True, nullable=False)
     original_name = Column(String, nullable=True)
     tonality = Column(String, nullable=True)
-    genre = Column(String, index=True, nullable=True)
+    genre_id = Column(Integer, ForeignKey("genres.id"), nullable=True)
+    genre = relationship("Genre", back_populates="works")
     nickname = Column(String, nullable=True)
     is_no_catalog = Column(Boolean, default=False)
     catalog_number = Column(String, index=True, nullable=True)
