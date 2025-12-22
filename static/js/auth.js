@@ -74,7 +74,15 @@ async function handleLogin() {
 
     localStorage.setItem("user_email", email);
     localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("is_admin", data.is_admin ? "true" : "false");
+    try {
+      // Делаем дополнительный запрос, чтобы получить display_name
+      const profile = await apiRequest("/api/users/me");
+      localStorage.setItem("display_name", profile.display_name || "");
+      localStorage.setItem("is_admin", profile.is_admin ? "true" : "false");
+    } catch (e) {
+      console.error("Не удалось получить профиль после входа:", e);
+      localStorage.setItem("is_admin", "false");
+    }
     onLoginSuccess();
   } catch (error) {
     showNotification(error.message, "error");
@@ -114,15 +122,22 @@ async function handleRegister() {
     const data = await response.json();
 
     if (!response.ok) {
-        const showLoginLink = document.getElementById("show-login");
-        showLoginLink?.click();
-        return;
+      const showLoginLink = document.getElementById("show-login");
+      showLoginLink?.click();
+      return;
     }
 
     localStorage.setItem("user_email", email);
     localStorage.setItem("access_token", data.access_token);
+    try {
+      const profile = await apiRequest("/api/users/me");
+      localStorage.setItem("display_name", profile.display_name || "");
+      localStorage.setItem("is_admin", profile.is_admin ? "true" : "false");
+    } catch (e) {
+      console.error("Не удалось получить профиль после регистрации:", e);
+      localStorage.setItem("is_admin", "false");
+    }
     onLoginSuccess();
-
   } catch (error) {
     console.error("Registration failed:", error);
   }

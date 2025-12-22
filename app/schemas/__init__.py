@@ -1,4 +1,4 @@
-from .user import User, UserCreate, UserUpdate
+from .user import User, UserCreate, UserUpdateProfile, UserAccount, UserPasswordChange, UserStats
 from .music import (
     Composer, ComposerCreate, ComposerUpdate, ComposerSimple,
     Work, WorkCreate, WorkUpdate, WorkWithComposer,

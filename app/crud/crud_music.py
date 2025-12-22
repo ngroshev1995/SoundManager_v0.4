@@ -31,7 +31,7 @@ def get_library_works(
         q: Optional[str] = None,
         composer_id: Optional[int] = None,
         genre: Optional[str] = None,
-        epoch: Optional[str] = None  # <--- 1. ДОБАВЛЕН АРГУМЕНТ
+        epoch: Optional[str] = None
 ):
     """
     Получает список Произведений (Work), у которых есть хотя бы одна аудиозапись.
@@ -43,6 +43,7 @@ def get_library_works(
         .join(models.music.Composition)
         .join(models.music.Recording)
         .join(models.music.Composer)
+        .outerjoin(models.music.Work.genre)
         .filter(models.music.Recording.duration > 0)
     )
 
@@ -61,9 +62,8 @@ def get_library_works(
         query = query.filter(models.music.Work.composer_id == composer_id)
 
     if genre:
-        query = query.filter(models.music.Work.genre == genre)
+        query = query.filter(models.music.Genre.name == genre)
 
-    # <--- 2. ДОБАВЛЕН ФИЛЬТР ПО ЭПОХЕ
     if epoch:
         query = query.filter(models.music.Composer.epoch == epoch)
 
@@ -81,6 +81,7 @@ def get_library_works(
         db.query(models.music.Work)
         .options(
             joinedload(models.music.Work.composer),
+            joinedload(models.music.Work.genre),
             joinedload(models.music.Work.compositions).joinedload(models.music.Composition.recordings)
         )
         .filter(models.music.Work.id.in_(work_ids))
@@ -88,21 +89,19 @@ def get_library_works(
         .all()
     )
 
-    # 3. Подготовка данных для Pydantic
+    # 3. Подготовка данных для Pydantic с дополнительной фильтрацией
     result_items = []
     for w in works:
         all_recs = []
         for comp in w.compositions:
-            # Явно связываем Work с Composition для Pydantic схемы
             comp.work = w
-
             for rec in comp.recordings:
                 if rec.duration > 0:
-                    # Явно связываем Composition с Recording
                     rec.composition = comp
                     all_recs.append(rec)
 
-        if not all_recs and q: continue
+        if not all_recs:
+            continue
 
         w.recordings = all_recs
         result_items.append(w)

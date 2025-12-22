@@ -81,6 +81,8 @@ window.state = state;
 document.addEventListener("DOMContentLoaded", main);
 
 async function main() {
+  history.scrollRestoration = "manual";
+
   const token = localStorage.getItem("access_token");
 
   player.initPlayer();
@@ -255,6 +257,12 @@ function setupRouter() {
           if (listEl) listEl.innerHTML = "";
         }
       },
+
+      "/account": () => {
+        state.view.current = "account";
+        resetViewState();
+        loadCurrentView();
+      },
     })
     .resolve();
 }
@@ -264,7 +272,12 @@ async function loadCurrentView() {
 
   if (!state.view.current) return;
 
-  const protectedViews = ["favorites", "playlist", "playlists_overview"];
+  const protectedViews = [
+    "favorites",
+    "playlist",
+    "playlists_overview",
+    "account",
+  ];
   const isLoggedIn = !!localStorage.getItem("access_token");
 
   if (protectedViews.includes(state.view.current) && !isLoggedIn) {
@@ -335,10 +348,14 @@ async function loadCurrentView() {
         );
         break;
       case "composers":
-        state.composersPagination.skip = 0;
-        state.composersPagination.hasMore = true;
-
-        await loadMoreComposers();
+        state.allComposersList = await apiRequest(
+          "/api/recordings/composers?limit=1000"
+        );
+        state.composerFilterLetter = "Все";
+        ui.renderComposerList(
+          state.allComposersList,
+          state.composerFilterLetter
+        );
         break;
 
       case "composer_detail":
@@ -418,7 +435,12 @@ async function loadCurrentView() {
         state.libraryFilters.mediaType = "audio";
         state.libraryFilters.composerId = "";
         state.libraryFilters.genre = "";
-        state.libraryFilters.epoch = "";
+        if (window.pendingEpochFilter) {
+          state.libraryFilters.epoch = window.pendingEpochFilter;
+          window.pendingEpochFilter = null; // Очищаем после использования
+        } else {
+          state.libraryFilters.epoch = ""; // Иначе сбрасываем как обычно
+        }
         state.libraryFilters.search = "";
 
         ui.renderLibraryPageStructure("Аудиоархив", state.composersList);
@@ -457,6 +479,16 @@ async function loadCurrentView() {
         state.view.currentBlogPost = post;
         ui.renderBlogPost(post);
         break;
+      case "account":
+        try {
+          // Нам понадобится новый эндпоинт на бэкенде
+          const userData = await apiRequest("/api/users/me");
+          ui.renderAccountPage(userData);
+        } catch (e) {
+          showNotification("Не удалось загрузить данные профиля.", "error");
+          router.navigate("/");
+        }
+        break;
     }
   } catch (err) {
     console.error(err);
@@ -478,6 +510,7 @@ async function loadCurrentView() {
       player.forceUpdateIcons();
     }, 50);
   }
+  ui.updateHeaderAuth();
 }
 
 function addEventListeners() {
@@ -619,6 +652,94 @@ function addEventListeners() {
     if (target.closest("#load-more-composers-btn")) {
       loadMoreComposers();
       return;
+    }
+
+    // === НОВЫЙ БЛОК ДЛЯ АЛФАВИТА ===
+    const alphabetBtn = target.closest(".alphabet-btn");
+    if (alphabetBtn) {
+      e.preventDefault();
+      const letter = alphabetBtn.dataset.letter;
+      state.composerFilterLetter = letter;
+      // Перерисовываем список с новым активным фильтром
+      ui.renderComposerList(state.allComposersList, state.composerFilterLetter);
+      return;
+    }
+
+    // Показать/скрыть форму смены пароля
+    if (target.closest("#show-password-form-btn")) {
+      document.getElementById("password-form").classList.toggle("hidden");
+    }
+
+    // Сменить пароль
+    if (target.closest("#change-password-btn")) {
+      const currentPassword = document.getElementById("current-password").value;
+      const newPassword = document.getElementById("new-password").value;
+
+      if (!currentPassword || !newPassword) {
+        return ui.showNotification(
+          "Заполните все поля для смены пароля",
+          "error"
+        );
+      }
+
+      try {
+        // Нужен эндпоинт POST /api/users/me/change-password
+        await apiRequest("/api/users/me/change-password", "POST", {
+          current_password: currentPassword,
+          new_password: newPassword,
+        });
+        ui.showNotification("Пароль успешно изменен!", "success");
+        document.getElementById("password-form").classList.add("hidden");
+        // Очищаем поля после успешной смены
+        document.getElementById("current-password").value = "";
+        document.getElementById("new-password").value = "";
+      } catch (err) {
+        ui.showNotification("Ошибка: " + err.message, "error");
+      }
+    }
+
+    // Открыть модальное окно редактирования профиля
+    if (target.closest("#edit-profile-btn")) {
+      const userData = await apiRequest("/api/users/me");
+
+      // Используем универсальную модалку для редактирования
+      ui.showEditEntityModal("profile", userData, async (payload) => {
+        const updatedUser = await apiRequest("/api/users/me", "PUT", payload);
+        localStorage.setItem("display_name", updatedUser.display_name || "");
+        ui.showNotification("Профиль обновлен", "success");
+        loadCurrentView(); // Перезагружаем данные страницы
+        ui.updateHeaderAuth(); // Обновляем приветствие в шапке
+      });
+    }
+
+    // === ЛОГИКА МОБИЛЬНЫХ ФИЛЬТРОВ (ПРАВИЛЬНОЕ МЕСТО) ===
+    const openFiltersBtn = target.closest("#open-mobile-filters-btn");
+    const closeFiltersBtn = target.closest("#close-mobile-filters-btn");
+    const filtersModal = document.getElementById("mobile-filters-modal");
+    const filtersPanel = document.getElementById("mobile-filters-panel");
+
+    // Открытие
+    if (openFiltersBtn) {
+      if (filtersModal) {
+        filtersModal.classList.remove("hidden");
+        setTimeout(() => {
+          filtersModal.classList.remove("opacity-0"); // Делаем фон видимым
+        }, 10);
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+
+    // Закрытие (по кнопке или по клику на фон)
+    if (
+      closeFiltersBtn ||
+      (target === filtersModal && !filtersPanel.contains(target))
+    ) {
+      if (filtersModal) {
+        filtersModal.classList.add("opacity-0"); // Делаем фон невидимым
+        setTimeout(() => {
+          filtersModal.classList.add("hidden");
+        }, 300); // Прячем элемент после завершения анимации
+      }
     }
 
     if (target.closest("#show-login-modal-btn")) {
@@ -903,33 +1024,53 @@ function addEventListeners() {
       let playableList = [];
       let clickedIndex = -1;
 
+      // Проверяем, находимся ли мы в режиме "аккордеона" (группировка по произведениям)
       const workAccordion = playBtn.closest('[id^="work-content-"]');
 
       if (workAccordion) {
-        // --- НОВАЯ ЛОГИКА ДЛЯ ВИДА "СПИСОК" ---
-        const workId = parseInt(workAccordion.id.replace("work-content-", ""));
+        // --- НОВАЯ ЛОГИКА ДЛЯ РЕЖИМА "СПИСОК" В МЕДИАТЕКЕ ---
 
+        // 1. Находим ID произведения
+        const workId = parseInt(workAccordion.id.replace("work-content-", ""));
         const workData = state.currentViewRecordings.find(
           (w) => w.id === workId
         );
 
         if (workData && workData.recordings) {
+          // 2. Находим полный объект трека, по которому кликнули
+          const clickedTrack = workData.recordings.find(
+            (r) => r.id === clickedId
+          );
+          if (!clickedTrack) return;
+
+          // 3. Определяем "ключ" исполнения для этого трека
+          const performanceKey =
+            (clickedTrack.performers || "Неизвестный") +
+            (clickedTrack.recording_year || "");
+
+          // 4. Формируем плейлист ТОЛЬКО из треков с таким же ключом
+          playableList = workData.recordings.filter((r) => {
+            const key =
+              (r.performers || "Неизвестный") + (r.recording_year || "");
+            return key === performanceKey;
+          });
+
+          // 5. Обогащаем треки данными о родителях (для обложек и названий)
           const compositionMap = new Map(
             (workData.compositions || []).map((c) => [c.id, c])
           );
-          playableList = workData.recordings
-            .map((rec) => {
-              const fullComposition = compositionMap.get(rec.composition_id);
-              return {
-                ...rec,
-                composition: {
-                  ...(fullComposition || rec.composition),
-                  work: workData,
-                },
-              };
-            })
+          playableList = playableList
+            .map((rec) => ({
+              ...rec,
+              composition: {
+                ...(compositionMap.get(rec.composition_id) || rec.composition),
+                work: workData,
+              },
+            }))
             .sort(
-              (a, b) => a.composition.sort_order - b.composition.sort_order
+              (a, b) =>
+                (a.composition.sort_order || 0) -
+                (b.composition.sort_order || 0)
             );
         }
       } else {
@@ -937,20 +1078,14 @@ function addEventListeners() {
         playableList = state.currentViewRecordings || [];
       }
 
+      // Находим индекс кликнутого трека в нашем новом, отфильтрованном списке
       playableList = playableList.filter((r) => r.duration > 0);
       clickedIndex = playableList.findIndex((r) => r.id === clickedId);
 
       if (clickedIndex !== -1) {
         player.handleTrackClick(clickedId, clickedIndex, playableList);
       } else {
-        const singleTrack = state.currentViewRecordings
-          .flatMap((w) => w.recordings || [w])
-          .find((r) => r.id === clickedId);
-        if (singleTrack) {
-          player.handleTrackClick(clickedId, 0, [singleTrack]);
-        } else {
-          console.error("Запись не найдена в текущем списке воспроизведения");
-        }
+        console.error("Запись не найдена в текущем списке воспроизведения");
       }
 
       return;
@@ -2998,6 +3133,12 @@ async function loadLibraryWithFilters(reset = false) {
   }
 }
 
+// Глобальная функция для перехода к эпохе
+window.goToEpoch = (epochId) => {
+  window.pendingEpochFilter = epochId;
+  window.router.navigate("/recordings/audio");
+};
+
 window.applyLibraryFilter = (key, value) => {
   state.libraryFilters[key] = value;
   loadLibraryWithFilters(true);
@@ -3228,6 +3369,17 @@ window.selectLibraryComposer = (id) => {
   // Применяем фильтр (функция из ui.js/main.js логики)
   window.applyLibraryFilter("composerId", id);
 
+  // Обновляем текст на кнопке
+  const label = document.getElementById("composer-filter-label");
+  if (label) {
+    if (id) {
+      const composer = state.composersList.find((c) => c.id == id);
+      label.textContent = composer ? composer.name_ru : "Все композиторы";
+    } else {
+      label.textContent = "Все композиторы";
+    }
+  }
+
   // Закрываем список
   const dropdown = document.getElementById("composer-custom-dropdown");
   if (dropdown) dropdown.classList.add("hidden");
@@ -3241,3 +3393,57 @@ document.addEventListener("click", (e) => {
     dropdown.classList.add("hidden");
   }
 });
+
+// === ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ ЗАПУСКА ИСПОЛНЕНИЯ ===
+window.playPerformanceByIds = (trackIds) => {
+  // 1. Берем ПОЛНЫЕ данные о произведении, которые мы сохранили при открытии модалки
+  const workData = window.state.tempWorkForModal;
+
+  if (!workData) {
+    console.error("Work data for modal is missing!");
+    // Фоллбэк на старую логику, на всякий случай
+    const allAvailableTracks = window.state.currentViewRecordings.flatMap(
+      (w) => w.recordings || [w]
+    );
+    const performanceTracks = trackIds
+      .map((id) => allAvailableTracks.find((track) => track.id === id))
+      .filter(Boolean);
+    if (performanceTracks.length > 0) {
+      player.handleTrackClick(performanceTracks[0].id, 0, performanceTracks);
+    }
+    return;
+  }
+
+  // 2. Находим нужные треки внутри ПОЛНЫХ данных
+  const allTracksOfWork = workData.compositions.flatMap((comp) =>
+    // ВАЖНО: Прикрепляем полные данные о части и произведении к каждой записи!
+    (comp.recordings || []).map((rec) => ({
+      ...rec,
+      composition: {
+        ...comp,
+        work: workData,
+      },
+    }))
+  );
+
+  const performanceTracks = allTracksOfWork.filter((track) =>
+    trackIds.includes(track.id)
+  );
+
+  if (performanceTracks.length > 0) {
+    // 3. Сортируем их по номеру части
+    performanceTracks.sort(
+      (a, b) =>
+        (a.composition.sort_order || 0) - (b.composition.sort_order || 0)
+    );
+
+    // 4. Запускаем плеер с ПОЛНЫМИ данными
+    player.handleTrackClick(performanceTracks[0].id, 0, performanceTracks);
+
+    // 5. Закрываем модальные окна
+    const versionsModal = document.getElementById("versions-modal");
+    if (versionsModal && !versionsModal.classList.contains("hidden")) {
+      versionsModal.querySelector(".close-button").click();
+    }
+  }
+};

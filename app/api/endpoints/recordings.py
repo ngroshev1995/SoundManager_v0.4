@@ -9,6 +9,7 @@ import os
 import shutil
 from pathlib import Path
 import re
+import random
 
 from app import crud, models, schemas
 from app.api import deps
@@ -275,16 +276,17 @@ def get_comp_recordings(slug: str, db: Session = Depends(get_db)):
 @router.get("/random-playable", response_model=schemas.music.Work)
 def get_random_playable_work(
         db: Session = Depends(get_db),
-        exclude_ids: Optional[List[int]] = Query(None)  # <--- НОВЫЙ ПАРАМЕТР
+        exclude_ids: Optional[List[int]] = Query(None)
 ):
     """
-    Возвращает одно случайное произведение, у которого есть хотя бы одна аудиозапись,
-    исключая произведения из списка exclude_ids.
+    Возвращает одно случайное произведение, обогащенное записями
+    ТОЛЬКО ОДНОГО случайного исполнения.
     """
     random_func = func.random()
     if db.bind.dialect.name == 'mysql':
         random_func = func.rand()
 
+    # 1. Находим случайное произведение, у которого есть аудиозаписи
     query = (
         db.query(models.music.Work)
         .join(models.music.Work.compositions)
@@ -297,22 +299,24 @@ def get_random_playable_work(
 
     work = query.order_by(random_func).first()
 
+    # Если с исключением ничего не нашлось, ищем без исключения
     if not work:
         work = (
             db.query(models.music.Work)
             .join(models.music.Work.compositions)
             .join(models.music.Composition.recordings)
             .filter(models.music.Recording.duration > 0)
-            .order_by(random_func)
-            .first()
+            .order_by(random_func).first()
         )
 
     if not work:
         raise HTTPException(status_code=404, detail="No playable works found")
 
-    result = (
+    # 2. Загружаем это произведение со всеми его аудиозаписями
+    full_work = (
         db.query(models.music.Work)
         .options(
+            joinedload(models.music.Work.composer),  # Подгружаем композитора
             joinedload(models.music.Work.compositions)
             .joinedload(models.music.Composition.recordings)
         )
@@ -320,7 +324,34 @@ def get_random_playable_work(
         .first()
     )
 
-    return result
+    # 3. В Python группируем записи по исполнению (исполнитель + год)
+    performances = {}
+    for comp in full_work.compositions:
+        for rec in comp.recordings:
+            if rec.duration > 0:
+                key = (rec.performers or "Unknown", rec.recording_year or "N/A")
+                if key not in performances:
+                    performances[key] = []
+                # Важно: добавляем полную запись, а не только ID
+                rec.composition = comp  # Добавляем связь для Pydantic
+                performances[key].append(rec)
+
+    if not performances:
+        raise HTTPException(status_code=404, detail="No performances found for the work")
+
+    # 4. Выбираем случайное исполнение
+    random_performance_key = random.choice(list(performances.keys()))
+    selected_recordings = performances[random_performance_key]
+
+    # 5. "Обманываем" Pydantic: подменяем полный список записей на отфильтрованный
+    selected_rec_ids = {rec.id for rec in selected_recordings}
+
+    # Теперь отфильтруем их прямо в объекте SQLAlchemy
+    for comp in full_work.compositions:
+        # Оставляем только те записи, которые принадлежат выбранному исполнению
+        comp.recordings = [rec for rec in comp.recordings if rec.id in selected_rec_ids]
+
+    return full_work
 
 
 @router.get("/", response_model=Union[schemas.music.RecordingPage, schemas.music.LibraryPage])

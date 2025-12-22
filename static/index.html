@@ -18,6 +18,8 @@
       rel="stylesheet"
     />
 
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
     <link href="/static/css/style.css" rel="stylesheet" />
 
     <link
@@ -926,7 +928,10 @@
               >
                 <!-- JS будет вставлять сюда элементы -->
               </div>
-              <div id="add-work-genre-typo-warning" class="hidden mt-2 text-sm text-orange-600 bg-orange-50 p-2 rounded-lg"></div>
+              <div
+                id="add-work-genre-typo-warning"
+                class="hidden mt-2 text-sm text-orange-600 bg-orange-50 p-2 rounded-lg"
+              ></div>
             </div>
 
             <div class="md:col-span-2">
@@ -2014,6 +2019,34 @@
           <div id="full-player-playlist-content" class="overflow-y-auto p-2">
             <!-- JS вставит сюда список плейлистов -->
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === МОДАЛЬНОЕ ОКНО ФИЛЬТРОВ (ДЛЯ МОБИЛЬНЫХ) === -->
+    <div
+      id="mobile-filters-modal"
+      class="hidden fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm md:hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+    >
+      <!-- Панель -->
+      <div
+        id="mobile-filters-panel"
+        class="bg-white rounded-xl p-4 w-full max-w-sm animate-scale-in flex flex-col"
+      >
+        <!-- Шапка -->
+        <div class="flex justify-between items-center mb-4 pb-2 border-b">
+          <h3 class="font-bold text-lg">Фильтры</h3>
+          <button id="close-mobile-filters-btn" class="p-2 text-gray-400">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <!-- Контент (копия сайдбара) -->
+        <div
+          id="mobile-filters-content"
+          class="space-y-6 max-h-[60vh] overflow-y-auto"
+        >
+          <!-- Сюда JS будет вставлять кнопки -->
         </div>
       </div>
     </div>

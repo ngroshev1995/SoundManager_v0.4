@@ -6,6 +6,15 @@ export async function apiRequest(endpoint, method = "GET", body = null) {
   const token = localStorage.getItem("access_token");
   const headers = {};
 
+  // === НОВЫЙ КОД: ОТКЛЮЧЕНИЕ КЭША ===
+  // Это заставит браузер всегда запрашивать свежие данные,
+  // чтобы сразу видеть новую аватарку после загрузки.
+  if (method === 'GET') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+  }
+
   if (!(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }

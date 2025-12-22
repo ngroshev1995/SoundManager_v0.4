@@ -18,12 +18,14 @@ def get_dashboard_summary(
     total_compositions = db.query(models.music.Composition).count()
     total_works = db.query(models.music.Work).filter(models.music.Work.name_ru != "Без сборника").count()
     total_composers = db.query(models.music.Composer).count()
+    total_seconds = db.query(func.sum(models.music.Recording.duration)).scalar() or 0
 
     stats = schemas.DashboardStats(
         total_recordings=total_recordings,
         total_compositions=total_compositions,
         total_works=total_works,
-        total_composers=total_composers
+        total_composers=total_composers,
+        total_duration=int(total_seconds)
     )
 
     top_composers_query = (
