@@ -13,6 +13,7 @@ class DashComposer(BaseModel):
 
 class DashWork(BaseModel):
     id: int
+    slug: Optional[str] = None
     name: Optional[str] = None
     name_ru: Optional[str] = None
     cover_art_url: Optional[str] = None

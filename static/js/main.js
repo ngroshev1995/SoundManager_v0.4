@@ -263,6 +263,19 @@ function setupRouter() {
         resetViewState();
         loadCurrentView();
       },
+
+      "/account/feedback": () => {
+        state.view.current = "account_feedback";
+        resetViewState();
+        loadCurrentView();
+      },
+
+      "/account/feedback/:id": ({ data }) => {
+        state.view.current = "account_feedback_detail";
+        state.view.feedbackMessageId = data.id; // Сохраняем ID из URL
+        resetViewState();
+        loadCurrentView();
+      },
     })
     .resolve();
 }
@@ -481,12 +494,43 @@ async function loadCurrentView() {
         break;
       case "account":
         try {
-          // Нам понадобится новый эндпоинт на бэкенде
           const userData = await apiRequest("/api/users/me");
           ui.renderAccountPage(userData);
+          if (localStorage.getItem("is_admin") === "true") {
+            updateFeedbackCounter();
+          }
         } catch (e) {
           showNotification("Не удалось загрузить данные профиля.", "error");
           router.navigate("/");
+        }
+        break;
+
+      case "account_feedback":
+        try {
+          const messages = await apiRequest("/api/feedback/");
+          ui.renderFeedbackMessages(messages);
+        } catch (e) {
+          ui.showNotification(
+            "Ошибка загрузки сообщений: " + e.message,
+            "error"
+          );
+          router.navigate("/account");
+        }
+        break;
+
+      case "account_feedback_detail":
+        try {
+          const message = await apiRequest(
+            `/api/feedback/${state.view.feedbackMessageId}`
+          );
+          ui.renderSingleFeedbackMessage(message);
+          updateFeedbackCounter(); // Обновляем счетчик, т.к. сообщение стало прочитанным
+        } catch (e) {
+          ui.showNotification(
+            "Ошибка загрузки сообщения: " + e.message,
+            "error"
+          );
+          router.navigate("/account/feedback");
         }
         break;
     }
@@ -648,6 +692,118 @@ function addEventListeners() {
   // 2. ОСНОВНОЙ СЛУШАТЕЛЬ КЛИКОВ
   document.body.addEventListener("click", async (e) => {
     const target = e.target;
+
+    // Пометить сообщение как прочитанное
+    const markReadBtn = target.closest(".mark-feedback-read-btn");
+    if (markReadBtn) {
+      const id = markReadBtn.dataset.id;
+      try {
+        await apiRequest(`/api/feedback/${id}/read`, "PATCH");
+        loadCurrentView();
+        updateFeedbackCounter();
+      } catch (err) {
+        ui.showNotification("Ошибка: " + err.message, "error");
+      }
+    }
+
+    // Пометить сообщение как НЕпрочитанное
+    const markUnreadBtn = target.closest(".mark-feedback-unread-btn");
+    if (markUnreadBtn) {
+      const id = markUnreadBtn.dataset.id;
+      try {
+        await apiRequest(`/api/feedback/${id}/unread`, "PATCH");
+        loadCurrentView();
+        updateFeedbackCounter();
+      } catch (err) {
+        ui.showNotification("Ошибка: " + err.message, "error");
+      }
+    }
+
+    // Удалить сообщение
+    const deleteFeedbackBtn = target.closest(".delete-feedback-btn");
+    if (deleteFeedbackBtn) {
+      if (confirm("Удалить это сообщение?")) {
+        const id = deleteFeedbackBtn.dataset.id;
+        try {
+          await apiRequest(`/api/feedback/${id}`, "DELETE");
+          ui.showNotification("Сообщение удалено", "success");
+
+          // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+          // Если мы на странице одного сообщения, возвращаемся к списку
+          if (state.view.current === "account_feedback_detail") {
+            router.navigate("/account/feedback");
+          } else {
+            // Иначе просто удаляем элемент из DOM
+            deleteFeedbackBtn.closest(".bg-white").remove();
+          }
+          updateFeedbackCounter(); // Обновляем счетчик
+          // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+        } catch (err) {
+          ui.showNotification("Ошибка удаления: " + err.message, "error");
+        }
+      }
+    }
+
+    // === ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ 3D РУЛЕТКИ ===
+    const diceBtn = target.closest("#random-dice-btn");
+    if (diceBtn) {
+      if (diceBtn.disabled) return;
+
+      // Ищем элемент кубика внутри кнопки
+      const cube = diceBtn.querySelector(".dice-cube");
+
+      diceBtn.disabled = true;
+
+      // Запускаем 3D анимацию
+      if (cube) cube.classList.add("is-rolling");
+
+      try {
+        // Запрашиваем случайное произведение
+        const work = await apiRequest("/api/recordings/random-interactive");
+
+        // Задержка минимум 1 секунда, чтобы пользователь успел увидеть анимацию
+        await new Promise((r) => setTimeout(r, 1000));
+
+        if (work && work.compositions) {
+          const playlist = work.compositions
+            .flatMap((comp) =>
+              (comp.recordings || []).map((rec) => ({
+                ...rec,
+                composition: {
+                  ...comp,
+                  work: work,
+                },
+              }))
+            )
+            .filter((r) => r.duration > 0)
+            .sort(
+              (a, b) =>
+                (a.composition.sort_order || 0) -
+                (b.composition.sort_order || 0)
+            );
+
+          if (playlist.length > 0) {
+            player.handleTrackClick(playlist[0].id, 0, playlist);
+            ui.showNotification(`Выпало: ${work.name_ru}`, "success");
+          } else {
+            throw new Error("В этом произведении нет аудио.");
+          }
+        } else {
+          throw new Error("Пустой ответ от сервера.");
+        }
+      } catch (e) {
+        ui.showNotification(e.message, "error");
+      } finally {
+        // Останавливаем анимацию
+        if (cube) cube.classList.remove("is-rolling");
+        diceBtn.disabled = false;
+      }
+    }
+
+    if (target.closest("#load-more-composers-btn")) {
+      loadMoreComposers();
+      return;
+    }
 
     if (target.closest("#load-more-composers-btn")) {
       loadMoreComposers();
@@ -2077,13 +2233,17 @@ function addEventListeners() {
     }
 
     // --- ОСТАЛЬНОЕ ---
-    if (target.closest("#logout-btn")) {
+    if (
+      target.closest("#logout-btn-desktop") ||
+      target.closest("#logout-btn-mobile")
+    ) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user_email");
+      localStorage.removeItem("display_name"); // Желательно очищать и это
       localStorage.removeItem("is_admin");
 
       window.location.href = "/";
-      window.location.reload();
+      // window.location.reload(); // reload не обязателен, если href меняется, но можно оставить для надежности сброса стейта
     }
     if (target.closest("#queue-btn"))
       document
@@ -2095,6 +2255,45 @@ function addEventListeners() {
         .classList.add("translate-x-full");
     if (target.closest("#select-recording-file-btn"))
       document.getElementById("composition-upload-input").click();
+  });
+
+  // КОД ДЛЯ ФОРМЫ ОБРАТНОЙ СВЯЗИ
+  document.body.addEventListener("submit", async (e) => {
+    if (e.target.id === "feedback-form") {
+      e.preventDefault();
+
+      const btn = document.getElementById("feedback-submit-btn");
+      const statusEl = document.getElementById("feedback-status");
+
+      const name = document.getElementById("feedback-name").value;
+      const email = document.getElementById("feedback-email").value;
+      const message = document.getElementById("feedback-message").value;
+
+      if (!name || !email || !message) {
+        statusEl.innerHTML = `<p class="text-red-600">Пожалуйста, заполните все поля.</p>`;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Отправка...";
+      statusEl.innerHTML = "";
+
+      try {
+        const response = await apiRequest("/api/feedback/send", "POST", {
+          name,
+          email,
+          message,
+        });
+
+        statusEl.innerHTML = `<p class="text-green-600 font-bold">${response.message}</p>`;
+        e.target.reset(); // Очищаем форму
+      } catch (err) {
+        statusEl.innerHTML = `<p class="text-red-600">Ошибка: ${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Отправить";
+      }
+    }
   });
 
   // --- КОНТЕКСТНОЕ МЕНЮ (Правый клик) ---
@@ -3447,3 +3646,33 @@ window.playPerformanceByIds = (trackIds) => {
     }
   }
 };
+
+async function updateFeedbackCounter() {
+  // Добавляем try...catch, чтобы ошибка не ломала другие функции
+  try {
+    const count = await apiRequest("/api/feedback/unread-count");
+
+    const link = document.getElementById("admin-feedback-link");
+    const badge = document.getElementById("feedback-counter-badge");
+
+    if (link && badge) {
+      link.classList.remove("hidden_for_now");
+
+      if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch feedback count:", error);
+    // В случае ошибки просто прячем элементы
+    const link = document.getElementById("admin-feedback-link");
+    if (link) link.classList.add("hidden_for_now");
+    const badge = document.getElementById("feedback-counter-badge");
+    if (badge) badge.classList.add("hidden");
+  }
+}
+
+window.updateFeedbackCounter = updateFeedbackCounter;

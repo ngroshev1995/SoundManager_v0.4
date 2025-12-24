@@ -3,9 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from app.api.endpoints import blog
 
-from app.api.endpoints import auth, recordings, playlists, users, dashboard, search, genres
+from app.api.endpoints import auth, recordings, playlists, users, dashboard, search, genres, blog, feedback
 
 ROOT_DIR = Path(__file__).resolve().parent
 
@@ -28,19 +27,20 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(genres.router, prefix="/api/genres", tags=["Genres"])
 app.include_router(blog.router, prefix="/api/blog", tags=["Blog"])
+app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
 
 STATIC_DIR = ROOT_DIR.parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def read_root():
     index_path = STATIC_DIR / "index.html"
     if not index_path.is_file():
         return HTMLResponse(content=f"<h1>File not found at {index_path}</h1>", status_code=404)
     return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
 
-@app.get("/{full_path:path}", response_class=HTMLResponse)
+@app.get("/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
 async def catch_all(full_path: str):
     """
     Перехватывает все запросы, которые не попали в API или static.

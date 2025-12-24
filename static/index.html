@@ -18,7 +18,10 @@
       rel="stylesheet"
     />
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
 
     <link href="/static/css/style.css" rel="stylesheet" />
 
@@ -189,21 +192,6 @@
                 >Композиторы</a
               >
               <a
-                href="/favorites"
-                data-navigo
-                id="nav-favorites-link"
-                class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
-                ><i data-lucide="heart" class="w-4 h-4"></i> Избранное</a
-              >
-              <a
-                href="/playlists"
-                data-navigo
-                id="nav-playlists-link"
-                class="hidden px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-2"
-                ><i data-lucide="list-music" class="w-4 h-4"></i> Мои
-                плейлисты</a
-              >
-              <a
                 href="/blog"
                 data-navigo
                 class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
@@ -266,20 +254,32 @@
           <a href="/composers" data-navigo class="text-2xl font-bold py-2"
             >Композиторы</a
           >
-          <a
-            href="/favorites"
-            data-navigo
-            id="mobile-nav-favorites-link"
-            class="hidden text-2xl font-bold py-2"
-            >Избранное</a
+          <div
+            id="mobile-user-collection"
+            class="hidden flex-col items-center justify-center gap-4 text-center"
           >
-          <a
-            href="/playlists"
-            data-navigo
-            id="mobile-nav-playlists-link"
-            class="hidden text-2xl font-bold py-2"
-            >Мои плейлисты</a
-          >
+            <div class="w-16 h-px bg-white/20 my-4"></div>
+            <h3
+              class="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2"
+            >
+              Моя коллекция
+            </h3>
+            <a
+              href="/favorites"
+              data-navigo
+              id="mobile-nav-favorites-link"
+              class="text-2xl font-bold py-2"
+              >Избранное</a
+            >
+            <a
+              href="/playlists"
+              data-navigo
+              id="mobile-nav-playlists-link"
+              class="text-2xl font-bold py-2"
+              >Мои плейлисты</a
+            >
+          </div>
+          <div class="w-16 h-px bg-white/20 my-4"></div>
           <a href="/blog" data-navigo class="text-2xl font-bold py-2">Блог</a>
           <a href="/map" data-navigo class="text-2xl font-bold py-2">Карта</a>
         </nav>

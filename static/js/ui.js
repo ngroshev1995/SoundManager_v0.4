@@ -136,63 +136,101 @@ function getYoutubeIcon(url) {
     `;
 }
 
-// ui.js
-
 export function updateHeaderAuth() {
   const container = document.getElementById("header-auth-block");
-  const plLink = document.getElementById("nav-playlists-link");
-  const favLink = document.getElementById("nav-favorites-link");
-  const mobilePlLink = document.getElementById("mobile-nav-playlists-link");
-  const mobileFavLink = document.getElementById("mobile-nav-favorites-link");
+  const mobileCollectionBlock = document.getElementById(
+    "mobile-user-collection"
+  );
 
   if (!container) return;
 
   if (!isLoggedIn()) {
+    // Пользователь НЕ вошел
     container.innerHTML = `
-            <button id="show-login-modal-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-bold">
-                Войти
-            </button>
-        `;
-    if (plLink) plLink.classList.add("hidden");
-    if (favLink) favLink.classList.add("hidden");
-    if (mobilePlLink) mobilePlLink.classList.add("hidden");
-    if (mobileFavLink) mobileFavLink.classList.add("hidden");
+        <button id="show-login-modal-btn" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-bold cursor-pointer">
+            Войти
+        </button>
+    `;
+    if (mobileCollectionBlock) mobileCollectionBlock.classList.add("hidden");
   } else {
+    // Пользователь ВОШЕЛ
     const username =
       localStorage.getItem("display_name") ||
       localStorage.getItem("user_email")?.split("@")[0] ||
       "User";
 
-    // Проверяем текущий маршрут через объект роутера
-    const isOnAccountPage =
-      window.router &&
-      window.router.lastResolvedRoute &&
-      window.router.lastResolvedRoute.url === "account";
-
     container.className = "flex items-center gap-2";
 
     container.innerHTML = `
-        <!-- ТЕКСТОВЫЙ БЛОК -->
-        <div class="flex flex-col items-end justify-center">
-             <div class="text-xs md:text-sm font-bold opacity-90 text-right leading-tight max-w-[150px] md:max-w-none">
-                <span>Здравствуйте, </span>
-                ${
-                  isOnAccountPage
-                    ? `<span class="text-white">${username}</span>`
-                    : `<a href="/account" data-navigo class="text-white/90 hover:text-white hover:underline transition-colors">${username}</a>`
-                }<span>!  </span>
-             </div>
+        <!-- === ДЕСКТОПНАЯ ВЕРСИЯ (с выпадашкой, видна на md экранах и шире) === -->
+        <div class="hidden md:flex items-center gap-4 relative">
+            <div class="relative group">
+                <div class="flex items-center gap-1 text-sm font-bold text-white/90 py-2 cursor-pointer">
+                    <span>Здравствуйте,&nbsp;</span>
+                    
+                    <!-- КНОПКА-ТРИГГЕР: Имя! + Стрелка -->
+                    <button class="flex items-center gap-1 hover:text-white transition-colors focus:outline-none cursor-pointer">
+                        <!-- Общая обертка для текста -->
+                        <span>
+                            <span class="underline">${username}</span><span>!</span>
+                        </span>
+                        
+                        <i data-lucide="chevron-down" class="w-4 h-4 opacity-70 group-hover:rotate-180 transition-transform duration-200"></i>
+                    </button>
+                </div>
+
+                <!-- Выпадающее меню -->
+                <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50 border border-gray-100 origin-top-right">
+                    <div class="absolute -top-1.5 right-6 w-3 h-3 bg-white transform rotate-45 border-l border-t border-gray-100"></div>
+                    <a href="/account" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-3">
+                        <i data-lucide="user" class="w-4 h-4"></i> Личный кабинет
+                    </a>
+                    <div class="h-px bg-gray-100 my-1 mx-2"></div>
+                    <a href="/favorites" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-3">
+                        <i data-lucide="heart" class="w-4 h-4"></i> Избранное
+                    </a>
+                    <a href="/playlists" data-navigo class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center gap-3">
+                        <i data-lucide="list-music" class="w-4 h-4"></i> Мои плейлисты
+                    </a>
+                    <a href="/account/feedback" data-navigo id="admin-feedback-link" class="hidden_for_now block px-4 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors flex items-center justify-between gap-3">
+                        <span class="flex items-center gap-3">
+                            <i data-lucide="inbox" class="w-4 h-4"></i> Обратная связь
+                        </span>
+                        <span id="feedback-counter-badge" class="hidden bg-cyan-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full"></span>
+                    </a>
+                    <div class="h-px bg-gray-100 my-1 mx-2"></div>
+                    <!-- ДОБАВЛЕН cursor-pointer СЮДА -->
+                    <button id="logout-btn-desktop" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3 cursor-pointer">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Выйти
+                    </button>
+                </div>
+            </div>
         </div>
-        
-        <!-- КНОПКА ВЫХОДА -->
-        <button id="logout-btn" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors flex-shrink-0 self-center" title="Выйти">
-           <i data-lucide="log-out" class="w-4 h-4"></i>
-        </button>
+
+        <!-- === МОБИЛЬНАЯ ВЕРСИЯ (старое приветствие, видна только на узких экранах) === -->
+        <div class="md:hidden flex items-center gap-2">
+            <div class="text-sm font-bold text-white/90 text-right">
+                Здравствуйте, <a href="/account" data-navigo class="hover:text-white underline">${username}</a>!
+            </div>
+            <!-- И СЮДА ТОЖЕ -->
+            <button id="logout-btn-mobile" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer" title="Выйти">
+               <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+        </div>
     `;
-    if (plLink) plLink.classList.remove("hidden");
-    if (favLink) favLink.classList.remove("hidden");
-    if (mobilePlLink) mobilePlLink.classList.remove("hidden");
-    if (mobileFavLink) mobileFavLink.classList.remove("hidden");
+
+    // Показываем блок "Моя коллекция" в гамбургер-меню
+    if (mobileCollectionBlock) {
+      mobileCollectionBlock.classList.remove("hidden");
+      mobileCollectionBlock.classList.add("flex");
+    }
+  }
+
+  if (isAdmin()) {
+    // Проверяем, существует ли функция, прежде чем вызывать
+    if (window.updateFeedbackCounter) {
+      window.updateFeedbackCounter();
+    }
   }
 
   if (window.lucide) lucide.createIcons();
@@ -262,7 +300,7 @@ export function renderDashboard(data, lang = "ru") {
 
   // 1. HERO SECTION (Улучшенная типографика)
   const heroHTML = `
-      <div class="relative text-white overflow-hidden rounded-b-[3rem] shadow-2xl group mb-12"
+      <div class="relative text-white overflow-hidden rounded-b-[3rem] shadow-2xl group mb-12 min-h-screen flex flex-col"
            style="-webkit-mask-image: -webkit-radial-gradient(white, black);">
         
         <div class="absolute inset-0">
@@ -273,7 +311,7 @@ export function renderDashboard(data, lang = "ru") {
           <div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/90"></div>
         </div>
 
-        <div class="max-w-5xl mx-auto px-6 py-28 relative z-10 text-center">
+        <div class="max-w-5xl mx-auto px-6 py-28 relative z-10 text-center flex-1 flex flex-col justify-center">
           <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight tracking-tight drop-shadow-xl font-serif">
             Величие <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">Классики</span>
           </h1>
@@ -283,19 +321,29 @@ export function renderDashboard(data, lang = "ru") {
 
           <div class="relative max-w-xl mx-auto mb-12 group/search">
              <i data-lucide="search" class="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within/search:text-cyan-400 transition-colors"></i>
-             <input type="text" id="hero-search-input" placeholder="Найти симфонию, автора..."
+             <input type="text" id="hero-search-input" placeholder="Найти композитора, произведение..."
                     class="w-full pl-14 pr-6 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:bg-white/20 focus:border-cyan-400/50 shadow-2xl transition-all">
+          </div>
+          <div class="flex justify-center items-center gap-4">
+              <a href="/recordings/audio" data-navigo 
+                 class="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full font-bold border border-white/20 transition-all flex items-center gap-2 text-sm shadow-sm hover:shadow-lg">
+                  <i data-lucide="disc" class="w-5 h-5 text-cyan-300"></i> Аудиозал
+              </a>
+              <a href="/recordings/video" data-navigo 
+                 class="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full font-bold border border-white/20 transition-all flex items-center gap-2 text-sm shadow-sm hover:shadow-lg">
+                  <i data-lucide="youtube" class="w-5 h-5 text-red-400"></i> Видеозал
+              </a>
           </div>
         </div>
       </div>
     `;
 
-  // 2. СТАТИСТИКА (Минималистичная)
+  // 2. СТАТИСТИКА (С акцентными границами)
   const totalHours = Math.floor((data.stats.total_duration || 0) / 3600);
 
   const statsHTML = `
-       <div class="max-w-7xl mx-auto px-6 mb-16">
-           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+       <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-16">
+           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                ${[
                  {
                    val: data.stats.total_composers,
@@ -326,24 +374,29 @@ export function renderDashboard(data, lang = "ru") {
                  },
                  {
                    val: totalHours,
-                   label: pluralize(totalHours, [
-                     "Час музыки",
-                     "Часа музыки",
-                     "Часов музыки",
-                   ]),
+                   label:
+                     pluralize(totalHours, ["Час", "Часа", "Часов"]) +
+                     " музыки",
                    icon: "clock",
                  },
                ]
                  .map(
                    (item) => `
-                 <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="${item.icon}" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-gray-800 font-serif">${item.val}</div>
-                        <!-- Вставляем правильное склонение -->
-                        <div class="text-xs text-gray-400 uppercase tracking-wider font-bold">${item.label}</div>
+                 <!-- 
+                    ИЗМЕНЕНИЯ:
+                    1. border border-cyan-200 — добавляет видимую голубую рамку.
+                    2. bg-white/80 — делает фон чуть менее прозрачным, чтобы текст читался лучше.
+                    3. hover:border-cyan-400 — при наведении рамка становится ярче.
+                 -->
+                 <div class="relative bg-white/80 backdrop-blur-md p-4 rounded-2xl md:rounded-3xl border border-cyan-200 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all duration-300 h-32 flex justify-end items-center overflow-hidden group">
+                    
+                    <!-- ФОНОВАЯ ИКОНКА (Сделали чуть ярче для контраста с белым) -->
+                    <i data-lucide="${item.icon}" class="absolute -left-4 top-1/2 -translate-y-1/2 w-28 h-28 text-cyan-100 group-hover:text-cyan-200/50 transition-colors z-0"></i>
+
+                    <!-- КОНТЕНТ -->
+                    <div class="relative z-10 text-right pr-2">
+                        <div class="text-4xl lg:text-5xl font-serif font-black text-cyan-950 drop-shadow-sm">${item.val}</div>
+                        <div class="text-xs font-sans font-bold text-cyan-700/70 uppercase tracking-wider mt-1">${item.label}</div>
                     </div>
                  </div>
                `
@@ -481,12 +534,14 @@ export function renderDashboard(data, lang = "ru") {
                     
                     <!-- text-gray-100 = Почти белый, очень легко читать -->
                     <p class="text-lg text-gray-100 mb-10 max-w-xl font-light leading-relaxed drop-shadow-md">
-                        Вдохновитесь шедевром <span class="font-semibold text-white">"${getLocalizedText(
-                          spotlightWork,
-                          "name",
-                          lang
-                        )}"</span> и откройте для себя мир великого мастера.
-                    </p>
+    Вдохновитесь шедевром <a href="/works/${
+      spotlightWork.slug || spotlightWork.id
+    }" data-navigo class="font-semibold text-white hover:underline">"${getLocalizedText(
+      spotlightWork,
+      "name",
+      lang
+    )}"</a> и откройте для себя мир великого мастера.
+</p>
                     
                     <!-- КНОПКА: Белая (bg-white), текст черный (text-gray-900) -->
                     <a href="${compLink}" data-navigo 
@@ -498,6 +553,92 @@ export function renderDashboard(data, lang = "ru") {
         </div>
       `;
   }
+
+  // 5. ОБНОВЛЕННАЯ СЕКЦИЯ: ИНТЕРАКТИВНАЯ РУЛЕТКА
+  const randomizerHTML = `
+    <div class="max-w-7xl mx-auto px-6 mb-20">
+        <div class="relative overflow-hidden rounded-[2.5rem] shadow-2xl group border border-gray-200">
+            
+            <!-- 1. Фоновое изображение (Абстракция или муз. тема) -->
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear group-hover:scale-110"
+                 style="background-image: url('https://images.unsplash.com/photo-1519412666065-94acb3f8838f?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');">
+            </div>
+            
+            <!-- 2. Затемнение (Градиент для читаемости) -->
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-cyan-900/80 backdrop-blur-sm"></div>
+
+            <!-- 3. Контент -->
+            <div class="relative z-10 p-10 md:p-16 text-center flex flex-col items-center">
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-white mb-4 drop-shadow-md">
+                    Испытай удачу
+                </h2>
+                <p class="text-gray-200 max-w-lg mx-auto mb-10 text-lg leading-relaxed">
+                    Доверьтесь случаю. Нажмите на кубик, и мы выберем для вас шедевр из нашей коллекции.
+                </p>
+
+                <!-- Кнопка с 3D кубиком -->
+                <button id="random-dice-btn" 
+                        class="dice-scene group/btn focus:outline-none transform transition-transform active:scale-95"
+                        title="Бросить кубик">
+                    <div class="dice-cube text-cyan-900">
+                        <!-- Грани кубика с точками (используем SVG точки для красоты) -->
+                        <div class="dice-face dice-face--1 bg-white">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                        </div>
+                        <div class="dice-face dice-face--2 bg-white flex justify-between p-3 w-full h-full">
+                             <svg class="w-3 h-3 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                             <svg class="w-3 h-3 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                        </div>
+                        <div class="dice-face dice-face--3 bg-white flex justify-between p-3 w-full h-full">
+                             <svg class="w-2.5 h-2.5 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                             <svg class="w-2.5 h-2.5 fill-current self-center" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                             <svg class="w-2.5 h-2.5 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                        </div>
+                        <div class="dice-face dice-face--4 bg-white p-3">
+                             <div class="grid grid-cols-2 gap-4 w-full h-full">
+                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                             </div>
+                        </div>
+                        
+                        <!-- ИЗМЕНЕНИЕ 1: Грань с 5 точками -->
+                        <div class="dice-face dice-face--5 bg-white p-3">
+                            <div class="grid grid-cols-3 grid-rows-3 w-full h-full">
+                                <svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current col-start-2 row-start-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                <svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                            </div>
+                        </div>
+                        
+                        <!-- ИЗМЕНЕНИЕ 2: Грань с 6 точками -->
+                        <div class="dice-face dice-face--6 bg-white p-3">
+                            <div class="grid grid-cols-2 gap-3 w-full h-full">
+                                <div class="flex flex-col justify-between h-full">
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                </div>
+                                <div class="flex flex-col justify-between h-full">
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+                
+                <p class="mt-6 text-sm text-cyan-200/70 font-medium uppercase tracking-widest animate-pulse">
+                    Нажмите, чтобы бросить
+                </p>
+            </div>
+        </div>
+    </div>
+  `;
 
   // Helper for Cards (Улучшенный дизайн карточек)
   const createSection = (title, items, icon) => {
@@ -548,21 +689,81 @@ export function renderDashboard(data, lang = "ru") {
         `;
   };
 
+  // НОВАЯ СЕКЦИЯ: ФОРМА ОБРАТНОЙ СВЯЗИ
+  const feedbackFormHTML = `
+    <!-- 
+      ФИНАЛЬНАЯ ВЕРСИЯ:
+      1. pt-8 pb-0 -mb-32: Исправление отступа до футера.
+      2. max-w-7xl: Растягивание на всю ширину (как у других секций).
+    -->
+    <div class="pt-8 pb-0 -mb-32 relative z-10">
+      <!-- ИЗМЕНЕНО: max-w-4xl -> max-w-7xl -->
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="bg-white/60 backdrop-blur-md p-8 sm:p-12 rounded-2xl shadow-lg border border-white/50 text-center">
+            
+            <!-- Заголовок (мобильная адаптация) -->
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 font-serif flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+                <i data-lucide="mail-question" class="w-10 h-10 sm:w-8 sm:h-8 text-cyan-600 mb-1 sm:mb-0"></i>
+                <span>Хотите оставить отзыв?</span>
+            </h2>
+            
+            <p class="text-gray-600 max-w-2xl mx-auto mb-10 text-sm sm:text-base">
+              Мы всегда рады обратной связи. Напишите нам, если у вас есть предложения по улучшению проекта или вы нашли ошибку.
+            </p>
+    
+            <!-- Форма (центрирована, ширина ограничена max-w-xl для читаемости полей) -->
+            <form id="feedback-form" class="max-w-xl mx-auto text-left space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="feedback-name" class="block text-sm font-medium text-gray-700 mb-1">Ваше имя</label>
+                  <input type="text" id="feedback-name" required 
+                         class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
+                </div>
+                <div>
+                  <label for="feedback-email" class="block text-sm font-medium text-gray-700 mb-1">Ваш Email</label>
+                  <input type="email" id="feedback-email" required 
+                         class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
+                </div>
+              </div>
+              
+              <div class="relative">
+                <label for="feedback-message" class="block text-sm font-medium text-gray-700 mb-1">Сообщение</label>
+                <textarea id="feedback-message" rows="5" required maxlength="1000" 
+                          class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 resize-none transition-all"></textarea>
+                <div id="feedback-char-counter" class="absolute bottom-2 right-3 text-xs text-gray-400">0 / 1000</div>
+              </div>
+              
+              <div id="feedback-status" class="text-center min-h-[24px]"></div>
+    
+              <div class="text-center pt-4">
+                <button type="submit" id="feedback-submit-btn" class="w-full sm:w-auto px-10 py-3 bg-cyan-600 text-white font-bold rounded-full hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-wait">
+                  Отправить
+                </button>
+              </div>
+            </form>
+        </div>
+      </div>
+    </div>
+  `;
+
   // СБОРКА
   listEl.innerHTML =
     heroHTML +
     statsHTML +
-    epochsHTML + // Новое
-    spotlightHTML + // Новое
+    epochsHTML +
+    spotlightHTML +
+    randomizerHTML +
     createSection(
       "Недавно добавленные",
       data.recently_added_works,
       "sparkles"
     ) +
-    createSection("Случайный выбор", data.random_works, "shuffle");
+    createSection("Случайный выбор", data.random_works, "shuffle") +
+    feedbackFormHTML;
 
-  // Логика поиска
+  // Логика поиска и СЧЕТЧИКА СИМВОЛОВ
   setTimeout(() => {
+    // 1. Поиск (это у вас уже было)
     document
       .getElementById("hero-search-input")
       ?.addEventListener("keydown", (e) => {
@@ -573,6 +774,26 @@ export function renderDashboard(data, lang = "ru") {
           else window.location.href = `/search/${encodeURIComponent(val)}`;
         }
       });
+
+    // 2. ДОБАВЛЕНО: Логика счетчика символов
+    const msgInput = document.getElementById("feedback-message");
+    const charCounter = document.getElementById("feedback-char-counter");
+
+    if (msgInput && charCounter) {
+        msgInput.addEventListener("input", function() {
+            const currentLength = this.value.length;
+            const maxLength = this.getAttribute("maxlength");
+            charCounter.textContent = `${currentLength} / ${maxLength}`;
+            
+            // Опционально: красим в красный, если достигли лимита
+            if (currentLength >= maxLength) {
+                charCounter.classList.add("text-red-500", "font-bold");
+            } else {
+                charCounter.classList.remove("text-red-500", "font-bold");
+            }
+        });
+    }
+
     if (window.lucide) window.lucide.createIcons();
   }, 50);
 }
@@ -2292,7 +2513,7 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: "Медиатека", link: "/recordings" });
       crumbs.push({ label: "Видеозал" });
       break;
-    case "recordings": // Старый роут, на всякий случай
+    case "recordings":
       crumbs.push({ label: "Медиатека" });
       break;
 
@@ -2320,7 +2541,7 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: `"${window.state.view.searchQuery}"` });
       break;
 
-    // --- БЛОГ (СПИСОК) ---
+    // --- БЛОГ ---
     case "blog_list":
       if (window.state.view.blogTagFilter) {
         crumbs.push({ label: "Блог", link: "/blog" });
@@ -2330,7 +2551,6 @@ export function renderBreadcrumbs() {
       }
       break;
 
-    // --- БЛОГ (СТАТЬЯ) ---
     case "blog_post":
       crumbs.push({ label: "Блог", link: "/blog" });
       if (window.state.view.currentBlogPost) {
@@ -2342,8 +2562,22 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: "Карта" });
       break;
 
+    // --- ЛИЧНЫЙ КАБИНЕТ ---
     case "account":
       crumbs.push({ label: "Личный кабинет" });
+      break;
+
+    // === ДОБАВЛЕНО: ОБРАТНАЯ СВЯЗЬ (СПИСОК) ===
+    case "account_feedback":
+      crumbs.push({ label: "Личный кабинет", link: "/account" });
+      crumbs.push({ label: "Обратная связь" });
+      break;
+
+    // === ДОБАВЛЕНО: ОБРАТНАЯ СВЯЗЬ (СООБЩЕНИЕ) ===
+    case "account_feedback_detail":
+      crumbs.push({ label: "Личный кабинет", link: "/account" });
+      crumbs.push({ label: "Обратная связь", link: "/account/feedback" });
+      crumbs.push({ label: "Сообщение" });
       break;
   }
 
@@ -5632,9 +5866,21 @@ export function renderAccountPage(userData) {
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 class="text-lg font-bold text-gray-700 mb-4">Быстрый доступ</h3>
-          <div class="flex gap-4">
-            <a href="/favorites" data-navigo class="flex-1 text-center px-4 py-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors">Избранное</a>
-            <a href="/playlists" data-navigo class="flex-1 text-center px-4 py-3 bg-cyan-50 text-cyan-600 font-bold rounded-lg hover:bg-cyan-100 transition-colors">Плейлисты</a>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <a href="/favorites" data-navigo 
+               class="flex items-center justify-center px-4 py-4 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors shadow-sm whitespace-nowrap">
+               Избранное
+            </a>
+            
+            <a href="/playlists" data-navigo 
+               class="flex items-center justify-center px-4 py-4 bg-cyan-50 text-cyan-600 font-bold rounded-xl hover:bg-cyan-100 transition-colors shadow-sm whitespace-nowrap">
+               Плейлисты
+            </a>
+            
+            <a href="/account/feedback" data-navigo 
+               class="flex items-center justify-center px-4 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors shadow-sm whitespace-nowrap">
+               Обратная связь
+            </a>
           </div>
         </div>
       </div>
@@ -5654,5 +5900,156 @@ export function renderAccountPage(userData) {
   `;
   // Просто рендерим в основной контейнер
   listEl.innerHTML = html;
+  if (window.lucide) window.lucide.createIcons();
+}
+
+export function renderFeedbackMessages(messages) {
+  const { listEl } = getElements();
+  const viewTitle = document.getElementById("view-title-container");
+
+  viewTitle.classList.remove("hidden");
+  viewTitle.innerHTML = `
+    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+        <i data-lucide="inbox" class="w-8 h-8 text-cyan-600"></i>
+        <span>Обратная связь</span>
+    </h2>
+  `;
+
+  // 1. Изменен текст для пустого состояния
+  if (!messages || messages.length === 0) {
+    listEl.innerHTML =
+      '<div class="max-w-4xl mx-auto px-6 text-center py-20 text-gray-400 text-lg">Сообщений нет</div>';
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  const itemsHtml = messages
+    .map((msg) => {
+      const date = new Date(msg.created_at).toLocaleString("ru-RU");
+
+      // Логика обрезки текста (как в предыдущем шаге)
+      let messageBody = "";
+      if (msg.message.length > 200) {
+        messageBody = `
+            <div class="whitespace-pre-wrap">${msg.message.substring(
+              0,
+              200
+            )}...</div>
+            <a href="/account/feedback/${
+              msg.id
+            }" data-navigo class="text-cyan-600 hover:underline font-bold text-sm mt-2 inline-block">Читать далее →</a>
+          `;
+      } else {
+        messageBody = `<div class="whitespace-pre-wrap">${msg.message}</div>`;
+      }
+
+      // 2. Новая логика кнопок статуса
+      let statusBtn;
+      if (msg.is_read) {
+        // ПРОЧИТАНО: Открытый конверт, серый, обычная толщина линий
+        statusBtn = `
+            <button class="mark-feedback-unread-btn p-2 text-gray-400 hover:text-cyan-600 transition-colors" 
+                    data-id="${msg.id}" 
+                    title="Пометить как непрочитанное (вернуть в новые)">
+                <i data-lucide="mail-open" class="w-5 h-5"></i>
+            </button>`;
+      } else {
+        // НЕПРОЧИТАНО: Запечатанный конверт (mail)
+        // УБРАН класс fill-current, чтобы были видны линии конверта
+        // ДОБАВЛЕН stroke-width="2.5", чтобы конверт выглядел "жирнее" и заметнее
+        statusBtn = `
+            <button class="mark-feedback-read-btn p-2 bg-cyan-100 text-cyan-600 hover:bg-cyan-200 rounded-lg transition-all shadow-sm" 
+                    data-id="${msg.id}" 
+                    title="Пометить как прочитанное">
+                <i data-lucide="mail" class="w-5 h-5" stroke-width="2.5"></i>
+            </button>`;
+      }
+
+      return `
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-4 transition-all hover:shadow-md ${
+        !msg.is_read ? "border-l-4 border-cyan-500 bg-cyan-50/10" : ""
+      }">
+        <div class="flex justify-between items-start gap-4">
+          <div class="min-w-0">
+            <!-- Имя-ссылка -->
+            <a href="/account/feedback/${
+              msg.id
+            }" data-navigo class="font-bold text-gray-900 hover:text-cyan-600 hover:underline transition-colors block text-lg truncate">
+                ${msg.name}
+            </a>
+            
+            <a href="mailto:${
+              msg.email
+            }" class="text-sm text-cyan-600 hover:underline block mb-1">${
+        msg.email
+      }</a>
+            <div class="text-xs text-gray-400">${date}</div>
+          </div>
+          
+          <!-- Блок кнопок -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            ${statusBtn}
+            
+            <div class="w-px h-6 bg-gray-200 mx-1"></div> <!-- Разделитель -->
+            
+            <button class="delete-feedback-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                    data-id="${msg.id}" 
+                    title="Удалить">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t border-gray-100 text-gray-700">
+            ${messageBody}
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+
+  listEl.innerHTML = `<div class="max-w-4xl mx-auto px-6 pb-20">${itemsHtml}</div>`;
+  if (window.lucide) window.lucide.createIcons();
+}
+
+export function renderSingleFeedbackMessage(msg) {
+  const { listEl } = getElements();
+  const viewTitle = document.getElementById("view-title-container");
+
+  viewTitle.classList.remove("hidden");
+  viewTitle.innerHTML = `
+    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+        <i data-lucide="mail" class="w-8 h-8 text-cyan-600"></i>
+        <span>Сообщение</span>
+    </h2>
+    <a href="/account/feedback" data-navigo class="text-sm text-gray-500 hover:text-cyan-600 mt-2 inline-block"><- Назад ко всем сообщениям</a>
+  `;
+
+  const date = new Date(msg.created_at).toLocaleString("ru-RU", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
+  const messageHtml = `
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center pb-4 border-b border-gray-200">
+        <div>
+          <div class="font-bold text-xl text-gray-900">${msg.name}</div>
+          <a href="mailto:${msg.email}" class="text-cyan-600 hover:underline">${msg.email}</a>
+        </div>
+        <div class="text-sm text-gray-500 mt-2 sm:mt-0">${date}</div>
+      </div>
+      <div class="mt-6 text-gray-800 leading-relaxed whitespace-pre-wrap text-base">
+        ${msg.message}
+      </div>
+      <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+        <button class="delete-feedback-btn px-4 py-2 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2" data-id="${msg.id}">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Удалить
+        </button>
+      </div>
+    </div>
+  `;
+
+  listEl.innerHTML = `<div class="max-w-4xl mx-auto px-6 pb-20">${messageHtml}</div>`;
   if (window.lucide) window.lucide.createIcons();
 }

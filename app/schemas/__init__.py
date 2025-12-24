@@ -11,3 +11,4 @@ from .token import Token, TokenData
 from .dashboard import DashboardSummary, DashboardStats
 from . import search
 from .blog import Post, PostCreate, PostUpdate, Tag, TagCreate, TagBase
+from .feedback import Feedback, FeedbackCreate

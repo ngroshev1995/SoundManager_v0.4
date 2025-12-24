@@ -316,7 +316,7 @@ def get_random_playable_work(
     full_work = (
         db.query(models.music.Work)
         .options(
-            joinedload(models.music.Work.composer),  # Подгружаем композитора
+            joinedload(models.music.Work.composer),
             joinedload(models.music.Work.compositions)
             .joinedload(models.music.Composition.recordings)
         )
@@ -487,3 +487,39 @@ def reorder_work_compositions(
 ):
     crud.music.reorder_compositions(db, work_id, payload.composition_ids)
     return {"status": "ok"}
+
+@router.get("/random-interactive", response_model=schemas.music.Work)
+def get_random_work_for_interactive(db: Session = Depends(get_db)):
+    """
+    Возвращает одно случайное произведение со всеми его аудиозаписями
+    для интерактивного блока "Случайный выбор".
+    """
+    random_func = func.random()
+    if db.bind.dialect.name == 'mysql':
+        random_func = func.rand()
+
+    # 1. Находим случайное произведение, у которого есть хоть одна аудиозапись
+    work = (
+        db.query(models.music.Work)
+        .join(models.music.Work.compositions)
+        .join(models.music.Composition.recordings)
+        .filter(models.music.Recording.duration > 0)
+        .order_by(random_func)
+        .first()
+    )
+    if not work:
+        raise HTTPException(status_code=404, detail="No playable works found")
+
+    # 2. Загружаем это произведение со всеми его данными, включая записи
+    full_work = (
+        db.query(models.music.Work)
+        .options(
+            joinedload(models.music.Work.composer),
+            joinedload(models.music.Work.compositions)
+            .joinedload(models.music.Composition.recordings)
+        )
+        .filter(models.music.Work.id == work.id)
+        .first()
+    )
+
+    return full_work
