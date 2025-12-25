@@ -207,12 +207,12 @@ export function updateHeaderAuth() {
             </div>
         </div>
 
-        <!-- === МОБИЛЬНАЯ ВЕРСИЯ (старое приветствие, видна только на узких экранах) === -->
+        <!-- === МОБИЛЬНАЯ ВЕРСИЯ === -->
         <div class="lg:hidden flex items-center gap-2">
-            <div class="text-sm font-bold text-white/90 text-right">
-                Здравствуйте, <a href="/account" data-navigo class="hover:text-white underline">${username}</a>!
-            </div>
-            <!-- И СЮДА ТОЖЕ -->
+    <div class="text-sm font-bold text-white/90 text-right max-w-[150px] leading-tight">
+        <span>Здравствуйте, </span><br>
+        <a href="/account" data-navigo class="hover:text-white underline truncate inline-block max-w-full align-bottom">${username}</a>!
+    </div>
             <button id="logout-btn-mobile" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer" title="Выйти">
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
@@ -5929,7 +5929,10 @@ export function renderAccountPage(userData) {
       
       <!-- Карточка профиля -->
       <div class="bg-white/50 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100 mb-8">
-        <div class="flex flex-col sm:flex-row items-center gap-6">
+        <!-- БЫЛО: sm:flex-row -> СТАЛО: lg:flex-row -->
+        <div class="flex flex-col lg:flex-row items-center gap-6">
+          
+          <!-- Аватар -->
           <div class="w-24 h-24 rounded-full shadow-xl overflow-hidden bg-gray-100 flex-shrink-0 border-4 border-white relative">
             ${
               userData.avatar_url
@@ -5939,18 +5942,29 @@ export function renderAccountPage(userData) {
                    </div>`
             }
           </div>
-          <div class="flex-1 text-center sm:text-left">
-            <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: flex-col для мобильных, flex-row для ПК -->
-            <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 justify-center sm:justify-start">
-              <!-- ИЗМЕНЕНИЯ ЗДЕСЬ: text-2xl для мобильных (чтобы влезло в строку), text-3xl для ПК -->
-              <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 whitespace-nowrap">${
-                userData.display_name || userData.email.split("@")[0]
-              }</h2>
+
+          <!-- Текстовый блок -->
+          <!-- БЫЛО: sm:text-left -> СТАЛО: lg:text-left -->
+          <div class="flex-1 text-center lg:text-left min-w-0 w-full">
+            
+            <!-- БЫЛО: sm:flex-row, sm:gap-3, sm:justify-start -> СТАЛО: lg:... -->
+            <div class="flex flex-col lg:flex-row items-center gap-2 lg:gap-3 justify-center lg:justify-start">
+              
+              <!-- ИСПРАВЛЕНИЕ ДЛИННОГО ИМЕНИ (из предыдущего шага) -->
+              <h2 class="text-2xl lg:text-3xl font-bold text-gray-800 break-all leading-tight">
+                ${userData.display_name || userData.email.split("@")[0]}
+              </h2>
+              
               ${adminBadge}
             </div>
-            <p class="text-gray-500 mt-1 sm:mt-0">${userData.email}</p>
+
+            <!-- БЫЛО: sm:mt-0 -> СТАЛО: lg:mt-0 -->
+            <p class="text-gray-500 mt-1 lg:mt-0 break-all">${
+              userData.email
+            }</p>
             <p class="text-xs text-gray-400 mt-2">На сайте с ${creationDate}</p>
           </div>
+
           <button id="edit-profile-btn" class="px-4 py-2 bg-white border border-gray-200 text-sm font-bold text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
             Редактировать
           </button>
@@ -5978,7 +5992,9 @@ export function renderAccountPage(userData) {
         </div>
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 class="text-lg font-bold text-gray-700 mb-4">Быстрый доступ</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          
+          <!-- БЫЛО: sm:grid-cols-3 -> СТАЛО: lg:grid-cols-3 -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <a href="/favorites" data-navigo 
                class="flex items-center justify-center px-4 py-4 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors shadow-sm whitespace-nowrap">
                Избранное
