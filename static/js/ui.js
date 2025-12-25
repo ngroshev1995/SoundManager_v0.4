@@ -163,7 +163,7 @@ export function updateHeaderAuth() {
 
     container.innerHTML = `
         <!-- === ДЕСКТОПНАЯ ВЕРСИЯ (с выпадашкой, видна на md экранах и шире) === -->
-        <div class="hidden md:flex items-center gap-4 relative">
+        <div class="hidden lg:flex items-center gap-4 relative">
             <div class="relative group">
                 <div class="flex items-center gap-1 text-sm font-bold text-white/90 py-2 cursor-pointer">
                     <span>Здравствуйте,&nbsp;</span>
@@ -208,7 +208,7 @@ export function updateHeaderAuth() {
         </div>
 
         <!-- === МОБИЛЬНАЯ ВЕРСИЯ (старое приветствие, видна только на узких экранах) === -->
-        <div class="md:hidden flex items-center gap-2">
+        <div class="lg:hidden flex items-center gap-2">
             <div class="text-sm font-bold text-white/90 text-right">
                 Здравствуйте, <a href="/account" data-navigo class="hover:text-white underline">${username}</a>!
             </div>
@@ -313,16 +313,16 @@ export function renderDashboard(data, lang = "ru") {
 
         <div class="max-w-5xl mx-auto px-6 py-28 relative z-10 text-center flex-1 flex flex-col justify-center">
           <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight tracking-tight drop-shadow-xl font-serif">
-            Величие <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">Классики</span>
+            Ваша персональная <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-400">филармония</span>
           </h1>
           <p class="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto font-light">
-            Ваша персональная библиотека музыкального наследия. Исследуйте эпохи, открывайте шедевры.
+            Исследуйте эпохи, открывайте шедевры.
           </p>
 
           <div class="relative max-w-xl mx-auto mb-12 group/search">
-             <i data-lucide="search" class="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within/search:text-cyan-400 transition-colors"></i>
-             <input type="text" id="hero-search-input" placeholder="Найти композитора, произведение..."
-                    class="w-full pl-14 pr-6 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:bg-white/20 focus:border-cyan-400/50 shadow-2xl transition-all">
+             <i data-lucide="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within/search:text-cyan-400 transition-colors z-10 pointer-events-none"></i>
+             <input type="text" id="hero-search-input" placeholder="Найти шедевр..."
+                    class="w-full px-12 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:bg-white/20 focus:border-cyan-400/50 shadow-2xl transition-all text-base text-center">
           </div>
           <div class="flex justify-center items-center gap-4">
               <a href="/recordings/audio" data-navigo 
@@ -715,19 +715,19 @@ export function renderDashboard(data, lang = "ru") {
             <form id="feedback-form" class="max-w-xl mx-auto text-left space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label for="feedback-name" class="block text-sm font-medium text-gray-700 mb-1">Ваше имя</label>
+                  <label for="feedback-name" class="block text-sm font-medium text-gray-700 mb-1">Ваше имя <span class="text-red-500">*</span></label>
                   <input type="text" id="feedback-name" required 
                          class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
                 </div>
                 <div>
-                  <label for="feedback-email" class="block text-sm font-medium text-gray-700 mb-1">Ваш Email</label>
+                  <label for="feedback-email" class="block text-sm font-medium text-gray-700 mb-1">Ваш Email <span class="text-red-500">*</span></label>
                   <input type="email" id="feedback-email" required 
                          class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
                 </div>
               </div>
               
               <div class="relative">
-                <label for="feedback-message" class="block text-sm font-medium text-gray-700 mb-1">Сообщение</label>
+                <label for="feedback-message" class="block text-sm font-medium text-gray-700 mb-1">Сообщение <span class="text-red-500">*</span></label>
                 <textarea id="feedback-message" rows="5" required maxlength="1000" 
                           class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 resize-none transition-all"></textarea>
                 <div id="feedback-char-counter" class="absolute bottom-2 right-3 text-xs text-gray-400">0 / 1000</div>
@@ -780,18 +780,18 @@ export function renderDashboard(data, lang = "ru") {
     const charCounter = document.getElementById("feedback-char-counter");
 
     if (msgInput && charCounter) {
-        msgInput.addEventListener("input", function() {
-            const currentLength = this.value.length;
-            const maxLength = this.getAttribute("maxlength");
-            charCounter.textContent = `${currentLength} / ${maxLength}`;
-            
-            // Опционально: красим в красный, если достигли лимита
-            if (currentLength >= maxLength) {
-                charCounter.classList.add("text-red-500", "font-bold");
-            } else {
-                charCounter.classList.remove("text-red-500", "font-bold");
-            }
-        });
+      msgInput.addEventListener("input", function () {
+        const currentLength = this.value.length;
+        const maxLength = this.getAttribute("maxlength");
+        charCounter.textContent = `${currentLength} / ${maxLength}`;
+
+        // Опционально: красим в красный, если достигли лимита
+        if (currentLength >= maxLength) {
+          charCounter.classList.add("text-red-500", "font-bold");
+        } else {
+          charCounter.classList.remove("text-red-500", "font-bold");
+        }
+      });
     }
 
     if (window.lucide) window.lucide.createIcons();
@@ -829,13 +829,14 @@ export function renderRecordingList(
         : "";
 
     viewTitle.innerHTML = `
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-            <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                <i data-lucide="list-music" class="w-8 h-8 text-cyan-600"></i> ${
-                  title || "Список"
-                }
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 text-center md:text-left">
+            <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
+                <span>${title || "Список"}</span>
+                <i data-lucide="list-music" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i> 
             </h2>
-            ${controlsHtml}
+            <div class="flex justify-center md:block w-full md:w-auto">
+                ${controlsHtml}
+            </div>
         </div>
     `;
   }
@@ -1079,14 +1080,14 @@ export function renderComposerList(
     : "";
 
   viewTitle.innerHTML = `
-      <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
-          <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <i data-lucide="users" class="w-8 h-8 text-cyan-600"></i>
-              <span>Композиторы</span>
-          </h2>
-          <div>${addBtn}</div>
-      </div>
-  `;
+    <div class="w-full mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+        <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
+            <span>Композиторы</span>
+            <i data-lucide="users" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
+        </h2>
+        <div class="w-full md:w-auto flex justify-center md:block">${addBtn}</div>
+    </div>
+`;
 
   // --- НОВЫЙ БЛОК: АЛФАВИТНЫЙ УКАЗАТЕЛЬ ---
   const alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ".split("");
@@ -2125,7 +2126,7 @@ export function renderCompositionDetailView(
 
 export function updatePlayerInfo(rec) {
   let title = "Выберите запись";
-  let artist = "ClassicaLib";
+  let artist = "ClassicGuide";
   let cover = "/static/img/placeholder.png";
   let recId = null;
 
@@ -2446,7 +2447,7 @@ export function renderBreadcrumbs() {
 
   container.classList.remove("hidden");
 
-  let crumbs = [{ label: "ClassicaLib", link: "/" }];
+  let crumbs = [{ label: "ClassicGuide", link: "/" }];
 
   switch (view) {
     // --- КОМПОЗИТОРЫ ---
@@ -3167,6 +3168,20 @@ export async function showEditEntityModal(type, data, onSave) {
             }"></div>
         </div>
     `;
+  } else if (type === "playlist_create" || type === "playlist_edit") {
+    // === НОВЫЙ БЛОК ДЛЯ ПЛЕЙЛИСТОВ ===
+    modalTitle =
+      type === "playlist_create"
+        ? "Создать плейлист"
+        : "Переименовать плейлист";
+    fields = `
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название плейлиста</label>
+        <input id="edit-playlist-name" class="w-full border-2 border-cyan-100 p-3 rounded-lg focus:border-cyan-500 outline-none font-medium" 
+               value="${data.name || ""}" 
+               placeholder="Например: Любимые концерты">
+      </div>
+    `;
   } else if (type === "profile") {
     modalTitle = "Редактировать профиль";
     fields = `
@@ -3633,15 +3648,17 @@ export function renderPlaylistsOverview(playlists) {
   viewTitle.classList.remove("hidden");
 
   viewTitle.innerHTML = `
-        <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
-            <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <i data-lucide="list-music" class="w-8 h-8 text-cyan-600"></i>
+        <div class="w-full mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
                 <span>Мои плейлисты</span>
+                <i data-lucide="list-music" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
             </h2>
 
-            <button id="create-new-playlist-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md flex items-center gap-2 transition-all text-sm font-bold whitespace-nowrap">
-                <i data-lucide="plus" class="w-4 h-4"></i> <span>Создать</span>
-            </button>
+            <div class="w-full md:w-auto flex justify-center md:block">
+                <button id="create-new-playlist-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md flex items-center gap-2 transition-all text-sm font-bold whitespace-nowrap">
+                    <i data-lucide="plus" class="w-4 h-4"></i> <span>Создать</span>
+                </button>
+            </div>
         </div>
     `;
 
@@ -4006,8 +4023,11 @@ export function renderLibraryHub() {
   if (viewTitle) {
     viewTitle.classList.remove("hidden");
     viewTitle.innerHTML = `
-        <div class="text-center">
-            <h2 class="text-3xl font-bold text-gray-800 mb-2">Медиатека</h2>
+        <div class="text-center md:text-left">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2 flex flex-col-reverse md:flex-row items-center md:justify-start justify-center gap-2">
+                <span>Медиатека</span>
+                <i data-lucide="library" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
+            </h2>
             <p class="text-gray-500">Выберите формат материалов</p>
         </div>`;
   }
@@ -4212,12 +4232,12 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const tagsFilterBar = `<div class="flex flex-wrap gap-2 mb-8">${tagsHtml}</div>`;
 
   viewTitle.innerHTML = `
-        <div class="w-full mb-8 border-b border-gray-200 pb-4 flex items-center justify-between gap-4">
-            <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <i data-lucide="newspaper" class="w-8 h-8 text-cyan-600"></i>
+        <div class="w-full mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
                 <span>Блог</span>
+                <i data-lucide="newspaper" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
             </h2>
-            ${addBtn}
+            <div class="w-full md:w-auto flex justify-center md:block">${addBtn}</div>
         </div>
         ${tagsFilterBar}
     `;
@@ -4232,14 +4252,15 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   const featuredPost = posts[0];
   const otherPosts = posts.slice(1);
 
-  const featuredDate = new Date(featuredPost.created_at).toLocaleDateString(
-    "ru-RU",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  );
+  const featuredDate = new Date(
+    featuredPost.created_at + "Z"
+  ).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Moscow",
+  });
+
   const featuredCover =
     featuredPost.cover_image_url || "/static/img/placeholder.png";
 
@@ -4311,11 +4332,15 @@ export async function renderBlogList(posts, allTags = [], activeTag = null) {
   if (otherPosts.length > 0) {
     const cards = otherPosts
       .map((post) => {
-        const date = new Date(post.created_at).toLocaleDateString("ru-RU", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
+        const date = new Date(post.created_at + "Z").toLocaleDateString(
+          "ru-RU",
+          {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone: "Europe/Moscow",
+          }
+        );
         const cover = post.cover_image_url || "/static/img/placeholder.png";
         const controls = isAdmin()
           ? `
@@ -4382,10 +4407,11 @@ export async function renderBlogPost(post) {
   const { listEl } = getElements();
   document.getElementById("view-title-container").classList.add("hidden");
 
-  const date = new Date(post.created_at).toLocaleDateString("ru-RU", {
+  const date = new Date(post.created_at + "Z").toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Europe/Moscow",
   });
 
   // 1. ШАПКА
@@ -4473,35 +4499,12 @@ export async function showBlogModal(post = null) {
   newClose.onclick = () => modal.classList.add("hidden");
 }
 
-export function renderLibraryPageStructure(title, composers) {
+export function renderLibraryPageStructure(title, composers, genres = []) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
   viewTitle.classList.add("hidden");
 
-  // ГЕНЕРАЦИЯ ЖАНРОВ
-  const sidebarGenresHtml = [
-    { label: "Симфонии", value: "Symphony", icon: "music-2" },
-    { label: "Концерты", value: "Concerto", icon: "mic-2" },
-    { label: "Сонаты", value: "Sonata", icon: "book-open" },
-    { label: "Опера", value: "Opera", icon: "mic" },
-    { label: "Камерная", value: "Chamber", icon: "users" },
-    { label: "Фортепиано", value: "Piano", icon: "music" },
-    { label: "Духовная", value: "Mass", icon: "church" },
-  ]
-    .map(
-      (g) => `
-        <button onclick="window.applyLibraryFilter('genre', '${g.value}')"
-                data-filter-type="genre" 
-                data-filter-value="${g.value}"
-                class="w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-cyan-50 hover:text-cyan-700 transition-colors flex items-center gap-3 text-sm font-medium">
-            <i data-lucide="${g.icon}" class="w-4 h-4 text-gray-400 group-hover:text-cyan-600"></i>
-            ${g.label}
-        </button>
-    `
-    )
-    .join("");
-
-  // ГЕНЕРАЦИЯ ЭПОХ
+  // ГЕНЕРАЦИЯ ЭПОХ (Остается в сайдбаре)
   const sidebarEpochsHtml = [
     { label: "Ренессанс", value: "renaissance", icon: "scroll" },
     { label: "Барокко", value: "baroque", icon: "landmark" },
@@ -4543,11 +4546,27 @@ export function renderLibraryPageStructure(title, composers) {
     </div>`
       : "";
 
+  // Определяем иконку для мобильного заголовка
+  const headerIcon = title === "Видеозал" ? "youtube" : "disc";
+  const headerColor = title === "Видеозал" ? "text-red-600" : "text-cyan-600";
+
+  // Сортируем жанры по алфавиту
+  const sortedGenres = [...genres].sort((a, b) => a.name.localeCompare(b.name));
+
   const layoutHtml = `
     <div class="max-w-[1600px] mx-auto px-6 pb-20">
+        
+        <!-- === МОБИЛЬНЫЙ ЗАГОЛОВОК === -->
+        <div class="lg:hidden w-full mb-6 text-center border-b border-gray-200 pb-4">
+             <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse items-center justify-center gap-2">
+                <span>${title}</span>
+                <i data-lucide="${headerIcon}" class="w-10 h-10 ${headerColor} mb-1"></i>
+            </h2>
+        </div>
+
         <div class="flex flex-col lg:flex-row gap-8 items-start">
 
-            <!-- === ЛЕВЫЙ САЙДБАР === -->
+            <!-- === ЛЕВЫЙ САЙДБАР (Скрыт на мобильных) === -->
             <aside class="hidden lg:block w-64 flex-shrink-0 sticky top-4 space-y-8">
                 <div class="px-2">
                     <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-1">
@@ -4561,21 +4580,7 @@ export function renderLibraryPageStructure(title, composers) {
                     <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Библиотека</p>
                 </div>
 
-                <!-- КАТЕГОРИИ (ЖАНРЫ) -->
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Категории</h3>
-                    <div class="space-y-1">
-                        <button onclick="window.applyLibraryFilter('genre', '')" 
-                                data-filter-type="genre" 
-                                data-filter-value=""
-                                class="w-full text-left px-3 py-2 rounded-lg bg-gray-100 text-gray-900 font-bold flex items-center gap-3 text-sm">
-                            <i data-lucide="layout-grid" class="w-4 h-4 text-cyan-600"></i> Все записи
-                        </button>
-                        ${sidebarGenresHtml}
-                    </div>
-                </div>
-
-                <!-- ЭПОХИ -->
+                <!-- ЭПОХИ (КАТЕГОРИИ УДАЛЕНЫ) -->
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Эпохи</h3>
                     <div class="space-y-1">
@@ -4594,33 +4599,80 @@ export function renderLibraryPageStructure(title, composers) {
             <div class="flex-1 w-full min-w-0">
                 <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 sticky top-0 z-20 mb-6">
-                    <div class="flex flex-col md:flex-row gap-3 justify-between items-center">
-                        <div class="flex gap-2 w-full md:flex-1">
-    <!-- Поиск -->
-    <div class="relative flex-1 w-full">
-        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
-        <input type="text" placeholder="Поиск..." class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-400 outline-none transition-all" onchange="window.applyLibraryFilter('search', this.value)">
-    </div>
-    
-    <!-- Инструменты для мобильных (в одном блоке) -->
-    <div class="md:hidden flex items-center flex-shrink-0 bg-gray-50 p-1 rounded-xl border border-gray-200">
-        <!-- Кнопка Фильтры -->
-        <button id="open-mobile-filters-btn" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg">
-            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
-        </button>
-        <!-- Переключатель вида -->
-        ${viewToggleHtml.replace(
-          "bg-gray-50 p-1 rounded-xl border border-gray-200 flex-shrink-0",
-          ""
-        )}
-    </div>
-</div>
-
-                        <div class="flex gap-2 w-full md:w-auto">
-                            <div class="hidden md:block flex-shrink-0">${viewToggleHtml}</div>
+                    <!-- Общая обертка для вертикального расположения на мобильных -->
+                    <div class="flex flex-col gap-3">
+                        
+                        <!-- Верхняя строка: Поиск и мобильные/планшетные кнопки -->
+                        <div class="flex gap-2 w-full">
+                            <!-- Поиск -->
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                                <input type="text" placeholder="Поиск..." class="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-400 outline-none transition-all" onchange="window.applyLibraryFilter('search', this.value)">
+                            </div>
                             
+                            <!-- Кнопки для мобильных и планшетов (скрываются на lg) -->
+                            <div class="lg:hidden flex items-center flex-shrink-0 bg-gray-50 p-1 rounded-xl border border-gray-200">
+                                <button id="open-mobile-filters-btn" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Фильтры">
+                                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                                </button>
+                                <!-- Сюда вставляется переключатель вида БЕЗ своей обертки -->
+                                ${viewToggleHtml
+                                  .replace(
+                                    '<div class="flex bg-gray-50 p-1 rounded-xl border border-gray-200 flex-shrink-0">',
+                                    ""
+                                  )
+                                  .replace("</div>", "")}
+                            </div>
+                        </div>
+
+                        <!-- Нижняя строка: Фильтры для десктопа -->
+                        <div class="flex flex-col md:flex-row gap-2 w-full">
+                            <!-- Переключатель вида (только для больших экранов) -->
+                            <div class="hidden lg:block flex-shrink-0">${viewToggleHtml}</div>
+                            
+                            <!-- ВЫПАДАЮЩИЙ СПИСОК ЖАНРОВ -->
+                            <div class="relative w-full flex-1">
+                                <button onclick="window.toggleGenreDropdown(event)" 
+                                        class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm flex items-center justify-between hover:border-cyan-300 transition-all focus:ring-2 focus:ring-cyan-100 group">
+                                    <span id="genre-filter-label" class="truncate font-medium text-gray-700">
+                                        ${
+                                          window.state.libraryFilters.genre ||
+                                          "Все жанры"
+                                        }
+                                    </span>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 group-hover:text-cyan-600 transition-colors"></i>
+                                </button>
+
+                                <div id="genre-custom-dropdown" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-scale-in origin-top">
+                                    <div class="max-h-64 overflow-y-auto p-1 custom-scrollbar">
+                                        <div onclick="window.selectLibraryGenre('')" class="px-3 py-2 rounded-lg cursor-pointer hover:bg-cyan-50 hover:text-cyan-700 text-sm font-bold text-gray-500 mb-1">Все жанры</div>
+                                        ${sortedGenres
+                                          .map((g) => {
+                                            const isSelected =
+                                              window.state.libraryFilters
+                                                .genre === g.name;
+                                            return `<div onclick="window.selectLibraryGenre('${
+                                              g.name
+                                            }')" class="px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm flex justify-between items-center ${
+                                              isSelected
+                                                ? "bg-cyan-50 text-cyan-700 font-bold"
+                                                : "text-gray-700 hover:bg-gray-50"
+                                            }">
+                                                <span>${g.name}</span>
+                                                ${
+                                                  isSelected
+                                                    ? '<i data-lucide="check" class="w-3 h-3"></i>'
+                                                    : ""
+                                                }
+                                            </div>`;
+                                          })
+                                          .join("")}
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- ВЫПАДАЮЩИЙ СПИСОК КОМПОЗИТОРОВ -->
-                            <div class="relative w-full min-w-[200px]">
+                            <div class="relative w-full flex-1">
                                 <button onclick="window.toggleComposerDropdown(event)" 
                                         class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm flex items-center justify-between hover:border-cyan-300 transition-all focus:ring-2 focus:ring-cyan-100 group">
                                     <span id="composer-filter-label" class="truncate font-medium text-gray-700">
@@ -4672,7 +4724,7 @@ export function renderLibraryPageStructure(title, composers) {
                     </div>
                 </div>
 
-                <!-- ПАНЕЛЬ ДЕЙСТВИЙ -->
+                <!-- ПАНЕЛЬ ДЕЙСТВИЙ (Счетчик и Play All) -->
                 <div id="library-action-bar" class="flex items-center justify-between mb-4 px-2 hidden">
                     <div id="library-counter-container" class="text-sm text-gray-500">
                       <span id="library-total-count" class="text-gray-900 font-bold text-lg">0</span> записей
@@ -4701,7 +4753,6 @@ export function renderLibraryPageStructure(title, composers) {
 
   listEl.innerHTML = layoutHtml;
 
-  // ВАЖНО: Сразу вызываем обновление классов, чтобы подсветить текущее состояние
   updateSidebarActiveStates();
   populateMobileFilters();
 
@@ -5314,11 +5365,12 @@ export function renderComposersMap(composers) {
   const viewTitle = document.getElementById("view-title-container");
 
   viewTitle.classList.remove("hidden");
+  // Используем выравнивание для десктопа (md:text-left) и центра для мобильных
   viewTitle.innerHTML = `
-        <div class="w-full mb-6 border-b border-gray-200 pb-4 flex flex-col items-center text-center">
-            <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <i data-lucide="map-pin" class="w-8 h-8 text-cyan-600"></i>
+        <div class="w-full mb-6 border-b border-gray-200 pb-4 flex flex-col items-center md:items-start text-center md:text-left">
+            <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
                 <span>География классики</span>
+                <i data-lucide="map-pin" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
             </h2>
             <p class="text-gray-500 mt-1">Где родились великие композиторы.</p>
         </div>
@@ -5326,30 +5378,43 @@ export function renderComposersMap(composers) {
 
   listEl.innerHTML = `
         <div class="max-w-7xl mx-auto px-6 pb-10">
-            <div id="composers-map" class="w-full h-[70vh] rounded-2xl shadow-xl border-4 border-white z-0 relative"></div>
+            <div id="composers-map" class="w-full h-[70vh] rounded-2xl shadow-xl border-4 border-white z-0 relative overflow-hidden"></div>
         </div>
     `;
 
-  setTimeout(() => {
+  // Функция инициализации карты
+  const initYandexMap = () => {
+    // Очищаем предыдущую карту, если была (важно для SPA)
     if (mapInstance) {
-      mapInstance.remove();
+      mapInstance.destroy();
       mapInstance = null;
     }
 
-    mapInstance = L.map("composers-map").setView([48.5, 15.0], 5);
+    // Создаем карту
+    mapInstance = new ymaps.Map("composers-map", {
+      center: [48.5, 15.0], // Центр Европы
+      zoom: 4,
+      controls: ["zoomControl", "fullscreenControl"], // Элементы управления
+    });
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 20,
-      }
-    ).addTo(mapInstance);
+    // ObjectManager для оптимизации и кластеризации (группировки) меток
+    const objectManager = new ymaps.ObjectManager({
+      clusterize: true, // Включаем кластеризацию
+      gridSize: 32,
+      clusterDisableClickZoom: false,
+    });
 
+    // Настройка внешнего вида кластеров (кружочки с цифрами)
+    objectManager.clusters.options.set(
+      "preset",
+      "islands#invertedCyanClusterIcons"
+    );
+
+    // Подготовка данных для ObjectManager (формат GeoJSON-like feature collection)
+    const features = [];
+
+    // Группируем композиторов по координатам, чтобы в одном балуне (попапе) показать всех
     const grouped = {};
-
     composers.forEach((c) => {
       if (c.latitude && c.longitude) {
         const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`;
@@ -5358,43 +5423,86 @@ export function renderComposersMap(composers) {
       }
     });
 
+    let idCounter = 0;
+
     Object.keys(grouped).forEach((key) => {
       const group = grouped[key];
-      const [lat, lng] = key.split(",");
+      const [lat, lng] = key.split(",").map(Number);
       const first = group[0];
 
-      let popupContent = `<div class="text-center min-w-[150px]">`;
-
+      // Формируем HTML содержимое балуна
+      let popupContent = `<div class="text-center min-w-[200px] font-sans">`;
       if (first.place_of_birth) {
-        popupContent += `<div class="font-bold text-sm text-gray-500 mb-2 uppercase tracking-wide border-b pb-1">${first.place_of_birth}</div>`;
+        popupContent += `<div class="font-bold text-sm text-gray-500 mb-3 uppercase tracking-wide border-b pb-2">${first.place_of_birth}</div>`;
       }
+      popupContent += `<div class="max-h-[200px] overflow-y-auto custom-scrollbar pr-1">`;
 
       group.forEach((c) => {
         const portrait = c.portrait_url || "/static/img/placeholder.png";
+        // Обратите внимание: ссылки внутри карт Яндекса могут перехватывать клик,
+        // поэтому используем onclick для навигации через router
         popupContent += `
-                    <a href="/composers/${
-                      c.slug || c.id
-                    }" data-navigo class="flex items-center gap-3 p-2 hover:bg-cyan-50 rounded-lg transition-colors text-left group mb-1">
-                        <img src="${portrait}" class="w-8 h-8 rounded-full object-cover border border-gray-200">
-                        <div>
-                            <div class="font-bold text-gray-800 text-sm group-hover:text-cyan-700">${
-                              c.name_ru
-                            }</div>
-                            <div class="text-[10px] text-gray-400">${
-                              c.year_born || "?"
-                            }</div>
-                        </div>
-                    </a>
-                `;
+            <a href="/composers/${c.slug || c.id}" data-navigo 
+               onclick="event.preventDefault(); window.router.navigate('/composers/${
+                 c.slug || c.id
+               }')"
+               class="flex items-center gap-3 p-2 hover:bg-cyan-50 rounded-lg transition-colors text-left group mb-1 border border-transparent hover:border-cyan-100">
+                <img src="${portrait}" class="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm">
+                <div>
+                    <div class="font-bold text-gray-800 text-sm group-hover:text-cyan-700 leading-tight">${
+                      c.name_ru
+                    }</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">${
+                      c.year_born || "?"
+                    }</div>
+                </div>
+            </a>
+        `;
       });
-      popupContent += `</div>`;
+      popupContent += `</div></div>`;
 
-      L.marker([lat, lng]).addTo(mapInstance).bindPopup(popupContent);
+      // Добавляем точку
+      features.push({
+        type: "Feature",
+        id: idCounter++,
+        geometry: {
+          type: "Point",
+          coordinates: [lat, lng],
+        },
+        properties: {
+          balloonContent: popupContent, // Содержимое при клике
+          hintContent:
+            group.length > 1
+              ? `${group.length} композиторов`
+              : group[0].name_ru,
+        },
+        options: {
+          preset: "islands#cyanIcon", // Стиль иконки (голубая)
+        },
+      });
     });
 
-    if (window.lucide) window.lucide.createIcons();
-  }, 100);
+    // Добавляем все точки на карту разом
+    objectManager.add(features);
+    mapInstance.geoObjects.add(objectManager);
+  };
+
+  // Проверяем, загрузился ли API Яндекса
+  if (typeof ymaps !== "undefined") {
+    ymaps.ready(initYandexMap);
+  } else {
+    // Если скрипт еще грузится (редкий случай, но возможный), пробуем через 100мс
+    const checkYmaps = setInterval(() => {
+      if (typeof ymaps !== "undefined") {
+        clearInterval(checkYmaps);
+        ymaps.ready(initYandexMap);
+      }
+    }, 100);
+  }
+
+  if (window.lucide) window.lucide.createIcons();
 }
+
 export function updateSelectionStyles() {
   document.querySelectorAll(".recording-item").forEach((row) => {
     const id = parseInt(row.dataset.recordingId);
@@ -5653,7 +5761,10 @@ window.openVersionsModal = async (
                               : ""
                           }
                           <span class="text-gray-300">•</span>
-                          <span>${perf.tracks.length} ч.</span>
+                          <span>${perf.tracks.length} ${pluralize(
+          perf.tracks.length,
+          ["часть", "части", "частей"]
+        )}</span>
                       </div>
                   </div>
 
@@ -5787,21 +5898,22 @@ export function renderAccountPage(userData) {
   breadcrumbs.innerHTML = "";
   viewTitle.classList.remove("hidden");
   viewTitle.innerHTML = `
-    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-        <i data-lucide="user-cog" class="w-8 h-8 text-cyan-600"></i>
+    <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3 text-center md:text-left">
         <span>Личный кабинет</span>
+        <i data-lucide="user-cog" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
     </h2>
   `;
 
   // Прячем пагинацию, так как она не нужна
   document.getElementById("pagination-container").innerHTML = "";
 
-  const creationDate = new Date(userData.created_at).toLocaleDateString(
+  const creationDate = new Date(userData.created_at + "Z").toLocaleDateString(
     "ru-RU",
     {
       day: "numeric",
       month: "long",
       year: "numeric",
+      timeZone: "Europe/Moscow",
     }
   );
 
@@ -5846,7 +5958,7 @@ export function renderAccountPage(userData) {
       </div>
 
       <!-- Статистика и быстрые ссылки -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+      <div class="flex flex-col gap-8 mb-8">
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 class="text-lg font-bold text-gray-700 mb-4">Статистика</h3>
           <div class="space-y-3">
@@ -5909,9 +6021,9 @@ export function renderFeedbackMessages(messages) {
 
   viewTitle.classList.remove("hidden");
   viewTitle.innerHTML = `
-    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-        <i data-lucide="inbox" class="w-8 h-8 text-cyan-600"></i>
+    <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3 text-center md:text-left">
         <span>Обратная связь</span>
+        <i data-lucide="inbox" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
     </h2>
   `;
 
@@ -5925,7 +6037,9 @@ export function renderFeedbackMessages(messages) {
 
   const itemsHtml = messages
     .map((msg) => {
-      const date = new Date(msg.created_at).toLocaleString("ru-RU");
+      const date = new Date(msg.created_at + "Z").toLocaleString("ru-RU", {
+        timeZone: "Europe/Moscow",
+      });
 
       // Логика обрезки текста (как в предыдущем шаге)
       let messageBody = "";
@@ -6018,16 +6132,19 @@ export function renderSingleFeedbackMessage(msg) {
 
   viewTitle.classList.remove("hidden");
   viewTitle.innerHTML = `
-    <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-        <i data-lucide="mail" class="w-8 h-8 text-cyan-600"></i>
-        <span>Сообщение</span>
-    </h2>
-    <a href="/account/feedback" data-navigo class="text-sm text-gray-500 hover:text-cyan-600 mt-2 inline-block"><- Назад ко всем сообщениям</a>
+    <div class="text-center md:text-left">
+        <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
+            <span>Сообщение</span>
+            <i data-lucide="mail" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
+        </h2>
+        <a href="/account/feedback" data-navigo class="text-sm text-gray-500 hover:text-cyan-600 mt-2 inline-block"><- Назад ко всем сообщениям</a>
+    </div>
   `;
 
-  const date = new Date(msg.created_at).toLocaleString("ru-RU", {
+  const date = new Date(msg.created_at + "Z").toLocaleString("ru-RU", {
     dateStyle: "long",
     timeStyle: "short",
+    timeZone: "Europe/Moscow",
   });
 
   const messageHtml = `

@@ -74,6 +74,9 @@ let state = {
     viewMode: "list",
   },
   composersList: [],
+  scrollHistory: new Map(),
+  isBackNavigation: false,
+  currentPath: window.location.pathname,
 };
 
 window.state = state;
@@ -82,6 +85,10 @@ document.addEventListener("DOMContentLoaded", main);
 
 async function main() {
   history.scrollRestoration = "manual";
+
+  window.addEventListener("popstate", () => {
+    state.isBackNavigation = true;
+  });
 
   const token = localStorage.getItem("access_token");
 
@@ -128,6 +135,7 @@ function resetViewState() {
   state.view.playlistId = null;
   state.currentViewRecordings = [];
   state.selectedRecordingIds.clear();
+  state.isSelectionMode = false;
   ui.updateSelectionBar(0);
 }
 
@@ -136,6 +144,14 @@ function setupRouter() {
 
     .hooks({
       before: (done) => {
+        const mainView = document.getElementById("main-view");
+        if (mainView) {
+          // ИСПОЛЬЗУЕМ СОХРАНЕННЫЙ ПУТЬ КАК КЛЮЧ, а не window.location
+          // Это критично для корректной работы кнопки "Назад"
+          const saveKey = state.currentPath;
+          state.scrollHistory.set(saveKey, mainView.scrollTop);
+        }
+
         const mobileMenuPanel = document.getElementById("mobile-menu-panel");
         if (mobileMenuPanel) {
           mobileMenuPanel.classList.add("hidden");
@@ -163,27 +179,32 @@ function setupRouter() {
       },
 
       "/composers/:slug": ({ data }) => {
+        resetViewState();
         state.view.current = "composer_detail";
         state.view.currentComposer = { id: data.slug };
         loadCurrentView();
       },
       "/works/:slug": ({ data }) => {
+        resetViewState();
         state.view.current = "work_detail";
         state.view.currentWork = { id: data.slug };
         loadCurrentView();
       },
       "/compositions/:slug": ({ data }) => {
+        resetViewState();
         state.view.current = "composition_detail";
         state.view.currentComposition = { id: data.slug };
         loadCurrentView();
       },
 
       "/favorites": () => {
+        resetViewState();
         state.view.current = "favorites";
         resetViewState();
         loadCurrentView();
       },
       "/playlists/:id": ({ data }) => {
+        resetViewState();
         state.view.current = "playlist";
         state.view.playlistId = data.id;
         loadCurrentView();
@@ -221,11 +242,13 @@ function setupRouter() {
         loadCurrentView();
       },
       "/blog/:slug": ({ data }) => {
+        resetViewState();
         state.view.current = "blog_post";
         state.view.blogSlug = data.slug;
         loadCurrentView();
       },
       "/map": async () => {
+        resetViewState();
         state.view.current = "map";
 
         const contentHeader = document.getElementById("content-header");
@@ -240,20 +263,15 @@ function setupRouter() {
         }
 
         try {
-          if (typeof L === "undefined") {
-            await import("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
-          }
-
           const composers = await apiRequest(
             "/api/recordings/composers?limit=1000"
           );
 
           ui.renderComposersMap(composers);
-
           ui.renderBreadcrumbs();
         } catch (error) {
-          console.error("Failed to load map:", error);
-          ui.showNotification("Не удалось загрузить карту", "error");
+          console.error("Failed to load map data:", error);
+          ui.showNotification("Не удалось загрузить данные карты", "error");
           if (listEl) listEl.innerHTML = "";
         }
       },
@@ -281,7 +299,12 @@ function setupRouter() {
 }
 
 async function loadCurrentView() {
-  document.getElementById("main-view").scrollTop = 0;
+  const mainView = document.getElementById("main-view");
+
+  // Если это НЕ возврат назад, сбрасываем скролл сразу (новая страница)
+  if (!state.isBackNavigation && mainView) {
+    mainView.scrollTop = 0;
+  }
 
   if (!state.view.current) return;
 
@@ -450,13 +473,18 @@ async function loadCurrentView() {
         state.libraryFilters.genre = "";
         if (window.pendingEpochFilter) {
           state.libraryFilters.epoch = window.pendingEpochFilter;
-          window.pendingEpochFilter = null; // Очищаем после использования
+          window.pendingEpochFilter = null;
         } else {
-          state.libraryFilters.epoch = ""; // Иначе сбрасываем как обычно
+          state.libraryFilters.epoch = "";
         }
         state.libraryFilters.search = "";
 
-        ui.renderLibraryPageStructure("Аудиоархив", state.composersList);
+        // ПЕРЕДАЕМ state.allGenres ТРЕТЬИМ АРГУМЕНТОМ
+        ui.renderLibraryPageStructure(
+          "Аудиоархив",
+          state.composersList,
+          state.allGenres
+        );
 
         await loadLibraryWithFilters(true);
         break;
@@ -473,9 +501,15 @@ async function loadCurrentView() {
         state.libraryFilters.epoch = "";
         state.libraryFilters.search = "";
 
-        ui.renderLibraryPageStructure("Видеозал", state.composersList);
+        // ПЕРЕДАЕМ state.allGenres ТРЕТЬИМ АРГУМЕНТОМ
+        ui.renderLibraryPageStructure(
+          "Видеозал",
+          state.composersList,
+          state.allGenres
+        );
         await loadLibraryWithFilters(true);
         break;
+
       case "blog_list":
         const activeTag = state.view.blogTagFilter;
         const apiUrl = activeTag
@@ -487,6 +521,7 @@ async function loadCurrentView() {
         ]);
         ui.renderBlogList(posts, allTags, activeTag);
         break;
+
       case "blog_post":
         const post = await apiRequest(`/api/blog/${state.view.blogSlug}`);
         state.view.currentBlogPost = post;
@@ -540,6 +575,18 @@ async function loadCurrentView() {
       ui.showNotification("Ошибка загрузки: " + err.message, "error");
     }
   }
+
+  if (state.isBackNavigation && mainView) {
+    // Ждем отрисовки (небольшая задержка для надежности)
+    requestAnimationFrame(() => {
+      const savedScroll =
+        state.scrollHistory.get(window.location.pathname) || 0;
+      mainView.scrollTop = savedScroll;
+      state.isBackNavigation = false; // Сбрасываем флаг
+    });
+  }
+
+  state.currentPath = window.location.pathname;
 
   ui.renderBreadcrumbs();
 
@@ -1587,10 +1634,10 @@ function addEventListeners() {
         "conductor",
         document.getElementById("add-recording-conductor").value || ""
       );
-      fd.append(
-        "recording_year",
-        document.getElementById("add-recording-year").value || ""
-      );
+      const recordingYear = document.getElementById("add-recording-year").value;
+      if (recordingYear) {
+        fd.append("recording_year", recordingYear);
+      }
       fd.append(
         "license",
         document.getElementById("add-recording-license").value || ""
@@ -3550,13 +3597,21 @@ window.playPerformanceFromModal = (firstTrackId) => {
 };
 // === ЛОГИКА КАСТОМНОГО ВЫПАДАЮЩЕГО СПИСКА ===
 
-// 1. Открыть/Закрыть
+// 1. Открыть/Закрыть список КОМПОЗИТОРОВ
 window.toggleComposerDropdown = (e) => {
-  e.stopPropagation(); // Чтобы клик не ушел в document и не закрыл сразу же
+  e.stopPropagation();
+
+  // СНАЧАЛА ЗАКРЫВАЕМ СОСЕДНИЙ СПИСОК (ЖАНРЫ)
+  const genreDropdown = document.getElementById("genre-custom-dropdown");
+  if (genreDropdown && !genreDropdown.classList.contains("hidden")) {
+    genreDropdown.classList.add("hidden");
+  }
+
+  // ТЕПЕРЬ ОТКРЫВАЕМ/ЗАКРЫВАЕМ СВОЙ
   const dropdown = document.getElementById("composer-custom-dropdown");
   if (dropdown) {
     dropdown.classList.toggle("hidden");
-    // Обновляем иконки, так как контент был скрыт
+
     if (!dropdown.classList.contains("hidden") && window.lucide) {
       window.lucide.createIcons();
     }
@@ -3674,5 +3729,55 @@ async function updateFeedbackCounter() {
     if (badge) badge.classList.add("hidden");
   }
 }
+
+// === ЛОГИКА ВЫПАДАЮЩЕГО СПИСКА ЖАНРОВ ===
+
+// 1. Открыть/Закрыть
+window.toggleGenreDropdown = (e) => {
+  e.stopPropagation();
+  const dropdown = document.getElementById("genre-custom-dropdown");
+  // Закрываем соседний (композиторов), если открыт
+  const compDropdown = document.getElementById("composer-custom-dropdown");
+  if (compDropdown && !compDropdown.classList.contains("hidden")) {
+    compDropdown.classList.add("hidden");
+  }
+
+  if (dropdown) {
+    dropdown.classList.toggle("hidden");
+    if (!dropdown.classList.contains("hidden") && window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+};
+
+// 2. Выбрать жанр
+window.selectLibraryGenre = (genreName) => {
+  // Применяем фильтр
+  window.applyLibraryFilter("genre", genreName);
+
+  // Обновляем текст на кнопке
+  const label = document.getElementById("genre-filter-label");
+  if (label) {
+    label.textContent = genreName || "Все жанры";
+  }
+
+  // Закрываем список
+  const dropdown = document.getElementById("genre-custom-dropdown");
+  if (dropdown) dropdown.classList.add("hidden");
+};
+
+// 3. Доработка закрытия при клике вне (обновляем существующий слушатель)
+document.addEventListener("click", (e) => {
+  // Закрываем композиторов
+  const compDropdown = document.getElementById("composer-custom-dropdown");
+  if (compDropdown && !compDropdown.classList.contains("hidden")) {
+    compDropdown.classList.add("hidden");
+  }
+  // Закрываем жанры
+  const genreDropdown = document.getElementById("genre-custom-dropdown");
+  if (genreDropdown && !genreDropdown.classList.contains("hidden")) {
+    genreDropdown.classList.add("hidden");
+  }
+});
 
 window.updateFeedbackCounter = updateFeedbackCounter;

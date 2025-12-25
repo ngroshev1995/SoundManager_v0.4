@@ -48,19 +48,6 @@
       <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     </noscript>
 
-    <link
-      rel="preload"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      />
-    </noscript>
-
     <link rel="icon" type="image/png" href="/static/img/favicon.png" />
   </head>
   <body class="text-gray-800 h-screen flex flex-col overflow-hidden">
@@ -84,7 +71,7 @@
           class="bg-gradient-to-r from-cyan-500 to-blue-600 p-8 text-white text-center"
         >
           <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4"></i>
-          <h1 class="text-3xl font-bold">ClassicaLib</h1>
+          <h1 class="text-3xl font-bold">ClassicGuide</h1>
         </div>
         <div id="login-form" class="p-8 space-y-6">
           <input
@@ -153,10 +140,10 @@
               class="flex items-center space-x-2 font-bold text-xl"
             >
               <i data-lucide="music-2" class="w-6 h-6"></i>
-              <span>ClassicaLib</span>
+              <span>ClassicGuide</span>
             </a>
             <!-- ДЕСКТОПНАЯ НАВИГАЦИЯ -->
-            <nav class="hidden md:flex space-x-1">
+            <nav class="hidden lg:flex space-x-1">
               <div class="relative group">
                 <span
                   class="px-4 py-2 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium flex items-center gap-1 cursor-pointer"
@@ -212,7 +199,7 @@
             <!-- КНОПКА ГАМБУРГЕР (видна только на мобильных) -->
             <button
               id="mobile-menu-btn"
-              class="md:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+              class="lg:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
             >
               <i data-lucide="menu" class="w-6 h-6"></i>
             </button>
@@ -315,7 +302,7 @@
             <div>
               <div class="flex items-center space-x-2 mb-4">
                 <i data-lucide="music-2" class="w-6 h-6 text-cyan-400"></i>
-                <span class="text-lg font-bold">ClassicaLib</span>
+                <span class="text-lg font-bold">ClassicGuide</span>
               </div>
               <p class="text-gray-400 text-sm">
                 Ваша персональная библиотека классической музыки.
@@ -346,7 +333,7 @@
           <div
             class="border-t border-gray-700 mt-10 pt-8 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center"
           >
-            <p>© 2025 ClassicaLib. Все права защищены.</p>
+            <p>© 2025 ClassicGuide. Все права защищены.</p>
             <p class="mt-2 md:mt-0 flex items-center gap-1">
               Сделано с
               <i
@@ -370,13 +357,13 @@
       </button>
 
       <!-- Player -->
-      <footer
+      <div
         id="music-player"
-        class="player-collapsed fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] group/player"
+        class="player-collapsed fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] group/player z-[100]"
       >
         <audio id="audio-player" preload="auto" crossorigin="anonymous"></audio>
 
-        <!-- MOBILE LAYOUT -->
+        <!-- === MOBILE LAYOUT (Виден только до 768px) === -->
         <div
           class="md:hidden w-full px-2 pb-2 bg-transparent pointer-events-none absolute bottom-0 left-0 right-0 z-50"
         >
@@ -384,7 +371,7 @@
             id="music-player-mobile"
             class="pointer-events-auto bg-white/95 backdrop-blur-md text-gray-900 rounded-xl p-2 flex items-center shadow-xl shadow-gray-200/50 border border-gray-100 mx-auto max-w-md transition-transform active:scale-95 cursor-pointer"
           >
-            <!-- Прогресс-бар (Тонкая линия сверху) -->
+            <!-- Прогресс-бар -->
             <div
               class="absolute top-0 left-2 right-2 h-[2px] bg-gray-100 overflow-hidden rounded-full"
             >
@@ -401,9 +388,8 @@
               class="w-10 h-10 rounded-md object-cover bg-gray-200 flex-shrink-0 border border-gray-100"
             />
 
-            <!-- Текст -->
+            <!-- Текст (Бегущая строка) -->
             <div class="flex-1 min-w-0 mx-3 flex flex-col justify-center">
-              <!-- Обёртка для бегущей строки заголовка -->
               <div id="marquee-title-mobile" class="overflow-hidden">
                 <span
                   id="player-title-mobile"
@@ -411,25 +397,21 @@
                   >Выберите запись</span
                 >
               </div>
-              <!-- Обёртка для бегущей строки исполнителя -->
               <div id="marquee-artist-mobile" class="overflow-hidden">
                 <span
                   id="player-artist-mobile"
                   class="text-xs text-gray-500 whitespace-nowrap"
-                  >ClassicaLib</span
+                  >ClassicGuide</span
                 >
               </div>
             </div>
 
-            <!-- Кнопки (Темные) -->
+            <!-- Кнопки -->
             <div class="flex items-center gap-1">
-              <!-- Like -->
               <div
                 id="player-favorite-btn-container-mobile"
                 class="mr-1 scale-90"
               ></div>
-
-              <!-- Play/Pause -->
               <button
                 id="play-pause-btn-mobile"
                 class="p-2 text-gray-800 hover:text-cyan-600 transition-colors"
@@ -445,8 +427,6 @@
                   class="w-6 h-6 fill-current hidden"
                 ></i>
               </button>
-
-              <!-- Next -->
               <button
                 id="next-btn-mobile"
                 class="p-2 text-gray-400 hover:text-gray-800 transition-colors"
@@ -457,53 +437,60 @@
           </div>
         </div>
 
-        <!-- DESKTOP LAYOUT -->
+        <!-- DESKTOP PLAYER LAYOUT -->
         <div
-          class="player-layout-desktop items-center justify-between w-full h-24 px-6 max-w-[1800px] mx-auto"
+          class="hidden md:grid grid-cols-[1fr_auto_1fr] items-center w-full h-24 px-4 xl:px-6 max-w-[1920px] mx-auto gap-2 xl:gap-4"
         >
-          <div class="flex items-center gap-4 w-[30%] min-w-[220px]">
+          <!-- ЛЕВАЯ ЧАСТЬ: Инфо -->
+          <div
+            class="flex items-center gap-3 xl:gap-4 w-full min-w-0 justify-self-start pr-1 h-full"
+          >
             <img
               id="player-cover-art-desktop"
               src="/static/img/placeholder.png"
-              class="w-14 h-14 rounded-lg object-cover shadow-md bg-gray-200 flex-shrink-0"
+              class="w-12 h-12 xl:w-14 xl:h-14 rounded-lg object-cover shadow-md bg-gray-200 flex-shrink-0"
             />
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex flex-col justify-center gap-0.5">
               <div
-                class="font-bold text-gray-900 text-sm"
+                class="font-bold text-gray-900 text-sm line-clamp-2 leading-snug break-words"
                 id="player-title-desktop"
+                title="Название произведения"
               >
                 Выберите запись
               </div>
-              <div class="text-xs text-gray-500" id="player-artist-desktop">
-                ClassicaLib
+              <div
+                class="text-xs text-gray-500 line-clamp-2 leading-snug break-words"
+                id="player-artist-desktop"
+              >
+                ClassicGuide
               </div>
             </div>
             <div
               id="player-favorite-btn-container-desktop"
-              class="flex-shrink-0"
+              class="flex-shrink-0 ml-1"
             ></div>
           </div>
 
-          <!-- Центральный блок без изменений -->
+          <!-- ЦЕНТРАЛЬНАЯ ЧАСТЬ: Управление -->
           <div
-            class="flex flex-col items-center justify-center w-[40%] max-w-2xl gap-1"
+            class="flex flex-col items-center justify-center w-full gap-1 min-w-[240px] max-w-[500px] xl:min-w-[400px] xl:max-w-[600px]"
           >
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-4 xl:gap-6">
               <button
                 id="shuffle-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600 p-1"
+                class="text-gray-400 hover:text-cyan-600 p-1 transition-colors"
               >
                 <i data-lucide="shuffle" class="w-4 h-4"></i>
               </button>
               <button
                 id="prev-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600"
+                class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-95"
               >
                 <i data-lucide="skip-back" class="w-6 h-6 fill-current"></i>
               </button>
               <button
                 id="play-pause-btn-desktop"
-                class="w-12 h-12 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-200 transition-transform hover:scale-105"
+                class="w-10 h-10 xl:w-12 xl:h-12 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-cyan-200 transition-transform hover:scale-105 active:scale-95 flex-shrink-0"
               >
                 <i
                   id="play-icon-desktop"
@@ -518,24 +505,30 @@
               </button>
               <button
                 id="next-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600"
+                class="text-gray-400 hover:text-cyan-600 transition-colors active:scale-95"
               >
                 <i data-lucide="skip-forward" class="w-6 h-6 fill-current"></i>
               </button>
               <button
                 id="repeat-btn-desktop"
-                class="text-gray-400 hover:text-cyan-600 p-1"
+                class="text-gray-400 hover:text-cyan-600 p-1 transition-colors"
               >
                 <i data-lucide="repeat" class="w-4 h-4"></i>
               </button>
             </div>
+
+            <!-- Прогресс бар -->
             <div
-              class="w-full flex items-center gap-3 text-xs font-mono text-gray-400"
+              class="w-full flex items-center gap-2 xl:gap-3 text-xs font-mono text-gray-400 px-1"
             >
-              <span id="current-time-desktop" class="w-9 text-right">0:00</span>
-              <div class="relative flex-1 h-1 group cursor-pointer">
+              <span
+                id="current-time-desktop"
+                class="w-8 xl:w-9 text-right tabular-nums"
+                >0:00</span
+              >
+              <div class="relative flex-1 h-1 group cursor-pointer w-full">
                 <div
-                  class="absolute w-full h-full bg-gray-200 rounded-full"
+                  class="absolute w-full h-full bg-gray-200 rounded-full group-hover:h-1.5 transition-all top-1/2 -translate-y-1/2"
                 ></div>
                 <input
                   type="range"
@@ -544,68 +537,85 @@
                   min="0"
                   max="100"
                   step="0.1"
-                  class="absolute inset-0 w-full h-full opacity-0 z-10"
+                  class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                 />
                 <div
                   id="progress-fill-desktop"
-                  class="absolute h-full bg-cyan-500 rounded-full"
+                  class="absolute h-full bg-cyan-500 rounded-full pointer-events-none group-hover:h-1.5 transition-all top-1/2 -translate-y-1/2"
                   style="width: 0%"
                 ></div>
               </div>
-              <span id="total-time-desktop" class="w-9">0:00</span>
+              <span id="total-time-desktop" class="w-8 xl:w-9 tabular-nums"
+                >0:00</span
+              >
             </div>
           </div>
 
-          <!-- Правый блок без изменений -->
+          <!-- ПРАВАЯ ЧАСТЬ: Доп. функции -->
           <div
-            class="flex items-center justify-end gap-3 w-[30%] min-w-[220px]"
+            class="flex items-center gap-1 xl:gap-2 justify-self-end w-full justify-end min-w-0 pl-1"
           >
+            <!-- Очередь -->
             <button
               id="queue-btn-desktop"
-              class="p-2 text-gray-400 hover:text-cyan-600"
+              class="p-2 text-gray-400 hover:text-cyan-600 transition-colors flex-shrink-0"
+              title="Очередь"
             >
               <i data-lucide="list-music" class="w-5 h-5"></i>
             </button>
-            <div class="flex items-center gap-2 w-32">
-              <button id="mute-btn" class="text-gray-400 hover:text-gray-600">
+
+            <!-- ГРОМКОСТЬ -->
+            <div class="relative flex items-center group/vol flex-shrink-0">
+              <button
+                id="mute-btn"
+                class="text-gray-400 hover:text-gray-600 p-2"
+              >
                 <i data-lucide="volume-2" class="w-5 h-5"></i>
               </button>
-              <div class="flex-1 h-1 bg-gray-200 rounded-full relative">
-                <input
-                  type="range"
-                  id="volume-slider"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value="1"
-                  class="absolute inset-0 w-full h-full opacity-0 z-10"
-                />
-                <div
-                  id="volume-fill"
-                  class="absolute h-full bg-gray-400 rounded-full"
-                  style="width: 100%"
-                ></div>
+
+              <div
+                class="hidden group-hover/vol:flex xl:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white p-3 rounded-xl shadow-xl border border-gray-100 after:absolute after:top-full after:left-0 after:w-full after:h-4 after:content-[''] xl:static xl:bg-transparent xl:p-0 xl:shadow-none xl:border-0 xl:mb-0 xl:translate-x-0 xl:ml-1 xl:after:hidden"
+              >
+                <div class="w-24 h-1 bg-gray-200 rounded-full relative">
+                  <input
+                    type="range"
+                    id="volume-slider"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="1"
+                    class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                  />
+                  <div
+                    id="volume-fill"
+                    class="absolute h-full bg-gray-400 rounded-full hover:bg-cyan-500 transition-colors"
+                    style="width: 100%"
+                  ></div>
+                </div>
               </div>
             </div>
-            <div class="flex items-center">
-              <div id="info-popover-container" class="relative">
-                <button
-                  id="player-info-btn-desktop"
-                  class="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors hidden"
-                >
-                  <i data-lucide="info" class="w-5 h-5"></i>
-                </button>
-              </div>
+
+            <!-- Инфо -->
+            <div id="info-popover-container" class="relative flex-shrink-0">
               <button
-                id="player-toggle-btn"
-                class="p-2 ml-1 text-gray-400 hover:text-gray-600"
+                id="player-info-btn-desktop"
+                class="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors hidden"
               >
-                <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                <i data-lucide="info" class="w-5 h-5"></i>
               </button>
             </div>
+
+            <!-- Скрыть плеер -->
+            <button
+              id="player-toggle-btn"
+              class="p-2 ml-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+              title="Свернуть"
+            >
+              <i data-lucide="chevron-down" class="w-5 h-5"></i>
+            </button>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
 
     <!-- === МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ (УНИВЕРСАЛЬНОЕ) === -->
@@ -2026,7 +2036,7 @@
     <!-- === МОДАЛЬНОЕ ОКНО ФИЛЬТРОВ (ДЛЯ МОБИЛЬНЫХ) === -->
     <div
       id="mobile-filters-modal"
-      class="hidden fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm md:hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
+      class="hidden fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm lg:hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300"
     >
       <!-- Панель -->
       <div
@@ -2055,12 +2065,13 @@
     <script src="https://unpkg.com/lucide@latest" defer></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js" defer></script>
     <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      defer
-    ></script>
-    <script
       src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"
       defer
+    ></script>
+    <!-- Yandex Maps -->
+    <script
+      src="https://api-maps.yandex.ru/2.1/?apikey=a6b6033e-008a-40f0-875d-da63ecb3c410&lang=ru_RU"
+      type="text/javascript"
     ></script>
     <script type="module" src="/static/js/main.js"></script>
     <script>
