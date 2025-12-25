@@ -209,11 +209,23 @@ export function updateHeaderAuth() {
 
         <!-- === МОБИЛЬНАЯ ВЕРСИЯ === -->
         <div class="lg:hidden flex items-center gap-2">
-    <div class="text-sm font-bold text-white/90 text-right max-w-[150px] leading-tight">
-        <span>Здравствуйте, </span><br>
-        <a href="/account" data-navigo class="hover:text-white underline truncate inline-block max-w-full align-bottom">${username}</a>!
-    </div>
-            <button id="logout-btn-mobile" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer" title="Выйти">
+            <div class="flex flex-col items-end justify-center mr-1">
+                <span class="text-[10px] text-white/80 leading-none mb-0.5">Здравствуйте,</span>
+                
+                <!-- 
+                   ИСПРАВЛЕНИЯ:
+                   1. text-xs: Шрифт чуть меньше (12px), чтобы больше влезло.
+                   2. whitespace-normal: Длинное имя перенесется на вторую строку, а не улетит за край.
+                   3. max-w-[110px]: Ограничиваем ширину текста, чтобы он не давил на кнопку.
+                   4. break-words: Если в имени очень длинное слово, оно перенесется корректно.
+                -->
+                <a href="/account" data-navigo class="font-bold text-white hover:underline text-xs text-right leading-tight whitespace-normal break-words max-w-[110px]">
+                    ${username}!
+                </a>
+            </div>
+            
+            <!-- flex-shrink-0: Кнопка "Выйти" никогда не сожмется и не исчезнет -->
+            <button id="logout-btn-mobile" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition-colors cursor-pointer flex-shrink-0" title="Выйти">
                <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
         </div>
