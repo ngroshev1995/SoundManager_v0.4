@@ -8,15 +8,57 @@ from typing import List, Optional
 from sqlalchemy import func
 import re
 from thefuzz import fuzz
+from app.utils import switch_keyboard_layout
 
 router = APIRouter()
 
 
-def is_match(text: Optional[str], term: str) -> bool:
-    """Проверяет вхождение строки (регистронезависимо)"""
+def normalize_text_smart(text: Optional[str]) -> str:
+    """
+    1. Приводит к нижнему регистру.
+    2. Вставляет пробелы между буквами и цифрами (kv525 -> kv 525).
+    3. Удаляет лишние спецсимволы.
+    """
     if not text:
+        return ""
+    text = text.lower()
+    # Вставляем пробел между буквой и цифрой (kv525 -> kv 525)
+    text = re.sub(r'([a-zа-яё])(\d)', r'\1 \2', text)
+    # Вставляем пробел между цифрой и буквой (525kv -> 525 kv)
+    text = re.sub(r'(\d)([a-zа-яё])', r'\1 \2', text)
+    # Заменяем все не-буквы и не-цифры на пробелы
+    text = re.sub(r'[^\w\d]+', ' ', text)
+    return text.strip()
+
+
+def is_fuzzy_match(target_text: str, query_tokens: List[str]) -> bool:
+    """
+    Проверяет нечеткое вхождение токенов.
+    Позволяет опечатки (ratio > 80).
+    """
+    if not target_text:
         return False
-    return term in text.lower()
+
+    # Нормализуем цель (разбиваем kv525 -> kv 525)
+    norm_target = normalize_text_smart(target_text)
+
+    for token in query_tokens:
+        # 1. Точное вхождение (быстро и надежно)
+        if token in norm_target:
+            continue
+
+        # 2. Нечеткое вхождение (для опечаток: сната -> соната)
+        # partial_ratio ищет лучшее вхождение подстроки
+        score = fuzz.partial_ratio(token, norm_target)
+
+        # Если слово короткое (< 4 букв), требуем точного совпадения или очень высокого скора
+        if len(token) < 4:
+            if score < 100: return False
+        # Для длинных слов допускаем опечатки (порог 80/100)
+        elif score < 80:
+            return False
+
+    return True
 
 
 @router.get("/", response_model=schemas.search.SearchResults)
@@ -24,34 +66,56 @@ def universal_search(q: str, db: Session = Depends(get_db)):
     if not q or len(q) < 2:
         return schemas.search.SearchResults(query=q)
 
-    search_term = q.lower().strip()
+    # 1. Подготовка запроса
+    original_q = q.strip()
+    switched_q = switch_keyboard_layout(original_q)
 
+    # Разбиваем на токены с учетом "умной" нормализации (kv525 -> [kv, 525])
+    tokens_orig = normalize_text_smart(original_q).split()
+    tokens_switched = normalize_text_smart(switched_q).split()
+
+    # Функция-хелпер
+    def check_obj(obj_texts: List[Optional[str]]) -> bool:
+        full_text = " ".join([t for t in obj_texts if t])
+
+        if is_fuzzy_match(full_text, tokens_orig):
+            return True
+        if tokens_orig != tokens_switched and is_fuzzy_match(full_text, tokens_switched):
+            return True
+        return False
+
+    # 2. Поиск Композиторов
     all_composers = db.query(models.music.Composer).all()
     found_composers = [
                           c for c in all_composers
-                          if is_match(c.name_ru, search_term) or
-                             is_match(c.original_name, search_term)
+                          if check_obj([c.name_ru, c.original_name])
                       ][:10]
 
+    # 3. Поиск Произведений (Расширенные поля)
     all_works = db.query(models.music.Work).options(joinedload(models.music.Work.composer)).all()
     found_works = [
                       w for w in all_works
-                      if is_match(w.name_ru, search_term) or
-                         is_match(w.original_name, search_term) or
-                         is_match(w.nickname, search_term)
+                      if check_obj([
+            w.name_ru, w.original_name, w.nickname,
+            w.catalog_number, str(w.publication_year or ''),
+            w.composer.name_ru  # Ищем и по композитору тоже
+        ])
                   ][:20]
 
+    # 4. Поиск Частей
     all_compositions = db.query(models.music.Composition).options(
         joinedload(models.music.Composition.work).joinedload(models.music.Work.composer)
     ).all()
 
     found_compositions = [
                              c for c in all_compositions
-                             if is_match(c.title_ru, search_term) or
-                                is_match(c.title_original, search_term) or
-                                is_match(c.catalog_number, search_term)
+                             if check_obj([
+            c.title_ru, c.title_original, c.catalog_number,
+            c.work.name_ru  # Контекст произведения
+        ])
                          ][:20]
 
+    # 5. Поиск Записей
     all_recordings = db.query(models.music.Recording).options(
         joinedload(models.music.Recording.composition)
         .joinedload(models.music.Composition.work)
@@ -60,7 +124,13 @@ def universal_search(q: str, db: Session = Depends(get_db)):
 
     found_recordings = [
                            r for r in all_recordings
-                           if is_match(r.performers, search_term)
+                           if check_obj([
+            r.performers, r.conductor, r.lead_performer,
+            str(r.recording_year or ''),
+            r.composition.title_ru,  # Название части
+            r.composition.work.name_ru,  # Название произведения
+            r.composition.work.nickname  # Прозвище
+        ])
                        ][:50]
 
     return schemas.search.SearchResults(

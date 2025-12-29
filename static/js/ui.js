@@ -65,6 +65,44 @@ function isLoggedIn() {
 
 // --- HELPERS ---
 
+function formatTotalDurationText(seconds) {
+  if (!seconds) return "";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours} ч. ${minutes} мин.`;
+  }
+  return `${minutes} мин.`;
+}
+
+export function toRoman(num) {
+  if (typeof num !== "number" || num < 1) return "";
+  const lookup = {
+    M: 1000,
+    CM: 900,
+    D: 500,
+    CD: 400,
+    C: 100,
+    XC: 90,
+    L: 50,
+    XL: 40,
+    X: 10,
+    IX: 9,
+    V: 5,
+    IV: 4,
+    I: 1,
+  };
+  let roman = "";
+  for (let i in lookup) {
+    while (num >= lookup[i]) {
+      roman += i;
+      num -= lookup[i];
+    }
+  }
+  return roman;
+}
+
 function pluralize(number, forms) {
   // forms = ['запись', 'записи', 'записей']
   const n = Math.abs(number) % 100;
@@ -826,26 +864,53 @@ export function renderRecordingList(
   if (viewTitle) {
     viewTitle.classList.remove("hidden");
 
+    const totalSeconds = recordings.reduce(
+      (acc, r) => acc + (r.duration || 0),
+      0
+    );
+    const durationText = formatTotalDurationText(totalSeconds);
+
+    const isSystemPlaylist = options.isSystem;
+    const currentUserId = parseInt(localStorage.getItem("user_id"));
+    const playlistOwnerId = options.ownerId;
+
+    const isOwner =
+      currentUserId && playlistOwnerId && currentUserId === playlistOwnerId;
+
+    const canClone = isLoggedIn() && isSystemPlaylist && !isOwner;
+
+    const cloneBtn = canClone
+      ? `<button id="playlist-clone-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md transition-all" title="Сохранить в мои плейлисты"><i data-lucide="plus-circle" class="w-4 h-4"></i> <span class="hidden sm:inline">Добавить к себе</span></button>`
+      : "";
+
     const controlsHtml =
       recordings && recordings.length > 0
-        ? `
-        <div class="flex gap-3 mt-4 md:mt-0">
+        ? `<div class="flex flex-wrap gap-3 mt-4 md:mt-0">
             <button id="playlist-play-all-btn" class="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-bold shadow-md transition-all">
                 <i data-lucide="play" class="w-4 h-4 fill-current"></i> Слушать всё
             </button>
             <button id="playlist-shuffle-btn" class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-bold shadow-sm transition-all">
                 <i data-lucide="shuffle" class="w-4 h-4"></i> Перемешать
             </button>
-        </div>
-    `
+            ${cloneBtn}
+           </div>`
         : "";
 
     viewTitle.innerHTML = `
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 text-center md:text-left">
-            <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
-                <span>${title || "Список"}</span>
-                <i data-lucide="list-music" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i> 
-            </h2>
+            <div>
+                <h2 class="text-3xl font-bold text-gray-800 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
+                    <span>${title || "Список"}</span>
+                    <i data-lucide="${
+                      isSystemPlaylist ? "library" : "list-music"
+                    }" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
+                </h2>
+                ${
+                  durationText
+                    ? `<p class="text-gray-500 text-sm mt-1 font-medium flex items-center gap-2 md:justify-start justify-center"><i data-lucide="clock" class="w-3 h-3"></i> ${durationText}</p>`
+                    : ""
+                }
+            </div>
             <div class="flex justify-center md:block w-full md:w-auto">
                 ${controlsHtml}
             </div>
@@ -855,18 +920,16 @@ export function renderRecordingList(
 
   if (!recordings || !recordings.length) {
     listEl.innerHTML =
-      '<div class="text-center py-16 text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200">Список пуст</div>';
+      '<div class="max-w-7xl mx-auto px-6"><div class="text-center py-16 text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200">Список пуст</div></div>';
     if (window.lucide) window.lucide.createIcons();
     return;
   }
 
-  // --- РАЗДЕЛЕНИЕ НА АУДИО И ВИДЕО ---
   const audioRecordings = recordings.filter((r) => r.duration > 0);
   const videoRecordings = recordings.filter((r) => r.duration === 0);
 
   let htmlContent = "";
 
-  // 1. БЛОК АУДИО (Если есть)
   if (audioRecordings.length > 0) {
     const audioRows = audioRecordings
       .map((r, i) => {
@@ -875,6 +938,19 @@ export function renderRecordingList(
         const compName = isFullWork
           ? getLocalizedText(r.composition.work, "name", lang)
           : getLocalizedText(r.composition, "title", lang);
+
+        const sortOrder = r.composition.sort_order;
+        const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
+        let metaBadge = "";
+
+        if (isAdmin()) {
+          metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text" title="ID и Номер части">#${
+            r.id
+          }${roman ? `, ${roman}` : ""}</span>`;
+        } else if (roman) {
+          metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium" title="Номер части">${roman}</span>`;
+        }
+
         const compoName = getLocalizedText(
           r.composition.work.composer,
           "name",
@@ -893,10 +969,18 @@ export function renderRecordingList(
         }`;
         const isSelected =
           window.state && window.state.selectedRecordingIds.has(r.id);
-        const draggableAttr = options.isPlaylist ? 'draggable="true"' : "";
-        const sortableClass = options.isPlaylist
-          ? "playlist-sortable-item"
+
+        // --- ЛОГИКА ДЛЯ ОПРЕДЕЛЕНИЯ ПРАВ НА СОРТИРОВКУ ---
+        const canSort = options.isPlaylist || options.isFavorites;
+        const draggableAttr = canSort ? 'draggable="false"' : "";
+        const sortableClass = canSort ? "playlist-sortable-item" : "";
+
+        const dragHandleHtml = canSort
+          ? `<div class="drag-handle p-2 cursor-grab text-gray-300 hover:text-cyan-600 hidden md:flex items-center justify-center transition-colors mr-1" title="Перетащите, чтобы изменить порядок">
+                 <i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i>
+               </div>`
           : "";
+        // -----------------------------------------------------
 
         return `
           <div class="recording-item ${sortableClass} relative group flex items-center p-3 hover:bg-gray-50 ${
@@ -904,6 +988,9 @@ export function renderRecordingList(
         } bg-white last:border-0 transition-colors cursor-pointer select-none first:rounded-t-xl last:rounded-b-xl" 
                ${draggableAttr}
                data-recording-id="${r.id}" data-index="${i}">
+               
+               <!-- ВОТ ЗДЕСЬ ДОБАВЛЕНА РУЧКА -->
+               ${dragHandleHtml}
   
                <!-- 1. Чекбокс -->
                <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
@@ -929,20 +1016,39 @@ export function renderRecordingList(
   
                <!-- 4. Информация -->
                <div class="flex-1 min-w-0">
-                   <div class="font-bold text-gray-800 text-sm leading-tight break-words">
-                        ${compName}
+                   <div class="font-bold text-gray-800 text-sm leading-tight break-words flex items-baseline">
+                        <span>${compName}</span>
+                        ${metaBadge}
                    </div>
                    <div class="text-xs text-gray-500 mt-0.5 break-words">
-                      <span>${r.performers || "Исполнитель не указан"}</span>
-                      ${
-                        !hideComposer
-                          ? `<span class="text-gray-300 mx-1">•</span><span>${compoName}</span>`
-                          : ""
-                      }
-                   </div>
+   
+   <!-- 1. ССЫЛКА НА ПРОИЗВЕДЕНИЕ (Только мобильные, если это часть) -->
+   ${
+     !isFullWork
+       ? `<div class="lg:hidden mb-0.5"><a href="${workLink}" data-navigo class="text-cyan-700 font-medium hover:underline relative z-10">${workName}</a></div>`
+       : ""
+   }
+
+   <!-- 2. ИСПОЛНИТЕЛЬ -->
+   <span>${r.performers || "Исполнитель не указан"}</span>
+   
+   <!-- 3. ГОД ЗАПИСИ -->
+   ${
+     r.recording_year
+       ? `<span class="ml-1 text-gray-400">(${r.recording_year})</span>`
+       : ""
+   }
+
+   <!-- 4. ССЫЛКА НА КОМПОЗИТОРА (Только мобильные) -->
+   ${
+     !hideComposer
+       ? `<span class="lg:hidden"><span class="text-gray-300 mx-1">•</span><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline relative z-10 transition-colors">${compoName}</a></span>`
+       : ""
+   }
+</div>
                </div>
 
-               <!-- Колонки для ПК (скрыты на мобильном) -->
+               <!-- Колонки для ПК -->
                ${
                  !hideComposer
                    ? `<div class="hidden lg:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>`
@@ -957,7 +1063,7 @@ export function renderRecordingList(
                <!-- 5. Правая часть -->
                <div class="flex items-center ml-auto pl-3 flex-shrink-0 gap-3">
                     
-                    <!-- === МОБИЛЬНАЯ СОРТИРОВКА (ТОЛЬКО В ПЛЕЙЛИСТЕ) === -->
+                    <!-- МОБИЛЬНАЯ СОРТИРОВКА (ТОЛЬКО В ПЛЕЙЛИСТЕ/ПОДБОРКЕ) -->
                     ${
                       options.isPlaylist
                         ? `
@@ -974,7 +1080,6 @@ export function renderRecordingList(
                     `
                         : ""
                     }
-                    <!-- ================================================ -->
 
                     <div class="hidden md:flex items-center">
                         ${
@@ -1007,7 +1112,6 @@ export function renderRecordingList(
       </div>`;
   }
 
-  // 2. БЛОК ВИДЕО
   if (videoRecordings.length > 0) {
     const videoRows = videoRecordings
       .map((r) => {
@@ -1280,8 +1384,11 @@ export function renderWorkList(works, composer, lang = "ru") {
   let content = "";
 
   if (!works || works.length === 0) {
-    content =
-      '<div class="text-left text-gray-500 italic bg-gray-50 p-8 rounded-xl border border-dashed border-gray-300">Произведения пока не добавлены.</div>';
+    const emptyMessage = isAdmin()
+      ? "Добавьте первое произведение."
+      : "Произведения скоро будут добавлены.";
+
+    content = `<div class="text-left text-gray-500 italic bg-gray-50 p-8 rounded-xl border border-dashed border-gray-300">${emptyMessage}</div>`;
   } else {
     // --- ШАГ A: Группируем произведения ---
     const groups = {};
@@ -1433,6 +1540,14 @@ export async function renderCompositionGrid(work, lang = "ru") {
     catalogHtml = `<span class="text-gray-500 text-lg font-normal ml-3 px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200">${work.catalog_number}</span>`;
   }
 
+  const workYear = formatYearRange(
+    work.publication_year,
+    work.publication_year_end
+  );
+  const yearHtml = workYear
+    ? `<span class="text-gray-500 text-lg font-normal ml-1 px-2 py-0.5 bg-gray-50 rounded-md border border-gray-200" title="Год создания">${workYear}</span>`
+    : "";
+
   const genreName = work.genre ? work.genre.name : null;
   const genreBadge = genreName
     ? `<span class="text-xs font-bold uppercase tracking-wider text-cyan-700 bg-cyan-50 px-2 py-1 rounded border border-cyan-100 align-middle">${genreName}</span>`
@@ -1526,6 +1641,7 @@ export async function renderCompositionGrid(work, lang = "ru") {
                     <div class="flex flex-wrap items-baseline gap-2 mb-1">
                         <h1 class="text-3xl md:text-4xl font-black text-gray-900 leading-tight tracking-tight">${nameRu}</h1>
                         ${catalogHtml}
+                        ${yearHtml}
                     </div>
 
                     ${originalNameHtml}
@@ -1757,7 +1873,6 @@ export async function renderCompositionGrid(work, lang = "ru") {
   if (movementParts.length > 0) {
     const list = movementParts
       .map((c, index) => {
-        // <--- Важно: добавлен index
         const metaParts = [];
         if (c.tonality)
           metaParts.push(
@@ -1789,12 +1904,14 @@ export async function renderCompositionGrid(work, lang = "ru") {
           : "";
 
         const isUserAdmin = isAdmin();
-        const draggableAttr = isUserAdmin ? 'draggable="true"' : "";
-        const cursorClass = "cursor-pointer"; // Палец для всех
+        const draggableAttr = isUserAdmin ? 'draggable="false"' : "";
 
-        // !!! ИСПРАВЛЕНИЕ 1: Скрываем шесть точек на мобильных (hidden md:block)
+        const cursorClass = "cursor-default";
+
         const gripIcon = isUserAdmin
-          ? `<i data-lucide="grip-vertical" class="w-5 h-5 text-gray-300 group-hover:text-cyan-500 ml-4 hidden md:block"></i>`
+          ? `<div class="drag-handle p-2 cursor-move text-gray-300 hover:text-cyan-500 hidden md:flex items-center justify-center transition-colors ml-2" title="Потяните для сортировки">
+                 <i data-lucide="grip-vertical" class="w-5 h-5 pointer-events-none"></i>
+             </div>`
           : ``;
 
         // Кнопки для мобильной сортировки
@@ -1813,35 +1930,34 @@ export async function renderCompositionGrid(work, lang = "ru") {
       `
           : "";
 
-        // !!! ИСПРАВЛЕНИЕ 2: Меняем структуру. Главный тег - DIV, ссылка только на тексте.
         return `
         <div ${draggableAttr} data-comp-id="${c.id}"
            class="comp-sortable-item flex items-center p-3 bg-white border border-gray-100 rounded-xl hover:border-cyan-300 hover:shadow-md transition-all group mb-3 ${cursorClass}">
 
-            <!-- Номер (часть ссылки) -->
+            <!-- Номер (ссылка на деталь, но выглядит как кружок) -->
             <a href="/compositions/${
               c.slug || c.id
-            }" data-navigo class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3 block">
-                ${c.sort_order || "#"}
+            }" data-navigo class="comp-sort-number w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition-colors font-bold text-sm flex-shrink-0 mr-3 block font-serif tracking-wider cursor-pointer">
+                ${c.sort_order ? toRoman(c.sort_order) : "#"}
             </a>
 
-            <!-- Текст (Основная ссылка) -->
-            <a href="/compositions/${
-              c.slug || c.id
-            }" data-navigo class="flex-1 min-w-0 mr-2 block">
-                <div class="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors break-words leading-tight">
+            <!-- 3. Текст: DIV вместо A. Ссылка только внутри заголовка. -->
+            <div class="flex-1 min-w-0 mr-2">
+                <a href="/compositions/${
+                  c.slug || c.id
+                }" data-navigo class="font-semibold text-gray-800 hover:text-cyan-600 transition-colors break-words leading-tight inline-block cursor-pointer">
                     ${getLocalizedText(c, "title", lang)}
-                </div>
+                </a>
                 <div class="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1 items-center">
                     ${metaHtml}
                 </div>
-            </a>
+            </div>
 
-            <!-- Иконки и действия (Вне ссылки!) -->
+            <!-- Иконки и действия -->
             <div class="flex items-center flex-shrink-0">
                 ${iconsContainer}
-                ${gripIcon} <!-- Теперь скрыт на мобильных -->
-                ${sortButtons} <!-- Кнопки теперь работают корректно -->
+                ${gripIcon} <!-- Ручка -->
+                ${sortButtons}
             </div>
         </div>
     `;
@@ -1851,11 +1967,14 @@ export async function renderCompositionGrid(work, lang = "ru") {
     partsListHtml = `<div class="mb-10"><h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="list-music" class="w-5 h-5 text-cyan-600"></i> Части произведения</h3>${list}</div>`;
   }
 
-  // Если совсем пусто
   let emptyHtml = "";
   if (!showPlayerBlock && movementParts.length === 0) {
+    const emptyMessage = isAdmin()
+      ? "Произведение пустое. <br>Загрузите запись (будет создана запись целиком) или добавьте части вручную."
+      : "Исполнения скоро будут добавлены.";
+
     emptyHtml = `<div class="text-center text-gray-500 italic py-12 bg-gray-50 rounded-xl mt-8 border-2 border-dashed border-gray-200">
-        Произведение пустое. <br>Загрузите запись (будет создана запись целиком) или добавьте части вручную.
+        ${emptyMessage}
       </div>`;
   }
 
@@ -1985,12 +2104,16 @@ export function renderCompositionDetailView(
   listEl.appendChild(listContainer);
 
   if (!recordings || recordings.length === 0) {
+    const emptyMessage = isAdmin()
+      ? "Загрузите первое исполнение (аудио или видео)."
+      : "Исполнения скоро будут добавлены.";
+
     listContainer.innerHTML = `
             <div class="max-w-7xl mx-auto px-6">
                 <div class="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
                     <i data-lucide="music" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
                     <h3 class="text-lg font-medium text-gray-900">Нет записей</h3>
-                    <p class="text-gray-500 mb-6">Загрузите первое исполнение (аудио или видео)</p>
+                    <p class="text-gray-500 mb-6">${emptyMessage}</p>
                 </div>
             </div>`;
   } else {
@@ -2548,9 +2671,19 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: "Избранное" });
       break;
 
+    // --- КОЛЛЕКЦИИ ---
+
+    case "collection_detail":
+      crumbs.push({ label: "Подборки", link: "/collections" });
+      const colTitle =
+        document.querySelector("#view-title-container h2 span")?.textContent ||
+        "Подборка";
+      crumbs.push({ label: colTitle });
+      break;
+
     // --- ПОИСК ---
     case "search":
-      crumbs.push({ label: "Поиск" });
+      crumbs.push({ label: "Результаты поиска" });
       crumbs.push({ label: `"${window.state.view.searchQuery}"` });
       break;
 
@@ -2592,6 +2725,9 @@ export function renderBreadcrumbs() {
       crumbs.push({ label: "Обратная связь", link: "/account/feedback" });
       crumbs.push({ label: "Сообщение" });
       break;
+    case "collections":
+      crumbs.push({ label: "Подборки" });
+      break;
   }
 
   const html = crumbs
@@ -2602,6 +2738,11 @@ export function renderBreadcrumbs() {
       if (isLast) {
         return `<span class="font-bold text-gray-900 ${textStyle}">${crumb.label}</span>`;
       } else {
+        // --- ИЗМЕНЕНИЕ: Проверка на наличие link ---
+        if (!crumb.link) {
+          return `<span class="text-gray-500 ${textStyle}">${crumb.label}</span><i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>`;
+        }
+        // -------------------------------------------
         return `
             <a href="${crumb.link}" data-navigo class="hover:text-cyan-600 hover:underline transition-colors ${textStyle} text-gray-600">
                 ${crumb.label}
@@ -2637,6 +2778,10 @@ export async function showAddComposerModal() {
     .querySelectorAll("#add-composer-modal input")
     .forEach((i) => (i.value = ""));
 
+  document
+    .getElementById("composer-duplicates-warning")
+    .classList.add("hidden");
+
   await loadAndInitQuill("#add-composer-bio", "");
 
   const closeBtn = modal.querySelector(".close-button");
@@ -2652,7 +2797,11 @@ export function showAddWorkModal() {
   const modal = document.getElementById("add-work-modal");
   modal.classList.remove("hidden");
 
-  // Очистка старых полей
+  document.getElementById("work-duplicates-warning").classList.add("hidden");
+  document
+    .getElementById("add-work-genre-typo-warning")
+    .classList.add("hidden");
+
   document
     .querySelectorAll("#add-work-modal input")
     .forEach((i) => (i.value = ""));
@@ -2741,6 +2890,10 @@ export function showAddWorkModal() {
 export function showAddCompositionModal() {
   const modal = document.getElementById("add-composition-modal");
   modal.classList.remove("hidden");
+
+  document
+    .getElementById("composition-duplicates-warning")
+    .classList.add("hidden");
 
   modal.querySelectorAll("input").forEach((i) => (i.value = ""));
 
@@ -3180,20 +3333,83 @@ export async function showEditEntityModal(type, data, onSave) {
             }"></div>
         </div>
     `;
-  } else if (type === "playlist_create" || type === "playlist_edit") {
-    // === НОВЫЙ БЛОК ДЛЯ ПЛЕЙЛИСТОВ ===
-    modalTitle =
-      type === "playlist_create"
-        ? "Создать плейлист"
-        : "Переименовать плейлист";
+  } else if (
+    type === "playlist_create" ||
+    type === "playlist_edit" ||
+    type === "collection_create"
+  ) {
+    const isCollection = type === "collection_create";
+    modalTitle = isCollection
+      ? "Создать подборку"
+      : type === "playlist_create"
+      ? "Создать плейлист"
+      : "Переименовать";
+
+    // Скрытый чекбокс для подборок (он всегда true)
+    // Описание показываем только для подборок или если админ редактирует
+    const showDesc =
+      isCollection || (isAdmin() && type === "playlist_edit" && data.is_system);
+
+    const descField = showDesc
+      ? `
+        <div class="mt-4">
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Описание</label>
+            <textarea id="edit-playlist-desc" class="w-full border p-3 rounded-lg outline-none resize-none h-24 text-sm">${
+              data.description || ""
+            }</textarea>
+        </div>`
+      : "";
+
+    const canUploadCover = isCollection || (isAdmin() && data.is_system);
+
+    const coverField = canUploadCover
+      ? `
+          <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mt-4">
+              <div class="flex justify-between items-center mb-2">
+                  <label class="block text-xs font-bold text-gray-500 uppercase">Обложка подборки</label>
+                  ${
+                    data.cover_image_url
+                      ? `<button type="button" id="delete-playlist-cover-btn" class="text-xs text-red-500 hover:text-red-700 font-bold">Удалить текущую</button>`
+                      : ""
+                  }
+              </div>
+              <input type="file" id="edit-playlist-cover" accept="image/*" class="text-sm w-full block w-full text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-100 file:text-cyan-700 hover:file:bg-cyan-200 cursor-pointer">
+          </div>
+      `
+      : "";
+
     fields = `
-      <div>
-        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название плейлиста</label>
-        <input id="edit-playlist-name" class="w-full border-2 border-cyan-100 p-3 rounded-lg focus:border-cyan-500 outline-none font-medium" 
-               value="${data.name || ""}" 
-               placeholder="Например: Любимые концерты">
-      </div>
-    `;
+  <div>
+    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Название</label>
+    <input id="edit-playlist-name" class="w-full border-2 border-cyan-100 p-3 rounded-lg focus:border-cyan-500 outline-none font-medium" 
+           value="${data.name || ""}" 
+           placeholder="Название...">
+  </div>
+  ${coverField} <!-- Добавили сюда -->
+  ${descField}
+  <input type="hidden" id="is-collection-flag" value="${
+    isCollection ? "true" : "false"
+  }">
+`;
+
+    setTimeout(() => {
+      const delCoverBtn = document.getElementById("delete-playlist-cover-btn");
+      if (delCoverBtn) {
+        delCoverBtn.onclick = async () => {
+          if (!confirm("Удалить обложку?")) return;
+          try {
+            await window.apiRequest(
+              `/api/playlists/${data.id}/cover`,
+              "DELETE"
+            );
+            window.showNotification("Обложка удалена", "success");
+            delCoverBtn.remove();
+          } catch (e) {
+            window.showNotification("Ошибка: " + e.message, "error");
+          }
+        };
+      }
+    }, 0);
   } else if (type === "profile") {
     modalTitle = "Редактировать профиль";
     fields = `
@@ -3387,16 +3603,67 @@ export async function showEditEntityModal(type, data, onSave) {
           recording_year:
             parseInt(document.getElementById("edit-rec-year").value) || null,
         };
-      } else if (type === "playlist_create" || type === "playlist_edit") {
-        payload = { name: document.getElementById("edit-playlist-name").value };
-      } else if (type === "profile") {
-        // НОВЫЙ БЛОК
+      } else if (
+        type === "playlist_create" ||
+        type === "playlist_edit" ||
+        type === "collection_create"
+      ) {
         payload = {
-          display_name: document.getElementById("edit-display-name").value,
+          name: document.getElementById("edit-playlist-name").value,
         };
+        const descEl = document.getElementById("edit-playlist-desc");
+        const isCollection =
+          document.getElementById("is-collection-flag").value === "true";
+
+        if (descEl) payload.description = descEl.value;
+
+        // Если создаем подборку - ставим флаг
+        if (isCollection) payload.is_system = true;
       }
 
       await onSave(payload);
+
+      // ЛОГИКА ДЛЯ ЗАГРУЗКИ ОБЛОЖКИ ПЛЕЙЛИСТА
+      const playlistCoverInput = document.getElementById("edit-playlist-cover");
+      if (
+        (type === "playlist_create" ||
+          type === "playlist_edit" ||
+          type === "collection_create") &&
+        playlistCoverInput &&
+        playlistCoverInput.files.length > 0
+      ) {
+        newBtn.textContent = "Загрузка обложки...";
+        const fd = new FormData();
+        fd.append("file", playlistCoverInput.files[0]);
+
+        // data.id есть при редактировании. При создании мы получаем ID из ответа onSave (но onSave здесь возвращает void/promise, но не ID напрямую в текущей реализации main.js логики).
+        // ОДНАКО:
+        // В текущей реализации showEditEntityModal, onSave вызывается, затем идет код загрузки.
+        // Если мы создаем новый плейлист, data.id еще нет или он пустой.
+        // Чтобы это работало для СОЗДАНИЯ, нужно, чтобы onSave возвращал созданный объект.
+
+        // РЕШЕНИЕ:
+        // Для редактирования (playlist_edit) data.id есть.
+        // Для создания нам нужно, чтобы onSave вернул объект.
+        // ТЕКУЩАЯ РЕАЛИЗАЦИЯ onSave в main.js (строки 1358 и 1367) НЕ возвращает объект.
+        // ПОЭТОМУ: Чтобы не переписывать половину main.js, сделаем загрузку только если data.id существует (т.е. редактирование),
+        // Либо модифицируем main.js чтобы возвращал result.
+
+        // Самый простой путь: При создании плейлиста мы не загружаем обложку сразу (интерфейсно это приемлемо),
+        // либо модифицируем main.js. Давайте модифицируем main.js для возврата значения.
+
+        // Предполагаем, что main.js исправлен (см. ниже).
+        const targetId = data.id || window.lastCreatedEntityId;
+
+        if (targetId) {
+          await window.apiRequest(
+            `/api/playlists/${targetId}/cover`,
+            "POST",
+            fd
+          );
+        }
+      }
+      // ---------------------------
 
       // ЛОГИКА ДЛЯ ЗАГРУЗКИ АВАТАРА
       const avatarInput = document.getElementById("edit-profile-avatar");
@@ -3654,6 +3921,63 @@ export function openPlayer() {
   }
 }
 
+function generateMosaicCover(recordings) {
+  if (!recordings || recordings.length === 0) return null;
+
+  // 1. Собираем уникальные обложки (исключая плейсхолдеры)
+  const uniqueCovers = new Set();
+  const validCovers = [];
+
+  for (const r of recordings) {
+    const url =
+      r.composition?.cover_art_url || r.composition?.work?.cover_art_url;
+    if (url && !url.includes("placeholder") && !uniqueCovers.has(url)) {
+      uniqueCovers.add(url);
+      validCovers.push(url);
+    }
+    if (validCovers.length >= 4) break; // Нам нужно максимум 4
+  }
+
+  // Если обложек нет совсем, возвращаем null (будет градиент)
+  if (validCovers.length === 0) return null;
+
+  const count = validCovers.length;
+
+  // 2. Генерируем HTML в зависимости от количества
+  if (count === 1) {
+    return `<img src="${validCovers[0]}" class="w-full h-full object-cover">`;
+  }
+
+  if (count === 2) {
+    return `
+      <div class="grid grid-cols-2 h-full w-full">
+        <img src="${validCovers[0]}" class="w-full h-full object-cover border-r border-white/10">
+        <img src="${validCovers[1]}" class="w-full h-full object-cover">
+      </div>`;
+  }
+
+  if (count === 3) {
+    // 1 большая слева, 2 маленькие справа
+    return `
+      <div class="grid grid-cols-2 h-full w-full">
+        <img src="${validCovers[0]}" class="w-full h-full object-cover border-r border-white/10">
+        <div class="grid grid-rows-2 h-full w-full">
+            <img src="${validCovers[1]}" class="w-full h-full object-cover border-b border-white/10">
+            <img src="${validCovers[2]}" class="w-full h-full object-cover">
+        </div>
+      </div>`;
+  }
+
+  // 4 и более (классическая сетка 2x2)
+  return `
+    <div class="grid grid-cols-2 grid-rows-2 h-full w-full">
+      <img src="${validCovers[0]}" class="w-full h-full object-cover border-r border-b border-white/10">
+      <img src="${validCovers[1]}" class="w-full h-full object-cover border-b border-white/10">
+      <img src="${validCovers[2]}" class="w-full h-full object-cover border-r border-white/10">
+      <img src="${validCovers[3]}" class="w-full h-full object-cover">
+    </div>`;
+}
+
 export function renderPlaylistsOverview(playlists) {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
@@ -3679,40 +4003,91 @@ export function renderPlaylistsOverview(playlists) {
       '<div class="max-w-7xl mx-auto px-6 py-12 text-center text-gray-500 italic bg-gray-50 rounded-xl border border-dashed border-gray-300">У вас пока нет плейлистов.</div>';
   } else {
     const cards = playlists
-      .map(
-        (p) => `
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-all group relative">
-            <a href="/playlists/${p.id}" data-navigo class="block mb-4">
-                <div class="aspect-square bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-white shadow-inner mb-4 group-hover:scale-105 transition-transform duration-300">
-                    <i data-lucide="music" class="w-12 h-12 opacity-50"></i>
+      .map((p) => {
+        const count = p.recordings ? p.recordings.length : 0;
+        const countText = pluralize(count, ["запись", "записи", "записей"]);
+        const totalSeconds = p.recordings
+          ? p.recordings.reduce((acc, r) => acc + (r.duration || 0), 0)
+          : 0;
+        const durationText = formatTotalDurationText(totalSeconds);
+
+        const collectionBadge = p.is_from_collection
+          ? `<div class="absolute top-2 left-2 z-20 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-200 shadow-sm flex items-center gap-1 cursor-help" title="Сохранено из подборки">
+                 <i data-lucide="library" class="w-3 h-3"></i> Подборка
+               </div>`
+          : "";
+
+        // --- ГЕНЕРАЦИЯ ОБЛОЖКИ (МОЗАИКА ИЛИ ГРАДИЕНТ) ---
+        const mosaicHtml = generateMosaicCover(p.recordings);
+
+        let coverHtml;
+        if (mosaicHtml) {
+          // Если есть картинки -> показываем мозаику
+          coverHtml = `
+              <div class="absolute inset-0 z-0">
+                  ${mosaicHtml}
+              </div>
+              <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors z-10"></div>
+            `;
+        } else {
+          // Если картинок нет -> показываем градиент и иконку
+          coverHtml = `
+              <div class="absolute inset-0 flex items-center justify-center z-0">
+                  <i data-lucide="music" class="w-12 h-12 text-white/50"></i>
+              </div>
+            `;
+        }
+        // ------------------------------------------------
+
+        return `
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all group relative flex flex-col h-full">
+            <a href="/playlists/${p.id}" data-navigo class="block flex-1">
+                <!-- Контейнер обложки: overflow-hidden важен для скругления картинки -->
+                <div class="aspect-square rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 shadow-inner mb-4 relative overflow-hidden">
+                    
+                    ${collectionBadge}
+                    
+                    <!-- ВСТАВЛЯЕМ СГЕНЕРИРОВАННУЮ ОБЛОЖКУ -->
+                    ${coverHtml}
+                    
+                    <!-- КНОПКА PLAY (поверх всего, z-20) -->
+                    <button onclick="event.preventDefault(); event.stopPropagation(); window.playPlaylistFromCard('${
+                      p.id
+                    }')"
+                            class="absolute bottom-2 right-2 z-20 w-10 h-10 bg-white text-cyan-600 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 transform translate-y-2 group-hover:translate-y-0">
+                        <i data-lucide="play" class="w-4 h-4 fill-current ml-0.5"></i>
+                    </button>
                 </div>
+                
                 <h3 class="font-bold text-gray-800 text-lg truncate group-hover:text-cyan-600 transition-colors">${
                   p.name
                 }</h3>
-                <p class="text-xs text-gray-400 font-medium">${
-                  p.recordings ? p.recordings.length : 0
-                } ${pluralize(p.recordings ? p.recordings.length : 0, [
-          "запись",
-          "записи",
-          "записей",
-        ])}</p>
+                
+                <div class="mt-1 flex flex-col gap-0.5">
+                    <p class="text-xs text-gray-500 font-medium">${count} ${countText}</p>
+                    ${
+                      durationText
+                        ? `<p class="text-[10px] text-gray-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${durationText}</p>`
+                        : ""
+                    }
+                </div>
             </a>
 
-            <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                <button class="edit-playlist-btn p-2 bg-white rounded-lg shadow-md text-gray-600 hover:text-cyan-600" data-id="${
+            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30">
+                <button class="edit-playlist-btn p-1.5 bg-white/90 backdrop-blur rounded-md shadow text-gray-600 hover:text-cyan-600" data-id="${
                   p.id
                 }" data-name="${p.name}" title="Переименовать">
                     <i data-lucide="edit-2" class="w-4 h-4"></i>
                 </button>
-                <button class="delete-playlist-btn p-2 bg-white rounded-lg shadow-md text-red-400 hover:text-red-600" data-id="${
+                <button class="delete-playlist-btn p-1.5 bg-white/90 backdrop-blur rounded-md shadow text-red-400 hover:text-red-600" data-id="${
                   p.id
                 }" data-name="${p.name}" title="Удалить">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
         </div>
-    `
-      )
+    `;
+      })
       .join("");
 
     listEl.innerHTML = `<div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 px-6 pb-10">${cards}</div>`;
@@ -4029,6 +4404,130 @@ export function renderSearchResults(data, favoriteIds = new Set()) {
 
   if (window.lucide) window.lucide.createIcons();
 }
+
+export function renderCollectionsHub(collections) {
+  const { listEl } = getElements();
+  const viewTitle = document.getElementById("view-title-container");
+
+  viewTitle.classList.remove("hidden");
+
+  // Кнопка: Cyan (как везде)
+  const addBtn = isAdmin()
+    ? `<button id="create-collection-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg shadow-sm hover:shadow-md flex items-center gap-2 transition-all text-sm font-bold whitespace-nowrap">
+         <i data-lucide="plus" class="w-4 h-4"></i> <span>Создать подборку</span>
+       </button>`
+    : "";
+
+  viewTitle.innerHTML = `
+    <div class="w-full mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row items-end justify-between gap-4 text-center md:text-left">
+        <!-- Левая часть: Заголовок + Описание -->
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900 flex flex-col-reverse md:flex-row items-center gap-2 md:gap-3 justify-center md:justify-start">
+                <span>Подборки</span>
+                <!-- Иконка: Cyan -->
+                <i data-lucide="library" class="w-10 h-10 md:w-8 md:h-8 text-cyan-600 mb-1 md:mb-0"></i>
+            </h2>
+            <p class="text-gray-500 text-sm mt-1">Тематические коллекции лучших произведений.</p>
+        </div>
+        
+        <!-- Правая часть: Только кнопка (если админ) -->
+        <div class="w-full md:w-auto flex justify-center md:block">
+            ${addBtn}
+        </div>
+    </div>
+`;
+
+  if (!collections || collections.length === 0) {
+    listEl.innerHTML =
+      '<div class="text-center py-20 text-gray-400">Подборок пока нет</div>';
+    return;
+  }
+
+  const html = collections
+    .map((c) => {
+      const firstRec = c.recordings && c.recordings[0];
+      const cover =
+        c.cover_image_url ||
+        firstRec?.composition?.cover_art_url ||
+        firstRec?.composition?.work?.cover_art_url ||
+        "/static/img/placeholder.png";
+      const count = c.recordings ? c.recordings.length : 0;
+
+      const totalSeconds = c.recordings
+        ? c.recordings.reduce((acc, r) => acc + (r.duration || 0), 0)
+        : 0;
+      const durationText = formatTotalDurationText(totalSeconds);
+      const countText = pluralize(count, ["запись", "записи", "записей"]);
+
+      const adminControls = isAdmin()
+        ? `
+        <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <button class="edit-playlist-btn p-2 bg-white/90 backdrop-blur rounded-lg shadow text-gray-600 hover:text-cyan-600" data-id="${c.id}" data-name="${c.name}" data-is-collection="true" title="Переименовать">
+                <i data-lucide="edit-2" class="w-4 h-4"></i>
+            </button>
+            <button class="delete-playlist-btn p-2 bg-white/90 backdrop-blur rounded-lg shadow text-red-400 hover:text-red-600" data-id="${c.id}" data-name="${c.name}" data-is-collection="true" title="Удалить подборку">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+      `
+        : "";
+
+      return `
+      <div class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden flex flex-col h-full hover:-translate-y-1 relative">
+          ${adminControls}
+          
+          <!-- ССЫЛКА НА /collections/ID -->
+          <a href="/collections/${
+            c.id
+          }" data-navigo class="block aspect-[2/1] relative bg-gray-100 overflow-hidden cursor-pointer">
+              <img src="${cover}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-6">
+                  <div class="text-white font-bold text-sm">
+                      <div class="flex items-center gap-2"><i data-lucide="music-2" class="w-4 h-4"></i> ${count} ${countText}</div>
+                      ${
+                        durationText
+                          ? `<div class="flex items-center gap-2 mt-1 opacity-90"><i data-lucide="clock" class="w-3 h-3"></i> ${durationText}</div>`
+                          : ""
+                      }
+                  </div>
+              </div>
+              
+              <!-- КНОПКА PLAY: Cyan -->
+              <div class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px]">
+                  <button onclick="event.preventDefault(); event.stopPropagation(); window.playPlaylistFromCard('${
+                    c.id
+                  }')" 
+                          class="w-14 h-14 bg-white text-cyan-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                      <i data-lucide="play" class="w-6 h-6 fill-current ml-1"></i>
+                  </button>
+              </div>
+          </a>
+
+          <!-- ССЫЛКА НА /collections/ID -->
+          <a href="/collections/${
+            c.id
+          }" data-navigo class="p-6 flex-1 flex flex-col block">
+              <h3 class="text-xl font-bold text-gray-900 mb-2 font-serif group-hover:text-cyan-600 transition-colors">${
+                c.name
+              }</h3>
+              <p class="text-gray-500 text-sm line-clamp-3 mb-4 flex-1">${
+                c.description || "Описание отсутствует"
+              }</p>
+              
+              <!-- Ссылка: Cyan -->
+              <div class="text-cyan-600 font-bold text-sm uppercase tracking-wider flex items-center gap-2 mt-auto">
+                  <i data-lucide="list-music" class="w-4 h-4"></i> К списку
+              </div>
+          </a>
+      </div>
+      `;
+    })
+    .join("");
+
+  listEl.innerHTML = `<div class="max-w-7xl mx-auto px-6 pb-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">${html}</div>`;
+  if (window.lucide) window.lucide.createIcons();
+}
+
 export function renderLibraryHub() {
   const { listEl } = getElements();
   const viewTitle = document.getElementById("view-title-container");
@@ -4968,6 +5467,19 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                     window.state.selectedRecordingIds &&
                     window.state.selectedRecordingIds.has(t.id);
 
+                  // --- ЛОГИКА БЕЙДЖА ---
+                  const sortOrder = t.composition.sort_order;
+                  const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
+                  let metaBadge = "";
+                  if (isAdmin()) {
+                    metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text">#${
+                      t.id
+                    }${roman ? `, ${roman}` : ""}</span>`;
+                  } else if (roman) {
+                    metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium">${roman}</span>`;
+                  }
+                  // --------------------
+
                   return `
                           <div class="recording-item flex items-center py-2 px-3 hover:bg-cyan-50 transition-colors group/track cursor-pointer border-b border-gray-50 last:border-0 ${
                             isSelected ? "bg-cyan-50" : ""
@@ -4983,17 +5495,16 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                data-id="${t.id}" 
                ${isSelected ? "checked" : ""}>
     </div>
-    ${
-      isAdmin()
-        ? `<div class="text-[10px] text-gray-300 font-mono w-8 text-center flex-shrink-0 select-all cursor-text mr-1">#${t.id}</div>`
-        : ""
-    }
+    
+    <!-- СТАРЫЙ БЛОК С ID УДАЛЕН ОТСЮДА -->
+
                               <div class="w-8 flex justify-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
                                 t.id
                               }">
                                   <i data-lucide="play" class="w-4 h-4 fill-current"></i>
                               </div>
-                              <div class="flex-1 text-sm text-gray-700 font-medium ml-3 break-words">
+                              <div class="flex-1 text-sm text-gray-700 font-medium ml-3 break-words flex items-baseline">
+                                  <span>
                                   ${
                                     t.composition.sort_order === 0
                                       ? getLocalizedText(work, "name", "ru")
@@ -5003,8 +5514,11 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                                           "ru"
                                         )
                                   }
+                                  </span>
+                                  ${metaBadge} <!-- ВСТАВЛЕНО СЮДА -->
                               </div>
                               <div class="flex items-center gap-3">
+
                                   ${
                                     isLoggedIn()
                                       ? `
@@ -5107,48 +5621,67 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
   // === 2. ОБЫЧНЫЙ СПИСОК (Плейлисты, Избранное, Поиск) ===
   else if (type === "list") {
     html = `<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
-          ${items
-            .map((r, i) => {
-              const isFav = favs.has(r.id);
-              const cover =
-                r.composition.cover_art_url ||
-                r.composition.work.cover_art_url ||
-                "/static/img/placeholder.png";
-              const isSelected =
-                window.state &&
-                window.state.selectedRecordingIds &&
-                window.state.selectedRecordingIds.has(r.id);
+        ${items
+          .map((r, i) => {
+            const isFav = favs.has(r.id);
+            const cover =
+              r.composition.cover_art_url ||
+              r.composition.work.cover_art_url ||
+              "/static/img/placeholder.png";
+            const isSelected =
+              window.state &&
+              window.state.selectedRecordingIds &&
+              window.state.selectedRecordingIds.has(r.id);
 
-              return `
-              <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 transition-colors cursor-pointer ${
-                isSelected ? "bg-cyan-50" : ""
-              }"
-                   data-recording-id="${r.id}" data-index="${i}">
-                  <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 ${
-                    window.state?.isSelectionMode ? "flex" : "hidden md:flex"
-                  }">
-                       <input type="checkbox" class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500" data-id="${
-                         r.id
-                       }" ${isSelected ? "checked" : ""}>
-                  </div>
-                  <div class="w-10 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
-                    r.id
-                  }">
-                      <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                  </div>
-                  <div class="flex-shrink-0 mx-3">
-                       <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm" loading="lazy">
-                  </div>
-                  <div class="flex-1 min-w-0">
-                      <div class="font-bold text-gray-800 text-sm truncate">
-                           ${getLocalizedText(r.composition, "title", "ru")}
-                      </div>
-                      <div class="text-xs text-gray-500 truncate">
-                           ${r.performers} • ${
-                r.composition.work.composer.name_ru
-              }
-                      </div>
-                  </div>
+            // --- ЛОГИКА БЕЙДЖА ---
+            const sortOrder = r.composition.sort_order;
+            const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
+            let metaBadge = "";
+            if (isAdmin()) {
+              metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text">#${
+                r.id
+              }${roman ? `, ${roman}` : ""}</span>`;
+            } else if (roman) {
+              metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium">${roman}</span>`;
+            }
+            // --------------------
+
+            return `
+            <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 transition-colors cursor-pointer ${
+              isSelected ? "bg-cyan-50" : ""
+            }"
+                 data-recording-id="${r.id}" data-index="${i}">
+                <!-- ... (чекбокс и play без изменений) ... -->
+                <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 ${
+                  window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+                }">
+                     <input type="checkbox" class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500" data-id="${
+                       r.id
+                     }" ${isSelected ? "checked" : ""}>
+                </div>
+                <div class="w-10 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
+                  r.id
+                }">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                </div>
+                <div class="flex-shrink-0 mx-3">
+                     <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm" loading="lazy">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-bold text-gray-800 text-sm truncate flex items-baseline">
+                         <span>${getLocalizedText(
+                           r.composition,
+                           "title",
+                           "ru"
+                         )}</span>
+                         ${metaBadge} <!-- ВСТАВЛЕНО СЮДА -->
+                    </div>
+                    <div class="text-xs text-gray-500 truncate">
+                         ${r.performers} • ${
+              r.composition.work.composer.name_ru
+            }
+                    </div>
+                </div>
                   <div class="ml-auto pl-2 flex items-center gap-3">
                        ${
                          isLoggedIn()
@@ -5167,8 +5700,8 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                        )}</span>
                   </div>
               </div>`;
-            })
-            .join("")}
+          })
+          .join("")}
       </div>`;
   }
   // === 3. ВИДЕОЗАЛ (Сетка видео) ===

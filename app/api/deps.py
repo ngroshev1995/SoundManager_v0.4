@@ -54,10 +54,10 @@ def get_current_user_or_none(
         db: Session = Depends(get_db), token: Optional[str] = Depends(reusable_oauth2)
 ) -> Optional[models.User]:
     """
-    Возвращает объект пользователя, если токен валиден, иначе возвращает None.
-    Не выбрасывает исключение, если токен отсутствует или невалиден.
+    Возвращает пользователя, если токен валиден, иначе None.
+    Не вызывает ошибку 401.
     """
-    if token is None:
+    if not token:
         return None
     try:
         payload = jwt.decode(
@@ -66,12 +66,10 @@ def get_current_user_or_none(
         email: str = payload.get("sub")
         if email is None:
             return None
-        token_data = schemas.TokenData(email=email)
     except (JWTError, ValueError):
-        # ValueError может возникнуть, если токен пустой или некорректный
         return None
 
-    user = crud.user.get_user_by_email(db, email=token_data.email)
+    user = crud.user.get_user_by_email(db, email=email)
     return user
 
 

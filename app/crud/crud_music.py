@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, String, and_
 
 from app import models, schemas
 
@@ -48,15 +48,69 @@ def get_library_works(
     )
 
     if q:
-        search_term = q.lower()
-        query = query.filter(
-            or_(
-                func.lower_utf8(models.music.Work.name_ru).contains(search_term),
-                func.lower_utf8(models.music.Work.original_name).contains(search_term),
-                func.lower_utf8(models.music.Composer.name_ru).contains(search_term),
-                func.lower_utf8(models.music.Recording.performers).contains(search_term)
-            )
-        )
+        from app.utils import switch_keyboard_layout  # Импорт внутри, чтобы избежать цикличности, если нужно
+
+        search_terms = [q.lower()]
+        switched = switch_keyboard_layout(q)
+        if switched != q:
+            search_terms.append(switched.lower())
+
+        # Логика:
+        # 1. Разбиваем запрос на слова (токенизация).
+        # 2. Ищем совпадение ВСЕХ слов (AND) в ОДНОМ из полей или комбинации.
+        # Для SQL LIKE это сложно сделать одним выражением, поэтому делаем упрощенно:
+        # Ищем записи, где конкатенация всех полей содержит запрос.
+
+        # Но для точности и поддержки "№11" vs "№ 11", лучше просто искать вхождение
+        # хотя бы одного варианта (оригинал или свитч) в конкатенированной строке полей.
+
+        # Собираем фильтры для каждого варианта раскладки (обычно их 1 или 2)
+        or_filters = []
+
+        for term in search_terms:
+            # Разбиваем "sonata 14" -> ["sonata", "14"]
+            tokens = term.split()
+            token_filters = []
+
+            for term in search_terms:
+                # Разбиваем запрос на слова
+                raw_tokens = term.split()
+                token_filters = []
+
+                for token in raw_tokens:
+                    # Очищаем токен от пробелов (хотя split их уже убрал, но для гарантии логики)
+                    clean_token = token.replace(" ", "")
+
+                    # --- ЛОГИКА: Сравниваем строки БЕЗ ПРОБЕЛОВ ---
+                    # func.replace(Field, ' ', '') превращает "Op. 55" в базе в "Op.55"
+                    # И мы ищем там "Op.55". Это решает проблему пробелов.
+
+                    token_filters.append(
+                        or_(
+                            # Обычный поиск (для текста)
+                            func.lower_utf8(models.music.Work.name_ru).contains(token),
+                            func.lower_utf8(models.music.Work.original_name).contains(token),
+                            func.lower_utf8(models.music.Work.nickname).contains(token),
+                            func.lower_utf8(models.music.Composer.name_ru).contains(token),
+                            func.lower_utf8(models.music.Recording.performers).contains(token),
+
+                            # "Безпробельный" поиск (для каталогов и номеров: kv 525 == kv525)
+                            func.lower_utf8(func.replace(models.music.Work.catalog_number, ' ', '')).contains(
+                                clean_token),
+                            func.lower_utf8(func.replace(models.music.Work.name_ru, ' ', '')).contains(clean_token),
+                            # Помогает найти "Симфония№5"
+
+                            # Поиск по году
+                            func.cast(models.music.Work.publication_year, String).contains(token)
+                        )
+                    )
+
+                if token_filters:
+                    or_filters.append(and_(*token_filters))
+
+        # Объединяем варианты раскладок через OR
+        if or_filters:
+            query = query.filter(or_(*or_filters))
 
     if composer_id:
         query = query.filter(models.music.Work.composer_id == composer_id)
@@ -121,7 +175,10 @@ def create_composer(db: Session, composer_in: schemas.music.ComposerCreate) -> m
         original_name=composer_in.original_name,
         year_born=composer_in.year_born,
         year_died=composer_in.year_died,
-        notes=composer_in.notes
+        notes=composer_in.notes,
+        place_of_birth=composer_in.place_of_birth,
+        latitude=composer_in.latitude,
+        longitude=composer_in.longitude
     )
     db.add(db_obj)
     db.commit()

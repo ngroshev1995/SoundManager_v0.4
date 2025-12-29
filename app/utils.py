@@ -73,3 +73,19 @@ def delete_file_by_url(url: str):
             print(f"Deleted old cover: {clean_path}")
     except Exception as e:
         print(f"Error deleting cover {clean_path}: {e}")
+
+
+def switch_keyboard_layout(text: str) -> str:
+    """Меняет раскладку (en <-> ru)"""
+    layout_ru = "йцукенгшщзхъфывапролджэячсмитьбю.ё"
+    layout_en = "qwertyuiop[]asdfghjkl;'zxcvbnm,./`"
+
+    # Словари перевода
+    trans_table_ru_to_en = str.maketrans(layout_ru + layout_ru.upper(), layout_en + layout_en.upper())
+    trans_table_en_to_ru = str.maketrans(layout_en + layout_en.upper(), layout_ru + layout_ru.upper())
+
+    # Простейшая эвристика: если есть кириллица, меняем на латиницу, и наоборот
+    if any("а" <= char.lower() <= "я" for char in text):
+        return text.translate(trans_table_ru_to_en)
+    else:
+        return text.translate(trans_table_en_to_ru)

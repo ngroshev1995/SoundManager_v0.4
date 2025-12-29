@@ -75,10 +75,10 @@ async function handleLogin() {
     localStorage.setItem("user_email", email);
     localStorage.setItem("access_token", data.access_token);
     try {
-      // Делаем дополнительный запрос, чтобы получить display_name
       const profile = await apiRequest("/api/users/me");
       localStorage.setItem("display_name", profile.display_name || "");
       localStorage.setItem("is_admin", profile.is_admin ? "true" : "false");
+      localStorage.setItem("user_id", profile.id);
     } catch (e) {
       console.error("Не удалось получить профиль после входа:", e);
       localStorage.setItem("is_admin", "false");

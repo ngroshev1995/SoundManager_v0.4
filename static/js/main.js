@@ -39,6 +39,7 @@ window.router = router;
 
 let state = {
   playlists: [],
+  systemPlaylists: [],
   currentViewRecordings: [],
   selectedRecordingIds: new Set(),
   favoriteRecordingIds: new Set(),
@@ -146,8 +147,6 @@ function setupRouter() {
       before: (done) => {
         const mainView = document.getElementById("main-view");
         if (mainView) {
-          // ИСПОЛЬЗУЕМ СОХРАНЕННЫЙ ПУТЬ КАК КЛЮЧ, а не window.location
-          // Это критично для корректной работы кнопки "Назад"
           const saveKey = state.currentPath;
           state.scrollHistory.set(saveKey, mainView.scrollTop);
         }
@@ -157,6 +156,12 @@ function setupRouter() {
           mobileMenuPanel.classList.add("hidden");
         }
         done();
+      },
+      after: () => {
+        const mainView = document.getElementById("main-view");
+        if (mainView && !state.isBackNavigation) {
+          mainView.scrollTop = 0;
+        }
       },
     })
 
@@ -203,11 +208,22 @@ function setupRouter() {
         resetViewState();
         loadCurrentView();
       },
-      "/playlists/:id": ({ data }) => {
+      "/playlists/:id": async ({ data }) => {
         resetViewState();
         state.view.current = "playlist";
         state.view.playlistId = data.id;
-        loadCurrentView();
+
+        try {
+          const pl = await apiRequest(`/api/playlists/${data.id}`);
+          if (pl.is_system) {
+            router.navigate(`/collections/${data.id}`, true);
+            return;
+          }
+          loadCurrentView();
+        } catch (e) {
+          console.error(e);
+          ui.showNotification("Плейлист не найден", "error");
+        }
       },
       "/playlists": () => {
         state.view.current = "playlists_overview";
@@ -290,9 +306,32 @@ function setupRouter() {
 
       "/account/feedback/:id": ({ data }) => {
         state.view.current = "account_feedback_detail";
-        state.view.feedbackMessageId = data.id; // Сохраняем ID из URL
+        state.view.feedbackMessageId = data.id;
         resetViewState();
         loadCurrentView();
+      },
+      // --- ПОДБОРКИ (Системные) ---
+      "/collections": () => {
+        state.view.current = "collections";
+        resetViewState();
+        loadCurrentView();
+      },
+      "/collections/:id": async ({ data }) => {
+        resetViewState();
+        state.view.current = "collection_detail";
+        state.view.playlistId = data.id;
+
+        try {
+          const pl = await apiRequest(`/api/playlists/${data.id}`);
+          if (!pl.is_system) {
+            router.navigate(`/playlists/${data.id}`, true);
+            return;
+          }
+          loadCurrentView();
+        } catch (e) {
+          console.error(e);
+          ui.showNotification("Подборка не найдена", "error");
+        }
       },
     })
     .resolve();
@@ -301,7 +340,6 @@ function setupRouter() {
 async function loadCurrentView() {
   const mainView = document.getElementById("main-view");
 
-  // Если это НЕ возврат назад, сбрасываем скролл сразу (новая страница)
   if (!state.isBackNavigation && mainView) {
     mainView.scrollTop = 0;
   }
@@ -348,11 +386,22 @@ async function loadCurrentView() {
     }
   }
 
-  if (hasToken && state.playlists.length === 0) {
+  if (hasToken) {
     try {
-      const p = await apiRequest("/api/playlists/");
-      state.playlists = p;
-      ui.renderPlaylistList(p);
+      // 1. Грузим личные плейлисты
+      if (state.playlists.length === 0) {
+        const p = await apiRequest("/api/playlists/");
+        state.playlists = p;
+        ui.renderPlaylistList(p);
+      }
+
+      if (
+        localStorage.getItem("is_admin") === "true" &&
+        (!state.systemPlaylists || state.systemPlaylists.length === 0)
+      ) {
+        const sys = await apiRequest("/api/playlists/system");
+        state.systemPlaylists = sys;
+      }
     } catch (e) {
       console.warn(e);
     }
@@ -431,15 +480,48 @@ async function loadCurrentView() {
         );
         break;
       case "playlist":
-        const pl = await apiRequest(`/api/playlists/${state.view.playlistId}`);
-        state.currentViewRecordings = pl.recordings;
-        ui.renderRecordingList(
-          pl.recordings,
-          pl.name,
-          0,
-          { isPlaylist: true },
-          state.favoriteRecordingIds
-        );
+        {
+          const pl = await apiRequest(
+            `/api/playlists/${state.view.playlistId}`
+          );
+          state.currentViewRecordings = pl.recordings;
+          ui.renderRecordingList(
+            pl.recordings,
+            pl.name,
+            0,
+            {
+              isPlaylist: true,
+              isSystem: false,
+              ownerId: pl.owner_id,
+            },
+            state.favoriteRecordingIds
+          );
+        }
+        break;
+
+      case "collections":
+        const collections = await apiRequest("/api/playlists/system");
+        ui.renderCollectionsHub(collections);
+        break;
+
+      case "collection_detail":
+        {
+          const pl = await apiRequest(
+            `/api/playlists/${state.view.playlistId}`
+          );
+          state.currentViewRecordings = pl.recordings;
+          ui.renderRecordingList(
+            pl.recordings,
+            pl.name,
+            0,
+            {
+              isPlaylist: true,
+              isSystem: true,
+              ownerId: pl.owner_id,
+            },
+            state.favoriteRecordingIds
+          );
+        }
         break;
       case "favorites":
         const fav = await apiRequest("/api/users/me/favorites");
@@ -448,7 +530,7 @@ async function loadCurrentView() {
           fav,
           "Избранное",
           0,
-          {},
+          { isFavorites: true },
           state.favoriteRecordingIds
         );
         break;
@@ -1899,44 +1981,91 @@ function addEventListeners() {
 
     // --- ПЛЕЙЛИСТЫ (CRUD) ---
 
-    if (
-      target.closest("#create-new-playlist-btn") ||
-      target.closest("#create-playlist-top-btn")
-    ) {
+    // 1. Создание Плейлиста (Личного)
+    if (target.closest("#create-new-playlist-btn")) {
       ui.showEditEntityModal("playlist_create", {}, async (data) => {
-        await apiRequest("/api/playlists/", "POST", data);
+        const res = await apiRequest("/api/playlists/", "POST", data); // <-- Добавили const res =
+        window.lastCreatedEntityId = res.id; // <-- Сохраняем ID в глобальную переменную (грязный хак, но минимальные изменения)
         ui.showNotification("Плейлист создан", "success");
         loadCurrentView();
+        return res; // Возвращаем
       });
     }
 
+    // 2. Создание Подборки (Админской)
+    if (target.closest("#create-collection-btn")) {
+      ui.showEditEntityModal("collection_create", {}, async (data) => {
+        // API тот же, но внутри data будет is_system: true
+        const res = await apiRequest("/api/playlists/", "POST", data); // <-- Добавили const res =
+        window.lastCreatedEntityId = res.id; // <-- Сохраняем
+        ui.showNotification("Подборка создана", "success");
+        loadCurrentView();
+        return res;
+      });
+    }
+
+    // 3. Редактирование (Общее)
     const editPlBtn = target.closest(".edit-playlist-btn");
     if (editPlBtn) {
       e.preventDefault();
+      e.stopPropagation();
       const id = editPlBtn.dataset.id;
-      const name = editPlBtn.dataset.name;
-      ui.showEditEntityModal("playlist_edit", { name }, async (data) => {
-        await apiRequest(`/api/playlists/${id}`, "PUT", data);
-        ui.showNotification("Плейлист обновлен", "success");
-        loadCurrentView();
-      });
+
+      // Запрашиваем полные данные (включая описание), чтобы заполнить форму
+      try {
+        const plData = await apiRequest(`/api/playlists/${id}`);
+        ui.showEditEntityModal("playlist_edit", plData, async (data) => {
+          await apiRequest(`/api/playlists/${id}`, "PUT", data);
+          ui.showNotification("Обновлено", "success");
+          loadCurrentView();
+        });
+      } catch (e) {
+        console.error(e);
+      }
     }
 
+    // 4. Удаление (Общее с проверкой типа)
     const delPlBtn = target.closest(".delete-playlist-btn");
     if (delPlBtn) {
       e.preventDefault();
+      e.stopPropagation();
       const id = delPlBtn.dataset.id;
       const name = delPlBtn.dataset.name;
+      // Атрибут data-is-collection мы добавили в ui.js для подборок
+      const isCollection = delPlBtn.dataset.isCollection === "true";
+
+      const text = isCollection
+        ? `Вы удаляете подборку <b>"${name}"</b>.<br>Копии, сохраненные пользователями, останутся.`
+        : `Вы удаляете плейлист <b>"${name}"</b>.<br>Это действие необратимо.`;
+
       ui.showDeleteModal({
-        title: "Удалить плейлист?",
-        text: `Вы удаляете плейлист <b>"${name}"</b>.<br>Записи внутри него останутся в медиатеке.`,
+        title: isCollection ? "Удалить подборку?" : "Удалить плейлист?",
+        text: text,
         onConfirm: async () => {
           await apiRequest(`/api/playlists/${id}`, "DELETE");
-          ui.showNotification("Плейлист удален", "success");
+          ui.showNotification(
+            isCollection ? "Подборка удалена" : "Плейлист удален",
+            "success"
+          );
           document.getElementById("delete-modal").classList.add("hidden");
           loadCurrentView();
         },
       });
+    }
+
+    // 5. Клонирование ("Добавить к себе")
+    if (target.closest("#playlist-clone-btn")) {
+      const pid = window.state.view.playlistId;
+      if (!pid) return;
+
+      if (!confirm("Добавить эту подборку в свои плейлисты?")) return;
+
+      try {
+        await apiRequest(`/api/playlists/${pid}/clone`, "POST");
+        ui.showNotification("Подборка добавлена в ваши плейлисты!", "success");
+      } catch (e) {
+        ui.showNotification("Ошибка: " + e.message, "error");
+      }
     }
 
     // --- FLOATING BAR ACTIONS (Массовые действия) ---
@@ -2286,11 +2415,11 @@ function addEventListeners() {
     ) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user_email");
-      localStorage.removeItem("display_name"); // Желательно очищать и это
+      localStorage.removeItem("display_name");
       localStorage.removeItem("is_admin");
+      localStorage.removeItem("user_id");
 
       window.location.href = "/";
-      // window.location.reload(); // reload не обязателен, если href меняется, но можно оставить для надежности сброса стейта
     }
     if (target.closest("#queue-btn"))
       document
@@ -2379,7 +2508,7 @@ function addEventListeners() {
     );
 
   // --- ЛОГИКА DRAG & DROP ДЛЯ ПЛЕЙЛИСТОВ (Идентична странице произведения) ---
-  let draggedPlaylistItem = null; // <--- ИМЯ ПЕРЕМЕННОЙ
+  let draggedPlaylistItem = null;
 
   // 1. НАЧАЛО ПЕРЕТАСКИВАНИЯ
   document.addEventListener("dragstart", (e) => {
@@ -2387,11 +2516,18 @@ function addEventListeners() {
     const target = e.target.closest(".playlist-sortable-item");
     if (!target) return;
 
-    draggedPlaylistItem = target; // <--- ИСПРАВЛЕНО (было draggedPlaylistRow)
+    // ИСПРАВЛЕНИЕ: Проверяем атрибут, который выставляется в mousedown.
+    // Это надежнее, чем проверять e.target, так как e.target может быть самой строкой.
+    if (target.getAttribute("draggable") !== "true") {
+      e.preventDefault();
+      return;
+    }
+
+    draggedPlaylistItem = target;
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", ""); // Нужно для Firefox
 
-    // Делаем полупрозрачным с задержкой, чтобы драг-имидж успел создаться
+    // Делаем полупрозрачным с задержкой
     setTimeout(() => {
       target.classList.add("dragging-active");
     }, 0);
@@ -2399,19 +2535,26 @@ function addEventListeners() {
 
   // 2. КОНЕЦ ПЕРЕТАСКИВАНИЯ
   document.addEventListener("dragend", (e) => {
-    if (draggedPlaylistItem) {
-      // <--- ИСПРАВЛЕНО
-      draggedPlaylistItem.classList.remove("dragging-active"); // <--- ИСПРАВЛЕНО
+    // ИСПРАВЛЕНИЕ: Очищаем ВСЕ элементы от класса активности, а не только draggedPlaylistItem.
+    // Это гарантирует, что если драг "сорвался", элементы не останутся серыми.
+    document
+      .querySelectorAll(".playlist-sortable-item, .comp-sortable-item")
+      .forEach((el) => {
+        el.classList.remove("dragging-active");
+        el.classList.remove("opacity-50", "border-cyan-400"); // Стили для частей произведений
+        el.setAttribute("draggable", "false"); // Всегда выключаем драг
+      });
 
-      // Чистим все синие линии на странице
-      document
-        .querySelectorAll(".drag-over-top, .drag-over-bottom")
-        .forEach((el) => {
-          el.classList.remove("drag-over-top", "drag-over-bottom");
-        });
+    // Чистим все синие линии на странице
+    document
+      .querySelectorAll(".drag-over-top, .drag-over-bottom")
+      .forEach((el) => {
+        el.classList.remove("drag-over-top", "drag-over-bottom");
+      });
 
-      draggedPlaylistItem = null; // <--- ИСПРАВЛЕНО
-    }
+    draggedPlaylistItem = null;
+    // Сбрасываем и переменную для частей произведений, если она была определена выше
+    if (typeof draggedComp !== "undefined") draggedComp = null;
   });
 
   // 3. DRAG OVER
@@ -2429,14 +2572,12 @@ function addEventListeners() {
       return;
     }
 
-    // 2. Очищаем визуальные эффекты ТОЛЬКО с других элементов
     document.querySelectorAll(".playlist-sortable-item").forEach((el) => {
       if (el !== target) {
         el.classList.remove("drag-over-top", "drag-over-bottom");
       }
     });
 
-    // 3. Рисуем линию на текущей цели
     const rect = target.getBoundingClientRect();
     const offset = e.clientY - rect.top;
 
@@ -2466,23 +2607,30 @@ function addEventListeners() {
       parent.insertBefore(draggedPlaylistItem, target.nextSibling);
     }
 
-    // Убираем линии
     target.classList.remove("drag-over-top", "drag-over-bottom");
 
-    // Собираем новые ID для сохранения
     const newOrderIds = Array.from(
       parent.querySelectorAll(".playlist-sortable-item")
     ).map((el) => parseInt(el.dataset.recordingId));
 
-    try {
-      await apiRequest(
-        `/api/playlists/${state.view.playlistId}/reorder`,
-        "PUT",
-        { recording_ids: newOrderIds }
-      );
-    } catch (err) {
-      ui.showNotification("Ошибка сохранения порядка", "error");
-      console.error(err);
+    // Если мы в плейлисте или подборке - сохраняем на сервер
+    if (
+      state.view.current === "playlist" ||
+      state.view.current === "collection_detail"
+    ) {
+      try {
+        await apiRequest(
+          `/api/playlists/${state.view.playlistId}/reorder`,
+          "PUT",
+          { recording_ids: newOrderIds }
+        );
+      } catch (err) {
+        ui.showNotification("Ошибка сохранения порядка", "error");
+        console.error(err);
+      }
+    } else if (state.view.current === "favorites") {
+      // Для избранного пока нет API сортировки, просто лог в консоль (или добавьте API)
+      console.log("Избранное пересортировано (локально):", newOrderIds);
     }
   });
 
@@ -2503,18 +2651,57 @@ function addEventListeners() {
   // --- DRAG & DROP ДЛЯ ЧАСТЕЙ (Сортировка) ---
   let draggedComp = null;
 
-  document.addEventListener("dragstart", (e) => {
-    const item = e.target.closest(".comp-sortable-item");
-    if (item) {
-      draggedComp = item;
-      item.classList.add("opacity-50", "border-cyan-400");
-      e.dataTransfer.effectAllowed = "move";
+  // 1. Активация драга ПЛЮС сброс состояния при простом клике
+  document.addEventListener("mousedown", (e) => {
+    const item =
+      e.target.closest(".comp-sortable-item") ||
+      e.target.closest(".playlist-sortable-item");
+    if (!item) return;
+
+    // Если клик по ручке (.drag-handle) -> включаем draggable
+    if (e.target.closest(".drag-handle")) {
+      item.setAttribute("draggable", "true");
     }
   });
 
+  // ВАЖНОЕ ИСПРАВЛЕНИЕ: Если пользователь нажал на ручку, но просто отпустил (кликнул),
+  // а не потащил, мы должны немедленно выключить draggable, иначе следующий клик
+  // в любом месте строки начнет перетаскивание и заблокирует интерфейс.
+  document.addEventListener("mouseup", () => {
+    document.querySelectorAll('[draggable="true"]').forEach((el) => {
+      el.setAttribute("draggable", "false");
+    });
+  });
+
+  // 2. Начало перетаскивания
+  document.addEventListener("dragstart", (e) => {
+    const item = e.target.closest(".comp-sortable-item");
+
+    // --- ВАЖНОЕ ИСПРАВЛЕНИЕ ---
+    // Если мы тянем не часть произведения (например, элемент плейлиста),
+    // мы должны просто выйти (return), а не отменять событие (preventDefault).
+    if (!item) return;
+    // ---------------------------
+
+    // Если атрибут true (выставлен в mousedown), начинаем драг
+    if (item.getAttribute("draggable") === "true") {
+      draggedComp = item;
+      item.classList.add("opacity-50", "border-cyan-400");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", ""); // Для Firefox
+    } else {
+      e.preventDefault();
+    }
+  });
+
+  // 3. Конец перетаскивания
   document.addEventListener("dragend", (e) => {
     if (draggedComp) {
       draggedComp.classList.remove("opacity-50", "border-cyan-400");
+
+      // Сбрасываем атрибут обратно в false
+      draggedComp.setAttribute("draggable", "false");
+
       document
         .querySelectorAll(".drag-over-top, .drag-over-bottom")
         .forEach((el) => {
@@ -2583,7 +2770,7 @@ function addEventListeners() {
     allItems.forEach((item, index) => {
       const numberBadge = item.querySelector(".comp-sort-number");
       if (numberBadge) {
-        numberBadge.textContent = index + 1;
+        numberBadge.textContent = ui.toRoman(index + 1);
       }
       newIds.push(parseInt(item.dataset.compId));
     });
@@ -2983,7 +3170,8 @@ function showRecordingContextMenu(x, y, rid) {
   const count = state.selectedRecordingIds.size;
   m.dataset.recordingId = rid;
 
-  let html = `<div class="py-1 min-w-[220px] bg-white rounded-lg shadow-xl border border-gray-100 font-medium text-sm text-gray-700">`;
+  // ИСПРАВЛЕНИЕ 5: Увеличена ширина с 220px до 280px
+  let html = `<div class="py-1 min-w-[280px] bg-white rounded-lg shadow-xl border border-gray-100 font-medium text-sm text-gray-700">`;
 
   html += `
     <li data-action="play-next" class="px-4 py-3 hover:bg-cyan-50 cursor-pointer flex gap-3 items-center border-b border-gray-50">
@@ -2997,31 +3185,66 @@ function showRecordingContextMenu(x, y, rid) {
   if (isLoggedIn) {
     html += `<div class="border-t border-gray-100 my-1"></div>`;
 
+    // 1. ЛИЧНЫЕ ПЛЕЙЛИСТЫ
     let playlistsItems = "";
     if (state.playlists.length) {
       state.playlists.forEach((p) => {
+        // ИСПРАВЛЕНИЕ 5: Добавлена верстка для обрезки длинных названий
         playlistsItems += `
              <li data-action="add-to-playlist" data-pid="${p.id}"
-                 class="px-4 py-2 hover:bg-cyan-50 cursor-pointer truncate flex items-center gap-2">
-                 <i data-lucide="list-music" class="w-3 h-3 opacity-70"></i> ${p.name}
+                 class="px-4 py-2 hover:bg-cyan-50 cursor-pointer flex items-center gap-2 group/item">
+                 <i data-lucide="list-music" class="w-4 h-4 opacity-70 text-cyan-600 flex-shrink-0"></i> 
+                 <span class="truncate w-full">${p.name}</span>
              </li>`;
       });
     } else {
       playlistsItems = `<li class="px-4 py-2 text-gray-400 italic text-xs">Нет плейлистов</li>`;
     }
 
+    // ИСПРАВЛЕНИЕ 5: Увеличена ширина выпадающего списка (w-64)
     html += `
           <li class="relative group px-4 py-3 hover:bg-cyan-50 cursor-pointer flex justify-between items-center">
-              <div class="flex gap-3 items-center"><i data-lucide="plus-square" class="w-4 h-4 text-blue-600"></i> В плейлист</div>
+              <div class="flex gap-3 items-center"><i data-lucide="plus-square" class="w-4 h-4 text-cyan-600"></i> В плейлист</div>
               <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
 
-              <ul class="absolute left-full top-0 mt-[-4px] w-48 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block z-50 py-2 pl-3 -ml-1">
+              <ul class="absolute left-full top-0 mt-[-4px] w-64 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block z-50 py-2 pl-1 -ml-1 max-h-60 overflow-y-auto custom-scrollbar">
                   ${playlistsItems}
               </ul>
           </li>
       `;
+
+    // 2. ПОДБОРКИ (Только для Админа)
+    if (isAdmin) {
+      let collectionsItems = "";
+      if (state.systemPlaylists && state.systemPlaylists.length) {
+        state.systemPlaylists.forEach((p) => {
+          // ИСПРАВЛЕНИЕ 5: Добавлена верстка для обрезки длинных названий
+          collectionsItems += `
+                 <li data-action="add-to-playlist" data-pid="${p.id}"
+                     class="px-4 py-2 hover:bg-orange-50 cursor-pointer flex items-center gap-2 group/item">
+                     <i data-lucide="library" class="w-4 h-4 opacity-70 text-orange-600 flex-shrink-0"></i> 
+                     <span class="truncate w-full">${p.name}</span>
+                 </li>`;
+        });
+      } else {
+        collectionsItems = `<li class="px-4 py-2 text-gray-400 italic text-xs">Нет подборок</li>`;
+      }
+
+      // ИСПРАВЛЕНИЕ 5: Увеличена ширина выпадающего списка (w-64)
+      html += `
+          <li class="relative group px-4 py-3 hover:bg-orange-50 cursor-pointer flex justify-between items-center">
+              <div class="flex gap-3 items-center"><i data-lucide="library" class="w-4 h-4 text-orange-600"></i> В подборку</div>
+              <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+
+              <ul class="absolute left-full top-0 mt-[-4px] w-64 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block z-50 py-2 pl-1 -ml-1 max-h-60 overflow-y-auto custom-scrollbar">
+                  ${collectionsItems}
+              </ul>
+          </li>
+        `;
+    }
   }
 
+  // Меню действий для админа (Редактировать / Удалить)
   if (isAdmin) {
     html += `<div class="border-t border-gray-100 my-1"></div>`;
     if (count === 1) {
@@ -3781,3 +4004,31 @@ document.addEventListener("click", (e) => {
 });
 
 window.updateFeedbackCounter = updateFeedbackCounter;
+
+window.playPlaylistFromCard = async (playlistId) => {
+  try {
+    // 1. Получаем данные плейлиста
+    // Если это "Мои плейлисты", данные уже могут быть в state.playlists, но там может не быть полного списка треков (зависит от API).
+    // Надежнее загрузить полный плейлист.
+    const pl = await apiRequest(`/api/playlists/${playlistId}`);
+
+    if (!pl || !pl.recordings || pl.recordings.length === 0) {
+      ui.showNotification("Плейлист пуст", "info");
+      return;
+    }
+
+    const playable = pl.recordings.filter((r) => r.duration > 0);
+
+    if (playable.length === 0) {
+      ui.showNotification("Нет доступных для воспроизведения записей", "info");
+      return;
+    }
+
+    // 2. Запускаем плеер
+    player.handleTrackClick(playable[0].id, 0, playable);
+    ui.showNotification(`Запуск: ${pl.name}`, "success");
+  } catch (e) {
+    console.error(e);
+    ui.showNotification("Ошибка запуска плейлиста", "error");
+  }
+};
