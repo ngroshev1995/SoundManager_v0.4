@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql.expression import func, desc
 from sqlalchemy import func
 
-from app import models, schemas
+from app import models, schemas, crud
 from app.api import deps
 from app.db.session import get_db
 
@@ -28,32 +28,17 @@ def get_dashboard_summary(
         total_duration=int(total_seconds)
     )
 
-    top_composers_query = (
-        db.query(
-            models.music.Composer,
-            func.count(models.music.Work.id).label('works_count')
-        )
-        .outerjoin(models.music.Work)
-        .group_by(models.music.Composer.id)
-        .order_by(desc('works_count'))
-        .limit(4)
-        .all()
-    )
-
-    popular_composers = []
-    for comp, count in top_composers_query:
-        comp.works_count = count
-        popular_composers.append(comp)
-
+    # 2. Недавно добавленные
     recently_added_works = (
         db.query(models.music.Work)
         .options(joinedload(models.music.Work.composer))
         .filter(models.music.Work.name_ru != "Без сборника")
         .order_by(models.music.Work.id.desc())
-        .limit(12)
+        .limit(10)
         .all()
     )
 
+    # 3. Случайные произведения (для секции "В центре внимания")
     random_func = func.random()
     if db.bind.dialect.name == 'mysql':
         random_func = func.rand()
@@ -67,9 +52,13 @@ def get_dashboard_summary(
         .all()
     )
 
+    # 4. Подборки
+    collections = crud.playlist.get_system_playlists(db, limit=10)
+
+
     return schemas.DashboardSummary(
         stats=stats,
-        popular_composers=popular_composers,
         recently_added_works=recently_added_works,
         random_works=random_works,
+        collections=collections
     )

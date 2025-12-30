@@ -93,6 +93,7 @@ class Work(Base):
     composer_id = Column(Integer, ForeignKey("composers.id"), nullable=False)
     composer = relationship("Composer", back_populates="works")
     compositions = relationship("Composition", back_populates="work", cascade="all, delete-orphan")
+    scores = relationship("Score", back_populates="work", cascade="all, delete-orphan")
 
 
 class Recording(Base):
@@ -160,3 +161,4 @@ class Composition(Base):
     work_id = Column(Integer, ForeignKey("works.id"), nullable=False)
     work = relationship("Work", back_populates="compositions")
     recordings = relationship("Recording", back_populates="composition", cascade="all, delete-orphan")
+    scores = relationship("Score", back_populates="composition", cascade="all, delete-orphan")

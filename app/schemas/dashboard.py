@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-
+from .playlist import Playlist
 
 class DashComposer(BaseModel):
     id: int
@@ -36,5 +36,6 @@ class DashboardSummary(BaseModel):
     stats: DashboardStats
     recently_added_works: List[DashWork]
     random_works: List[DashWork]
+    collections: List[Playlist] = []
     class Config:
         from_attributes = True

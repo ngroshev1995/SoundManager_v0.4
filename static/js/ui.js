@@ -1,4 +1,5 @@
 const licenses = {
+  "PDM 1.0": "https://creativecommons.org/publicdomain/mark/1.0/deed.ru",
   "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/deed.ru",
   "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/deed.ru",
   "CC BY-ND 4.0": "https://creativecommons.org/licenses/by-nd/4.0/deed.ru",
@@ -348,9 +349,9 @@ export function renderDashboard(data, lang = "ru") {
   const titleContainer = document.getElementById("view-title-container");
   if (titleContainer) titleContainer.classList.add("hidden");
 
-  // 1. HERO SECTION (Улучшенная типографика)
+  // 1. HERO SECTION
   const heroHTML = `
-      <div class="relative text-white overflow-hidden rounded-b-[3rem] shadow-2xl group mb-12 min-h-screen flex flex-col"
+      <div class="relative text-white overflow-hidden rounded-b-[3rem] shadow-2xl group min-h-screen flex flex-col mb-16"
            style="-webkit-mask-image: -webkit-radial-gradient(white, black);">
         
         <div class="absolute inset-0">
@@ -388,345 +389,304 @@ export function renderDashboard(data, lang = "ru") {
       </div>
     `;
 
-  // 2. СТАТИСТИКА (С акцентными границами)
+  // 2. СТАТИСТИКА
   const totalHours = Math.floor((data.stats.total_duration || 0) / 3600);
-
   const statsHTML = `
-       <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-16">
-           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-               ${[
-                 {
-                   val: data.stats.total_composers,
-                   label: pluralize(data.stats.total_composers, [
-                     "Композитор",
-                     "Композитора",
-                     "Композиторов",
-                   ]),
-                   icon: "users",
-                 },
-                 {
-                   val: data.stats.total_works,
-                   label: pluralize(data.stats.total_works, [
-                     "Произведение",
-                     "Произведения",
-                     "Произведений",
-                   ]),
-                   icon: "book-open",
-                 },
-                 {
-                   val: data.stats.total_recordings,
-                   label: pluralize(data.stats.total_recordings, [
-                     "Запись",
-                     "Записи",
-                     "Записей",
-                   ]),
-                   icon: "disc",
-                 },
-                 {
-                   val: totalHours,
-                   label:
-                     pluralize(totalHours, ["Час", "Часа", "Часов"]) +
-                     " музыки",
-                   icon: "clock",
-                 },
-               ]
-                 .map(
-                   (item) => `
-                 <!-- 
-                    ИЗМЕНЕНИЯ:
-                    1. border border-cyan-200 — добавляет видимую голубую рамку.
-                    2. bg-white/80 — делает фон чуть менее прозрачным, чтобы текст читался лучше.
-                    3. hover:border-cyan-400 — при наведении рамка становится ярче.
-                 -->
-                 <div class="relative bg-white/80 backdrop-blur-md p-4 rounded-2xl md:rounded-3xl border border-cyan-200 shadow-sm hover:shadow-md hover:border-cyan-400 transition-all duration-300 h-32 flex justify-end items-center overflow-hidden group">
-                    
-                    <!-- ФОНОВАЯ ИКОНКА (Сделали чуть ярче для контраста с белым) -->
-                    <i data-lucide="${item.icon}" class="absolute -left-4 top-1/2 -translate-y-1/2 w-28 h-28 text-cyan-100 group-hover:text-cyan-200/50 transition-colors z-0"></i>
-
-                    <!-- КОНТЕНТ -->
-                    <div class="relative z-10 text-right pr-2">
-                        <div class="text-4xl lg:text-5xl font-serif font-black text-cyan-950 drop-shadow-sm">${item.val}</div>
-                        <div class="text-xs font-sans font-bold text-cyan-700/70 uppercase tracking-wider mt-1">${item.label}</div>
-                    </div>
-                 </div>
-               `
-                 )
-                 .join("")}
+       <div class="px-6 mb-16">
+           <h2 class="text-3xl font-bold text-gray-900 mb-6 font-serif flex items-center gap-3">
+                <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> Библиотека в цифрах
+           </h2>
+           <div class="bg-white rounded-[2.5rem] shadow-xl p-8 md:p-12">
+               <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                   ${[
+                     {
+                       val: data.stats.total_composers,
+                       label: pluralize(data.stats.total_composers, [
+                         "Композитор",
+                         "Композитора",
+                         "Композиторов",
+                       ]),
+                       icon: "users",
+                     },
+                     {
+                       val: data.stats.total_works,
+                       label: pluralize(data.stats.total_works, [
+                         "Произведение",
+                         "Произведения",
+                         "Произведений",
+                       ]),
+                       icon: "book-open",
+                     },
+                     {
+                       val: data.stats.total_recordings,
+                       label: pluralize(data.stats.total_recordings, [
+                         "Запись",
+                         "Записи",
+                         "Записей",
+                       ]),
+                       icon: "disc",
+                     },
+                     {
+                       val: totalHours,
+                       label:
+                         pluralize(totalHours, ["Час", "Часа", "Часов"]) +
+                         " музыки",
+                       icon: "clock",
+                     },
+                   ]
+                     .map(
+                       (item) => `
+                     <div class="relative bg-slate-50 p-4 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-300 transition-all duration-300 h-32 flex justify-end items-center overflow-hidden group">
+                        <i data-lucide="${item.icon}" class="absolute -left-4 top-1/2 -translate-y-1/2 w-28 h-28 text-cyan-600 opacity-10 group-hover:opacity-20 transition-opacity z-0"></i>
+                        <div class="relative z-10 text-right pr-2">
+                            <div class="text-4xl lg:text-5xl font-serif font-black text-cyan-900 drop-shadow-sm">${item.val}</div>
+                            <div class="text-xs font-sans font-bold text-cyan-700 uppercase tracking-wider mt-1">${item.label}</div>
+                        </div>
+                     </div>
+                   `
+                     )
+                     .join("")}
+               </div>
            </div>
        </div>
     `;
 
-  // 3. НОВАЯ СЕКЦИЯ: ЭПОХИ (Визуальные карточки)
-  const epochsHTML = `
-    <div class="max-w-7xl mx-auto px-6 mb-20">
-        <h2 class="text-3xl font-bold text-gray-900 mb-6 font-serif flex items-center gap-3">
-            <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> Путешествие во времени
-        </h2>
-        
-        <!-- ИСПРАВЛЕНИЕ СЕТКИ: 
-             grid-cols-1 = мобильный (столбик)
-             sm:grid-cols-2 = планшет (по 2)
-             lg:grid-cols-5 = десктоп (все 5 в один ряд) 
-        -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            ${[
-              {
-                id: "renaissance",
-                name: "Ренессанс",
-                dates: "1400–1600",
-                img: "/static/img/epoch_renaissance.jpg",
-              },
-              {
-                id: "baroque",
-                name: "Барокко",
-                dates: "1600–1750",
-                img: "/static/img/epoch_baroque.jpg",
-              },
-              {
-                id: "classical",
-                name: "Классицизм",
-                dates: "1750–1820",
-                img: "/static/img/epoch_classical.jpg",
-              },
-              {
-                id: "romantic",
-                name: "Романтизм",
-                dates: "1820–1900",
-                img: "/static/img/epoch_romantic.jpg",
-              },
-              {
-                id: "modern",
-                name: "XX Век",
-                dates: "1900–...",
-                img: "/static/img/epoch_modern.jpg",
-              },
-            ]
-              .map(
-                (e) => `
-                <button onclick="window.goToEpoch('${e.id}')" 
-                   class="relative h-40 rounded-xl overflow-hidden group text-left shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
-                    
-                    <!-- 1. ЧИСТАЯ КАРТИНКА (Без прозрачности, без смешивания цветов) -->
-                    <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
-                         style="background-image: url('${e.img}');">
-                    </div>
-
-                    <!-- 2. ТОЛЬКО ЧЕРНАЯ ТЕНЬ СНИЗУ (чтобы текст читался, картинку не красит) -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-                    
-                    <!-- ТЕКСТ -->
-                    <div class="absolute bottom-0 left-0 p-4 z-20 text-white w-full">
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <div class="text-[10px] font-bold opacity-80 mb-0.5 uppercase tracking-wider">${e.dates}</div>
-                                <h3 class="text-xl font-serif font-bold text-white leading-tight">${e.name}</h3>
-                            </div>
-                            <!-- Стрелочка теперь внизу справа, компактно -->
-                            <i data-lucide="arrow-right" class="w-4 h-4 text-white/70 group-hover:text-white transition-colors mb-1"></i>
-                        </div>
-                    </div>
-                </button>
-            `
-              )
-              .join("")}
-        </div>
-    </div>
-  `;
-
-  // 4. SPOTLIGHT (ФИНАЛЬНАЯ ВЕРСИЯ: УБРАНА ЛИНИЯ, БЕЛЫЙ ТЕКСТ, БЕЛАЯ КНОПКА)
+  // 3. НОВАЯ СЕКЦИЯ: SPOTLIGHT ("В ЦЕНТРЕ ВНИМАНИЯ")
   let spotlightHTML = "";
   if (data.random_works.length > 0) {
     const spotlightWork = data.random_works[0];
     const comp = spotlightWork.composer;
     const portrait = comp.portrait_url || "/static/img/placeholder.png";
-
-    // Ссылка формируется здесь. Если слага нет, будет ID.
     const compLink = `/composers/${comp.slug || comp.id}`;
 
     spotlightHTML = `
-        <div class="max-w-7xl mx-auto px-6 mb-20">
-            <div class="relative h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl group bg-black">
-                
-                <!-- 1. ФОН (Осветлили: brightness-75) -->
-                <!-- md:opacity-70 = На ПК фон чуть ярче, чтобы цвет был виден -->
-                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-3xl opacity-100 brightness-75 transition-transform duration-[20s] ease-linear group-hover:scale-125" 
-                     style="background-image: url('${portrait}');">
-                </div>
+      <div class="px-6 mb-16">
+          <h2 class="text-3xl font-bold text-gray-900 mb-6 font-serif flex items-center gap-3">
+              <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> В центре внимания
+          </h2>
+          <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl group bg-gray-900 flex flex-col md:flex-row items-stretch min-h-[400px] md:min-h-[600px]">
+              
+              <!-- 
+                 ИЗМЕНЕНИЯ:
+                 1. flex-1: Заставляет контейнер занять всю высоту родителя (исправляет прилипание к верху).
+                 2. justify-center: Центрирует контент по вертикали.
+                 3. md:flex-none: На десктопе ширина фиксированная (w-1/2), flex-1 отключаем.
+                 4. Убран pb-6.
+              -->
+              <div class="relative z-10 w-full flex-1 md:flex-none md:w-1/2 flex flex-col justify-center">
+                  <div class="p-8 md:p-16 text-center md:text-left">
+                      
+                      <h2 class="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 drop-shadow-xl leading-none" style="text-wrap: balance;">
+                          ${getLocalizedText(comp, "name", lang)}
+                      </h2>
+                      
+                      <p class="text-lg text-gray-300 mb-8 max-w-xl font-light leading-relaxed drop-shadow-md mx-auto md:mx-0">
+                          Вдохновитесь шедевром <a href="/works/${spotlightWork.slug || spotlightWork.id}" data-navigo class="font-semibold text-white hover:underline">"${getLocalizedText(spotlightWork, "name", lang)}"</a> и откройте для себя мир великого мастера.
+                      </p>
+                      
+                      <a href="${compLink}" data-navigo 
+                         class="inline-flex items-center gap-2 px-8 py-4 bg-white text-gray-900 hover:bg-gray-200 rounded-xl font-bold text-base shadow-xl transition-transform hover:-translate-y-1">
+                          Перейти к профилю <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                      </a>
+                  </div>
+              </div>
 
-                <!-- 2. ФОТО (МАСКА АДАПТИРОВАНА ДЛЯ ПК) -->
-                <!-- transparent 0%, transparent 20%: Левый край прозрачный (безопасная зона) -->
-                <!-- black 100%: Полная видимость справа -->
-                <!-- Мы используем одну маску для всех экранов, она универсальна -->
-                <div class="absolute inset-0 z-10 transition-transform duration-[20s] ease-linear group-hover:scale-105" 
-                     style="background-image: url('${portrait}'); 
-                            background-repeat: no-repeat; 
-                            background-position: right top; 
-                            background-size: auto 100%; 
-                            -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 20%, black 100%);
-                            mask-image: linear-gradient(to right, transparent 0%, transparent 20%, black 100%);">
-                </div>
+              <div class="absolute inset-0 md:relative md:inset-auto w-full md:w-1/2 h-full md:h-auto z-0 md:z-auto">
+                  <div class="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-500"
+                       style="background-image: url('${portrait}');">
+                  </div>
+                  <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent md:bg-gradient-to-r"></div>
+              </div>
+          </div>
+      </div>
+    `;
+  }
 
-                <!-- 3. ГРАДИЕНТ (Смягчили черноту) -->
-                <!-- from-black/70 (было 80) = Текст читается, но черноты меньше -->
-                <div class="absolute inset-0 z-20 bg-gradient-to-r from-black/70 via-black/30 to-transparent"></div>
-                
-                <!-- 4. КОНТЕНТ (Белоснежный текст) -->
-                <div class="absolute bottom-0 left-0 w-full md:w-2/3 p-8 md:p-16 z-30 flex flex-col items-start justify-center h-full">
-                    
-                    <div class="inline-block px-4 py-1.5 bg-white/10 backdrop-blur-md text-white/90 rounded-full text-xs font-bold uppercase tracking-widest mb-6 border border-white/20">
-                        Композитор дня
+  // 4. НОВАЯ СЕКЦИЯ: ПОДБОРКИ (СЛАЙДЕР)
+  let collectionsHTML = "";
+  const collections = data.collections;
+  if (collections && collections.length > 0) {
+    const sliderId = "col-slider-" + Math.random().toString(36).substr(2, 9);
+
+    const collectionCards = collections
+      .map((c) => {
+        const cover = c.cover_image_url || "/static/img/placeholder.png";
+
+        // Карточка: фиксированная ширина (w-72 на мобильных, w-80 на десктопе), snap-start, shrink-0
+        return `
+            <a href="/collections/${
+              c.id
+            }" data-navigo class="snap-start shrink-0 w-72 md:w-80 group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-auto hover:-translate-y-1">
+                <div class="relative aspect-video overflow-hidden bg-gray-100">
+                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                        <button onclick="event.preventDefault(); event.stopPropagation(); window.playPlaylistFromCard('${
+                          c.id
+                        }')" class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-cyan-600 shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300">
+                            <i data-lucide="play" class="w-5 h-5 ml-1 fill-current"></i>
+                        </button>
                     </div>
+                </div>
+                <div class="p-4 flex flex-col flex-1">
+                    <h4 class="font-bold text-gray-900 text-base leading-tight mb-1 group-hover:text-cyan-700 transition-colors line-clamp-2 font-serif">${
+                      c.name
+                    }</h4>
+                    <p class="text-sm text-gray-500 line-clamp-2 flex-1">${
+                      c.description || ""
+                    }</p>
+                    <div class="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">${
+                      c.recordings.length
+                    } ${pluralize(c.recordings.length, [
+          "запись",
+          "записи",
+          "записей",
+        ])}</div>
+                </div>
+            </a>
+          `;
+      })
+      .join("");
 
-                    <!-- text-white = Чистый белый цвет -->
-                    <h2 class="text-5xl md:text-7xl font-serif font-bold text-white mb-6 drop-shadow-xl leading-none">
-                        ${getLocalizedText(comp, "name", lang)}
-                    </h2>
-                    
-                    <!-- text-gray-100 = Почти белый, очень легко читать -->
-                    <p class="text-lg text-gray-100 mb-10 max-w-xl font-light leading-relaxed drop-shadow-md">
-    Вдохновитесь шедевром <a href="/works/${
-      spotlightWork.slug || spotlightWork.id
-    }" data-navigo class="font-semibold text-white hover:underline">"${getLocalizedText(
-      spotlightWork,
-      "name",
-      lang
-    )}"</a> и откройте для себя мир великого мастера.
-</p>
-                    
-                    <!-- КНОПКА: Белая (bg-white), текст черный (text-gray-900) -->
-                    <a href="${compLink}" data-navigo 
-                       class="px-8 py-4 bg-white text-gray-900 hover:bg-cyan-50 rounded-xl font-bold text-base shadow-xl transition-transform hover:-translate-y-1 flex items-center gap-2">
-                        Перейти к профилю <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                    </a>
+    collectionsHTML = `
+        <div class="px-6 mb-16 relative group/slider">
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-3xl font-bold text-gray-900 font-serif flex items-center gap-3">
+                    <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> Подборки
+                </h2>
+                <a href="/collections" data-navigo class="text-sm font-bold text-gray-400 hover:text-cyan-600 transition-colors flex items-center gap-1">
+                    Смотреть все <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <!-- Кнопки навигации -->
+            <button onclick="document.getElementById('${sliderId}').scrollBy({left: -320, behavior: 'smooth'})"
+                    class="absolute left-2 top-[60%] z-20 p-3 bg-white/90 backdrop-blur border border-gray-100 rounded-full shadow-lg text-gray-700 hover:text-cyan-600 hidden md:group-hover/slider:block transition-all hover:scale-110 -translate-y-1/2">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <button onclick="document.getElementById('${sliderId}').scrollBy({left: 320, behavior: 'smooth'})"
+                    class="absolute right-2 top-[60%] z-20 p-3 bg-white/90 backdrop-blur border border-gray-100 rounded-full shadow-lg text-gray-700 hover:text-cyan-600 hidden md:group-hover/slider:block transition-all hover:scale-110 -translate-y-1/2">
+                <i data-lucide="chevron-right" class="w-6 h-6"></i>
+            </button>
+
+            <!-- Контейнер слайдера -->
+            <div class="bg-white rounded-[2.5rem] shadow-xl p-6 md:p-10 border border-gray-100/50">
+                <div id="${sliderId}" class="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory scroll-smooth no-scrollbar">
+                    ${collectionCards}
                 </div>
             </div>
         </div>
       `;
   }
 
-  // 5. ОБНОВЛЕННАЯ СЕКЦИЯ: ИНТЕРАКТИВНАЯ РУЛЕТКА
-  const randomizerHTML = `
-    <div class="max-w-7xl mx-auto px-6 mb-20">
-        <div class="relative overflow-hidden rounded-[2.5rem] shadow-2xl group border border-gray-200">
-            
-            <!-- 1. Фоновое изображение (Абстракция или муз. тема) -->
-            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear group-hover:scale-110"
-                 style="background-image: url('https://images.unsplash.com/photo-1519412666065-94acb3f8838f?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');">
-            </div>
-            
-            <!-- 2. Затемнение (Градиент для читаемости) -->
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-cyan-900/80 backdrop-blur-sm"></div>
-
-            <!-- 3. Контент -->
-            <div class="relative z-10 p-10 md:p-16 text-center flex flex-col items-center">
-                <h2 class="text-3xl md:text-4xl font-serif font-bold text-white mb-4 drop-shadow-md">
-                    Испытай удачу
-                </h2>
-                <p class="text-gray-200 max-w-lg mx-auto mb-10 text-lg leading-relaxed">
-                    Доверьтесь случаю. Нажмите на кубик, и мы выберем для вас шедевр из нашей коллекции.
-                </p>
-
-                <!-- Кнопка с 3D кубиком -->
-                <button id="random-dice-btn" 
-                        class="dice-scene group/btn focus:outline-none transform transition-transform active:scale-95"
-                        title="Бросить кубик">
-                    <div class="dice-cube text-cyan-900">
-                        <!-- Грани кубика с точками (используем SVG точки для красоты) -->
-                        <div class="dice-face dice-face--1 bg-white">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+  // 5. ЭПОХИ
+  const epochsHTML = `
+    <div class="px-6 mb-16">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6 font-serif flex items-center gap-3">
+            <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> Путешествие во времени
+        </h2>
+        <div class="bg-white rounded-[2.5rem] shadow-xl p-8 md:p-12">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                ${[
+                  {
+                    id: "renaissance",
+                    name: "Ренессанс",
+                    dates: "1400–1600",
+                    img: "/static/img/epoch_renaissance.jpg",
+                  },
+                  {
+                    id: "baroque",
+                    name: "Барокко",
+                    dates: "1600–1750",
+                    img: "/static/img/epoch_baroque.jpg",
+                  },
+                  {
+                    id: "classical",
+                    name: "Классицизм",
+                    dates: "1750–1820",
+                    img: "/static/img/epoch_classical.jpg",
+                  },
+                  {
+                    id: "romantic",
+                    name: "Романтизм",
+                    dates: "1820–1900",
+                    img: "/static/img/epoch_romantic.jpg",
+                  },
+                  {
+                    id: "modern",
+                    name: "XX Век",
+                    dates: "1900–...",
+                    img: "/static/img/epoch_modern.jpg",
+                  },
+                ]
+                  .map(
+                    (e) => `
+                    <button onclick="window.goToEpoch('${e.id}')" 
+                       class="relative h-40 rounded-xl overflow-hidden group text-left shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
+                             style="background-image: url('${e.img}');">
                         </div>
-                        <div class="dice-face dice-face--2 bg-white flex justify-between p-3 w-full h-full">
-                             <svg class="w-3 h-3 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                             <svg class="w-3 h-3 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                        </div>
-                        <div class="dice-face dice-face--3 bg-white flex justify-between p-3 w-full h-full">
-                             <svg class="w-2.5 h-2.5 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                             <svg class="w-2.5 h-2.5 fill-current self-center" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                             <svg class="w-2.5 h-2.5 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                        </div>
-                        <div class="dice-face dice-face--4 bg-white p-3">
-                             <div class="grid grid-cols-2 gap-4 w-full h-full">
-                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                             </div>
-                        </div>
-                        
-                        <!-- ИЗМЕНЕНИЕ 1: Грань с 5 точками -->
-                        <div class="dice-face dice-face--5 bg-white p-3">
-                            <div class="grid grid-cols-3 grid-rows-3 w-full h-full">
-                                <svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current col-start-2 row-start-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                <svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-4 z-20 text-white w-full">
+                            <div class="flex justify-between items-end">
+                                <div>
+                                    <div class="text-[10px] font-bold opacity-80 mb-0.5 uppercase tracking-wider">${e.dates}</div>
+                                    <h3 class="text-xl font-serif font-bold text-white leading-tight">${e.name}</h3>
+                                </div>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-white/70 group-hover:text-white transition-colors mb-1"></i>
                             </div>
                         </div>
-                        
-                        <!-- ИЗМЕНЕНИЕ 2: Грань с 6 точками -->
-                        <div class="dice-face dice-face--6 bg-white p-3">
-                            <div class="grid grid-cols-2 gap-3 w-full h-full">
-                                <div class="flex flex-col justify-between h-full">
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                </div>
-                                <div class="flex flex-col justify-between h-full">
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </button>
-                
-                <p class="mt-6 text-sm text-cyan-200/70 font-medium uppercase tracking-widest animate-pulse">
-                    Нажмите, чтобы бросить
-                </p>
+                    </button>
+                `
+                  )
+                  .join("")}
             </div>
         </div>
     </div>
   `;
 
-  // Helper for Cards (Улучшенный дизайн карточек)
+  // 6. НЕДАВНО ДОБАВЛЕННЫЕ (СЛАЙДЕР)
   const createSection = (title, items, icon) => {
     if (!items || !items.length) return "";
+
+    // Генерируем уникальный ID для привязки кнопок к конкретному слайдеру
+    const sliderId = "slider-" + Math.random().toString(36).substr(2, 9);
+
     const cards = items
       .map((item) => {
         const cover = item.cover_art_url || "/static/img/placeholder.png";
+        // snap-start, shrink-0 и фиксированная ширина создают эффект слайдов
         return `
-    <a href="/works/${item.slug || item.id}" data-navigo
-       class="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full hover:-translate-y-1">
-        <div class="relative aspect-square overflow-hidden bg-gray-100">
-            <img src="${cover}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
-            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-cyan-600 shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300">
-                    <i data-lucide="play" class="w-5 h-5 ml-1 fill-current"></i>
+            <a href="/works/${
+              item.slug || item.id
+            }" data-navigo class="snap-start shrink-0 w-44 md:w-56 group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col hover:-translate-y-1 h-auto">
+                <div class="relative aspect-square overflow-hidden bg-gray-100">
+                    <img src="${cover}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-cyan-600 shadow-lg transform scale-0 group-hover:scale-100 transition-transform duration-300">
+                            <i data-lucide="play" class="w-5 h-5 ml-1 fill-current"></i>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="p-4 flex flex-col flex-1">
-            <h4 class="font-bold text-gray-900 text-lg leading-tight mb-1 group-hover:text-cyan-700 transition-colors line-clamp-2 font-serif">${getLocalizedText(
-              item,
-              "name",
-              lang
-            )}</h4>
-            <p class="text-sm text-gray-500 line-clamp-1">${getLocalizedText(
-              item.composer,
-              "name",
-              lang
-            )}</p>
-        </div>
-    </a>
-            `;
+                <div class="p-4 flex flex-col flex-1">
+                    <h4 class="font-bold text-gray-900 text-base leading-tight mb-1 group-hover:text-cyan-700 transition-colors line-clamp-2 font-serif">${getLocalizedText(
+                      item,
+                      "name",
+                      lang
+                    )}</h4>
+                    <p class="text-xs text-gray-500 line-clamp-1">${getLocalizedText(
+                      item.composer,
+                      "name",
+                      lang
+                    )}</p>
+                </div>
+            </a>
+        `;
       })
       .join("");
 
     return `
-        <div class="max-w-7xl mx-auto px-6 mb-20">
-            <div class="flex justify-between items-end mb-8">
+        <div class="px-6 mb-16 relative group/slider">
+            <div class="flex justify-between items-end mb-6">
                 <h2 class="text-3xl font-bold text-gray-900 font-serif flex items-center gap-3">
                     <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> ${title}
                 </h2>
@@ -734,86 +694,106 @@ export function renderDashboard(data, lang = "ru") {
                     Смотреть все <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </a>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">${cards}</div>
+            
+            <!-- Кнопки навигации (видны только на Desktop при наведении) -->
+            <button onclick="document.getElementById('${sliderId}').scrollBy({left: -300, behavior: 'smooth'})"
+                    class="absolute left-2 top-[60%] z-20 p-3 bg-white/90 backdrop-blur border border-gray-100 rounded-full shadow-lg text-gray-700 hover:text-cyan-600 hidden md:group-hover/slider:block transition-all hover:scale-110 -translate-y-1/2">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <button onclick="document.getElementById('${sliderId}').scrollBy({left: 300, behavior: 'smooth'})"
+                    class="absolute right-2 top-[60%] z-20 p-3 bg-white/90 backdrop-blur border border-gray-100 rounded-full shadow-lg text-gray-700 hover:text-cyan-600 hidden md:group-hover/slider:block transition-all hover:scale-110 -translate-y-1/2">
+                <i data-lucide="chevron-right" class="w-6 h-6"></i>
+            </button>
+
+            <!-- Контейнер слайдера -->
+            <div class="bg-white rounded-[2.5rem] shadow-xl p-6 md:p-10 border border-gray-100/50">
+                <div id="${sliderId}" class="flex overflow-x-auto gap-5 pb-4 snap-x snap-mandatory scroll-smooth no-scrollbar">
+                    ${cards}
+                </div>
+            </div>
         </div>
-        `;
+    `;
   };
 
-  // НОВАЯ СЕКЦИЯ: ФОРМА ОБРАТНОЙ СВЯЗИ
+  // 7. РУЛЕТКА
+  const randomizerHTML = `
+    <div class="px-6 mb-16">
+        <div class="relative overflow-hidden rounded-[2.5rem] shadow-2xl group border border-gray-200">
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear group-hover:scale-110" style="background-image: url('https://images.unsplash.com/photo-1519412666065-94acb3f8838f?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-cyan-900/80 backdrop-blur-sm"></div>
+            <div class="relative z-10 p-10 md:p-16 text-center flex flex-col items-center">
+                <h2 class="text-3xl md:text-4xl font-serif font-bold text-white mb-4 drop-shadow-md">Испытай удачу</h2>
+                <p class="text-gray-200 max-w-lg mx-auto mb-10 text-lg leading-relaxed">Доверьтесь случаю. Нажмите на кубик, и мы выберем для вас шедевр из нашей коллекции.</p>
+                <button id="random-dice-btn" class="dice-scene group/btn focus:outline-none transform transition-transform active:scale-95" title="Бросить кубик">
+                    <div class="dice-cube text-cyan-900">
+                        <div class="dice-face dice-face--1 bg-white"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+                        <div class="dice-face dice-face--2 bg-white flex justify-between p-3 w-full h-full"><svg class="w-3 h-3 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-3 h-3 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+                        <div class="dice-face dice-face--3 bg-white flex justify-between p-3 w-full h-full"><svg class="w-2.5 h-2.5 fill-current self-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current self-center" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current self-end" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div>
+                        <div class="dice-face dice-face--4 bg-white p-3"><div class="grid grid-cols-2 gap-4 w-full h-full"><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div>
+                        <div class="dice-face dice-face--5 bg-white p-3"><div class="grid grid-cols-3 grid-rows-3 w-full h-full"><svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current col-start-2 row-start-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current col-start-1 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current col-start-3 row-start-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div>
+                        <div class="dice-face dice-face--6 bg-white p-3"><div class="grid grid-cols-2 gap-3 w-full h-full"><div class="flex flex-col justify-between h-full"><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div><div class="flex flex-col justify-between h-full"><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg><svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div></div>
+                    </div>
+                </button>
+                <p class="mt-6 text-sm text-cyan-200/70 font-medium uppercase tracking-widest animate-pulse">Нажмите, чтобы бросить</p>
+            </div>
+        </div>
+    </div>
+  `;
+
+  // 8. ФОРМА ОБРАТНОЙ СВЯЗИ
   const feedbackFormHTML = `
-    <!-- 
-      ФИНАЛЬНАЯ ВЕРСИЯ:
-      1. pt-8 pb-0 -mb-32: Исправление отступа до футера.
-      2. max-w-7xl: Растягивание на всю ширину (как у других секций).
-    -->
-    <div class="pt-8 pb-0 -mb-32 relative z-10">
-      <!-- ИЗМЕНЕНО: max-w-4xl -> max-w-7xl -->
-      <div class="max-w-7xl mx-auto px-6">
-        <div class="bg-white/60 backdrop-blur-md p-8 sm:p-12 rounded-2xl shadow-lg border border-white/50 text-center">
-            
-            <!-- Заголовок (мобильная адаптация) -->
+    <div class="px-6 pb-16">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6 font-serif flex items-center gap-3">
+            <span class="w-2 h-8 bg-cyan-600 rounded-full"></span> Обратная связь
+        </h2>
+        <div class="bg-white p-8 sm:p-12 rounded-[2.5rem] shadow-xl text-center">
             <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 font-serif flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
                 <i data-lucide="mail-question" class="w-10 h-10 sm:w-8 sm:h-8 text-cyan-600 mb-1 sm:mb-0"></i>
                 <span>Хотите оставить отзыв?</span>
             </h2>
-            
-            <p class="text-gray-600 max-w-2xl mx-auto mb-10 text-sm sm:text-base">
-              Мы всегда рады обратной связи. Напишите нам, если у вас есть предложения по улучшению проекта или вы нашли ошибку.
-            </p>
-    
-            <!-- Форма (центрирована, ширина ограничена max-w-xl для читаемости полей) -->
+            <p class="text-gray-600 max-w-2xl mx-auto mb-10 text-sm sm:text-base">Мы всегда рады обратной связи. Напишите нам, если у вас есть предложения по улучшению проекта или вы нашли ошибку.</p>
             <form id="feedback-form" class="max-w-xl mx-auto text-left space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label for="feedback-name" class="block text-sm font-medium text-gray-700 mb-1">Ваше имя <span class="text-red-500">*</span></label>
-                  <input type="text" id="feedback-name" required 
-                         class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
+                  <input type="text" id="feedback-name" required class="w-full px-4 py-2 bg-slate-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
                 </div>
                 <div>
                   <label for="feedback-email" class="block text-sm font-medium text-gray-700 mb-1">Ваш Email <span class="text-red-500">*</span></label>
-                  <input type="email" id="feedback-email" required 
-                         class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
+                  <input type="email" id="feedback-email" required class="w-full px-4 py-2 bg-slate-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 transition-all">
                 </div>
               </div>
-              
               <div class="relative">
                 <label for="feedback-message" class="block text-sm font-medium text-gray-700 mb-1">Сообщение <span class="text-red-500">*</span></label>
-                <textarea id="feedback-message" rows="5" required maxlength="1000" 
-                          class="w-full px-4 py-2 bg-white/80 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 resize-none transition-all"></textarea>
+                <textarea id="feedback-message" rows="5" required maxlength="1000" class="w-full px-4 py-2 bg-slate-50 border border-gray-300 rounded-lg focus:outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10 resize-none transition-all"></textarea>
                 <div id="feedback-char-counter" class="absolute bottom-2 right-3 text-xs text-gray-400">0 / 1000</div>
               </div>
-              
               <div id="feedback-status" class="text-center min-h-[24px]"></div>
-    
               <div class="text-center pt-4">
-                <button type="submit" id="feedback-submit-btn" class="w-full sm:w-auto px-10 py-3 bg-cyan-600 text-white font-bold rounded-full hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-wait">
-                  Отправить
-                </button>
+                <button type="submit" id="feedback-submit-btn" class="w-full sm:w-auto px-10 py-3 bg-cyan-600 text-white font-bold rounded-full hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-wait">Отправить</button>
               </div>
             </form>
         </div>
-      </div>
     </div>
   `;
 
-  // СБОРКА
+  // --- ФИНАЛЬНАЯ СБОРКА В НУЖНОМ ПОРЯДКЕ ---
   listEl.innerHTML =
     heroHTML +
     statsHTML +
-    epochsHTML +
     spotlightHTML +
-    randomizerHTML +
+    collectionsHTML +
+    epochsHTML +
     createSection(
       "Недавно добавленные",
       data.recently_added_works,
       "sparkles"
     ) +
-    createSection("Случайный выбор", data.random_works, "shuffle") +
+    randomizerHTML +
     feedbackFormHTML;
 
-  // Логика поиска и СЧЕТЧИКА СИМВОЛОВ
+  // Логика для инпутов, счетчиков и т.д. (без изменений)
   setTimeout(() => {
-    // 1. Поиск (это у вас уже было)
     document
       .getElementById("hero-search-input")
       ?.addEventListener("keydown", (e) => {
@@ -825,7 +805,6 @@ export function renderDashboard(data, lang = "ru") {
         }
       });
 
-    // 2. ДОБАВЛЕНО: Логика счетчика символов
     const msgInput = document.getElementById("feedback-message");
     const charCounter = document.getElementById("feedback-char-counter");
 
@@ -834,8 +813,6 @@ export function renderDashboard(data, lang = "ru") {
         const currentLength = this.value.length;
         const maxLength = this.getAttribute("maxlength");
         charCounter.textContent = `${currentLength} / ${maxLength}`;
-
-        // Опционально: красим в красный, если достигли лимита
         if (currentLength >= maxLength) {
           charCounter.classList.add("text-red-500", "font-bold");
         } else {
@@ -1587,10 +1564,36 @@ export async function renderCompositionGrid(work, lang = "ru") {
   `
     : "";
 
+  // --- ЛОГИКА КНОПКИ НОТ ДЛЯ ПРОИЗВЕДЕНИЯ ---
+  const hasScores = work.scores && work.scores.length > 0;
+
+  // Показываем кнопку, если есть ноты ИЛИ если пользователь Админ (чтобы добавить)
+  const scoresBtn =
+    hasScores || isAdmin()
+      ? `
+       <button onclick="window.ui.showScoresModal('${work.name_ru.replace(
+         /'/g,
+         "\\'"
+       )}', window.state.view.currentWork.scores, ${work.id}, 'work')" 
+               class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+           <i data-lucide="music" class="w-5 h-5 ${
+             hasScores ? "text-cyan-600" : "text-gray-400"
+           }"></i> 
+           <span>Ноты</span>
+           ${
+             hasScores
+               ? `<span class="bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full ml-1 border border-gray-200">${work.scores.length}</span>`
+               : ""
+           }
+       </button>
+   `
+      : "";
+
   // === 3. Собираем все кнопки вместе ===
   const allControls = `
     <div class="flex flex-wrap gap-3 mt-6 md:mt-0 w-full md:w-auto">
         ${playButton}
+        ${scoresBtn}
         ${
           isAdmin()
             ? `
@@ -1898,6 +1901,34 @@ export async function renderCompositionGrid(work, lang = "ru") {
           iconsHtml += `<i data-lucide="disc" class="w-5 h-5 text-cyan-500" title="Есть аудиозаписи"></i>`;
         if (c.has_video)
           iconsHtml += `<i data-lucide="youtube" class="w-5 h-5 text-red-500" title="Есть видеозаписи"></i>`;
+
+        // --- НОВЫЕ ИКОНКИ НОТ ---
+        const partHasScores = c.scores && c.scores.length > 0;
+
+        if (partHasScores || isAdmin()) {
+          // Экранирование кавычек для JS
+          const safeTitle = c.title_ru.replace(/'/g, "\\'");
+
+          // Классы: если нот нет (но админ), иконка серая. Если есть - синяя.
+          const btnClass = partHasScores
+            ? "text-cyan-700 hover:bg-cyan-50"
+            : "text-gray-300 hover:text-gray-500 hover:bg-gray-50";
+
+          const iconName = partHasScores ? "file-text" : "file-plus"; // Разные иконки
+
+          // Важно: передаем scores через поиск в window.state, чтобы передать актуальный массив
+          iconsHtml += `
+                <button onclick="event.stopPropagation(); window.ui.showScoresModal('${safeTitle}', window.state.view.currentWork.compositions.find(x => x.id === ${
+            c.id
+          }).scores, ${c.id}, 'composition')"
+                        class="p-1 rounded transition-colors ml-2 ${btnClass}" 
+                        title="${
+                          partHasScores ? "Открыть ноты" : "Добавить ноты"
+                        }">
+                    <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                </button>
+             `;
+        }
 
         const iconsContainer = iconsHtml
           ? `<div class="flex items-center gap-2 ml-4">${iconsHtml}</div>`
@@ -2554,10 +2585,16 @@ export function renderPlaylistList(playlists) {
 }
 export function renderPagination(curr, total) {
   const c = document.getElementById("pagination-container");
-  if (!c || total <= 1) {
+  if (!c) return;
+
+  if (total <= 1) {
     c.innerHTML = "";
+    c.classList.add("hidden");
     return;
   }
+
+  c.classList.remove("hidden");
+
   let h = "";
   for (let i = 1; i <= total; i++) {
     const active =
@@ -2568,6 +2605,7 @@ export function renderPagination(curr, total) {
   }
   c.innerHTML = h;
 }
+
 export function renderBreadcrumbs() {
   const container = document.getElementById("breadcrumbs-container");
   if (!container) return;
@@ -6730,4 +6768,240 @@ export function renderSingleFeedbackMessage(msg) {
 
   listEl.innerHTML = `<div class="max-w-4xl mx-auto px-6 pb-20">${messageHtml}</div>`;
   if (window.lucide) window.lucide.createIcons();
+}
+
+// Функция открытия окна нот
+export function showScoresModal(entityTitle, scores, entityId, entityType) {
+  const modal = document.getElementById("edit-modal");
+  const content = document.getElementById("edit-modal-content");
+  const title = document.getElementById("edit-modal-title");
+  const confirmBtn = document.getElementById("confirm-edit-btn");
+
+  confirmBtn.classList.add("hidden");
+
+  title.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="music" class="w-5 h-5 text-cyan-600"></i> Ноты: ${entityTitle}</div>`;
+
+  // Генерация опций для селекта лицензий
+  const licenseOptions = Object.keys(licenses)
+    .map((key) => `<option value="${key}">${key}</option>`)
+    .join("");
+
+  const renderList = () => {
+    if (!scores || scores.length === 0) {
+      return `<div class="text-center py-8 text-gray-500">Нет добавленных нот</div>`;
+    }
+    return scores
+      .map((score) => {
+        const licenseUrl = licenses[score.license];
+
+        // ЛИЦЕНЗИЯ: Если есть URL — ссылка, если нет — просто текст
+        const licenseBadge = licenseUrl
+          ? `<a href="${licenseUrl}" target="_blank" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide border border-cyan-100 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 hover:text-cyan-900 transition-colors" title="Открыть лицензию">${score.license}</a>`
+          : score.license
+          ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide border border-gray-200 text-gray-500">${score.license}</span>`
+          : "";
+
+        // JSON для кнопки редактирования (чтобы заполнить форму)
+        const scoreData = JSON.stringify(score).replace(/"/g, "&quot;");
+
+        const adminControls = isAdmin()
+          ? `
+              <div class="flex items-center ml-2 border-l border-gray-200 pl-2 gap-1">
+                  <button onclick='window.fillScoreForm(${scoreData})' 
+                          class="p-2 text-gray-400 hover:text-cyan-600 transition-colors rounded-lg hover:bg-cyan-50" title="Редактировать">
+                      <i data-lucide="edit-2" class="w-4 h-4"></i>
+                  </button>
+                  <button onclick="window.deleteScore(${score.id})" 
+                          class="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50" title="Удалить">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+              </div>
+          `
+          : "";
+
+        return `
+          <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 mb-2 shadow-sm hover:border-cyan-200 transition-colors">
+              <div class="flex-1 min-w-0 mr-4">
+                  <div class="flex items-center gap-2 mb-1 flex-wrap">
+                      <span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide border border-gray-200">
+                          ${translateScoreType(score.score_type)}
+                      </span>
+                      ${licenseBadge}
+                  </div>
+                  <div class="font-bold text-gray-800 text-sm truncate" title="${
+                    score.editor || ""
+                  }">
+                      ${score.editor || "Редакция не указана"}
+                  </div>
+              </div>
+              <div class="flex items-center">
+                  <a href="${score.url}" target="_blank" 
+                     class="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-lg transition-all shadow-sm active:scale-95">
+                      <span>${score.source_text || "Скачать"}</span>
+                      <i data-lucide="external-link" class="w-3 h-3"></i>
+                  </a>
+                  ${adminControls}
+              </div>
+          </div>`;
+      })
+      .join("");
+  };
+
+  const adminForm = isAdmin()
+    ? `
+      <div class="border-t border-gray-200 pt-5 mt-5 bg-gray-50 -mx-6 px-6 pb-4" id="score-form-container">
+          <div class="flex justify-between items-center mb-3">
+              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide" id="score-form-title">Добавить ноты</h4>
+              <button type="button" id="cancel-edit-score" class="hidden text-xs text-red-500 hover:underline">Отменить редактирование</button>
+          </div>
+          
+          <form id="add-score-form" class="space-y-3">
+              <input type="hidden" name="score_id" id="score_id_input"> <!-- ID для редактирования -->
+              
+              <div class="grid grid-cols-2 gap-3">
+                  <select name="score_type" id="score_type" class="w-full border p-2 rounded-lg text-sm bg-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200 transition-all" required>
+                      <option value="full_score">Партитура</option>
+                      <option value="piano_score">Клавир</option>
+                      <option value="part">Партия</option>
+                      <option value="arrangement">Аранжировка</option>
+                  </select>
+                  <input type="text" name="editor" id="score_editor" placeholder="Редакция / Издательство" class="w-full border p-2 rounded-lg text-sm outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200 transition-all">
+              </div>
+              
+              <div class="grid grid-cols-2 gap-3">
+                  <select name="license" id="score_license" class="w-full border p-2 rounded-lg text-sm bg-white outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200 transition-all">
+                      <option value="">Лицензия (Не указана)</option>
+                      ${licenseOptions}
+                  </select>
+                  <input type="text" name="source_text" id="score_source_text" placeholder="Источник (текст ссылки)" required class="w-full border p-2 rounded-lg text-sm outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200 transition-all">
+              </div>
+
+              <div>
+                  <input type="url" name="url" id="score_url" placeholder="URL (Ссылка на файл или страницу)" required class="w-full border p-2 rounded-lg text-sm outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-200 transition-all">
+              </div>
+
+              <button type="submit" id="score-submit-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-md transition-all mt-2 active:scale-[0.99]">
+                  Добавить
+              </button>
+          </form>
+      </div>
+  `
+    : "";
+
+  content.innerHTML = `
+      <div class="max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+          ${renderList()}
+      </div>
+      ${adminForm}
+  `;
+
+  // --- ЛОГИКА ФОРМЫ ---
+  if (isAdmin()) {
+    const form = document.getElementById("add-score-form");
+    const submitBtn = document.getElementById("score-submit-btn");
+    const formTitle = document.getElementById("score-form-title");
+    const cancelBtn = document.getElementById("cancel-edit-score");
+    const idInput = document.getElementById("score_id_input");
+
+    // Глобальная функция для заполнения формы (вызывается из HTML кнопки редактирования)
+    window.fillScoreForm = (data) => {
+      idInput.value = data.id;
+      document.getElementById("score_type").value = data.score_type;
+      document.getElementById("score_editor").value = data.editor || "";
+      document.getElementById("score_license").value = data.license || "";
+      document.getElementById("score_source_text").value =
+        data.source_text || "";
+      document.getElementById("score_url").value = data.url || "";
+
+      // Визуальные изменения
+      submitBtn.textContent = "Сохранить изменения";
+      formTitle.textContent = "Редактировать ноты";
+      formTitle.className =
+        "text-xs font-bold text-cyan-600 uppercase tracking-wide";
+      cancelBtn.classList.remove("hidden");
+
+      // Скролл к форме
+      document
+        .getElementById("score-form-container")
+        .scrollIntoView({ behavior: "smooth" });
+    };
+
+    // Отмена редактирования
+    cancelBtn.onclick = () => {
+      form.reset();
+      idInput.value = "";
+      submitBtn.textContent = "Добавить";
+      formTitle.textContent = "Добавить ноты";
+      formTitle.className =
+        "text-xs font-bold text-gray-500 uppercase tracking-wide";
+      cancelBtn.classList.add("hidden");
+    };
+
+    // Отправка
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Сохранение...";
+
+      // 1. Собираем все данные из формы в объект
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      // 2. Извлекаем ID для определения, это создание или редактирование
+      const scoreId = data.score_id;
+
+      // 3. !!! ВАЖНОЕ ИСПРАВЛЕНИЕ !!!
+      // Удаляем поле score_id из объекта, который пойдет в тело запроса.
+      // Pydantic-схема ScoreUpdate его не ожидает.
+      delete data.score_id;
+
+      try {
+        if (scoreId) {
+          // PUT (Редактирование): Отправляем 'data' без 'score_id'
+          await window.apiRequest(`/api/scores/${scoreId}`, "PUT", data);
+          window.showNotification("Изменения сохранены", "success");
+        } else {
+          // POST (Создание): Прикрепляем ID родителя и отправляем
+          if (entityType === "work") data.work_id = entityId;
+          else data.composition_id = entityId;
+
+          await window.apiRequest("/api/scores/", "POST", data);
+          window.showNotification("Ссылка добавлена", "success");
+        }
+        // Перезагружаем страницу в любом случае для обновления данных
+        window.location.reload();
+      } catch (err) {
+        window.showNotification(err.message, "error");
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    };
+  }
+
+  const closeBtn = modal.querySelector(".close-button");
+  const newClose = closeBtn.cloneNode(true);
+  closeBtn.parentNode.replaceChild(newClose, closeBtn);
+  newClose.onclick = () => {
+    modal.classList.add("hidden");
+    confirmBtn.classList.remove("hidden");
+  };
+
+  modal.classList.remove("hidden");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function translateScoreType(type) {
+  switch (type) {
+    case "full_score":
+      return "Партитура";
+    case "piano_score":
+      return "Клавир";
+    case "part":
+      return "Партия";
+    case "arrangement":
+      return "Аранжировка";
+    default:
+      return type;
+  }
 }

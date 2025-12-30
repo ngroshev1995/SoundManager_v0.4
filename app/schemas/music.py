@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
+from .score import Score
 
 class GenreBase(BaseModel):
     name: str
@@ -180,6 +181,7 @@ class CompositionSimple(CompositionBase):
     has_audio: bool = False
     has_video: bool = False
     recordings: List[RecordingSimple] = []
+    scores: List[Score] = []
     class Config:
         from_attributes = True
 
@@ -213,6 +215,7 @@ class Work(WorkBase):
     composer: Composer
     compositions: List[CompositionSimple] = []
     genre: Optional[Genre] = None
+    scores: List[Score] = []
 
     class Config:
         from_attributes = True
@@ -224,6 +227,7 @@ class Composition(CompositionBase):
     work_id: int
     cover_art_url: Optional[str] = None
     work: Work
+    scores: List[Score] = []
 
     class Config:
         from_attributes = True

@@ -246,15 +246,25 @@ def get_work(slug: str, db: Session = Depends(get_db)):
     if not w:
         raise HTTPException(404, "Not found")
 
-    return (
-        db.query(models.music.Work)
-        .options(
-            joinedload(models.music.Work.compositions)
-            .joinedload(models.music.Composition.recordings)
-        )
-        .filter(models.music.Work.id == w.id)
-        .first()
+    # Формируем запрос поэтапно, чтобы избежать ошибки связывания путей
+    query = db.query(models.music.Work)
+
+    # 1. Загружаем ноты самого произведения (Work -> Scores)
+    query = query.options(joinedload(models.music.Work.scores))
+
+    # 2. Загружаем части и их записи (Work -> Compositions -> Recordings)
+    query = query.options(
+        joinedload(models.music.Work.compositions)
+        .joinedload(models.music.Composition.recordings)
     )
+
+    # 3. Загружаем ноты для частей (Work -> Compositions -> Scores)
+    query = query.options(
+        joinedload(models.music.Work.compositions)
+        .joinedload(models.music.Composition.scores)
+    )
+
+    return query.filter(models.music.Work.id == w.id).first()
 
 @router.get("/compositions/{slug}", response_model=schemas.music.Composition)
 def get_composition(slug: str, db: Session = Depends(get_db)):

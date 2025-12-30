@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+from app.api.endpoints import scores
 
 from app.api.endpoints import auth, recordings, playlists, users, dashboard, search, genres, blog, feedback
 
@@ -28,6 +29,7 @@ app.include_router(search.router, prefix="/api/search", tags=["Search"])
 app.include_router(genres.router, prefix="/api/genres", tags=["Genres"])
 app.include_router(blog.router, prefix="/api/blog", tags=["Blog"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])
+app.include_router(scores.router, prefix="/api/scores", tags=["Scores"])
 
 STATIC_DIR = ROOT_DIR.parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

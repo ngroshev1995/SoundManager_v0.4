@@ -138,6 +138,12 @@ function resetViewState() {
   state.selectedRecordingIds.clear();
   state.isSelectionMode = false;
   ui.updateSelectionBar(0);
+
+  const pag = document.getElementById("pagination-container");
+  if (pag) {
+    pag.innerHTML = "";
+    pag.classList.add("hidden");
+  }
 }
 
 function setupRouter() {
@@ -4032,3 +4038,16 @@ window.playPlaylistFromCard = async (playlistId) => {
     ui.showNotification("Ошибка запуска плейлиста", "error");
   }
 };
+
+window.deleteScore = async (id) => {
+  if (!confirm("Удалить эту ссылку?")) return;
+  try {
+      await apiRequest(`/api/scores/${id}`, "DELETE");
+      showNotification("Удалено", "success");
+      window.location.reload();
+  } catch (e) {
+      showNotification(e.message, "error");
+  }
+};
+// Добавь это в window, чтобы UI мог вызывать
+window.ui = ui;
