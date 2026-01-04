@@ -109,6 +109,7 @@ class Recording(Base):
 
     conductor = Column(String, nullable=True)
     license = Column(String, nullable=True)
+    publisher = Column(String, nullable=True)
     source_text = Column(String, nullable=True)
     source_url = Column(String, nullable=True)
     lead_performer = Column(String, nullable=True)

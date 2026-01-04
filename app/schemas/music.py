@@ -62,6 +62,7 @@ class RecordingBase(BaseModel):
     youtube_url: Optional[str] = None
     conductor: Optional[str] = None
     license: Optional[str] = None
+    publisher: Optional[str] = None
     source_text: Optional[str] = None
     source_url: Optional[str] = None
     lead_performer: Optional[str] = None
@@ -72,6 +73,7 @@ class VideoRecordingCreate(BaseModel):
     performers: str
     lead_performer: Optional[str] = None
     conductor: Optional[str] = None
+    publisher: Optional[str] = None
     recording_year: Optional[int] = None
 
 
@@ -112,6 +114,7 @@ class RecordingUpdate(BaseModel):
     youtube_url: Optional[str] = None
     conductor: Optional[str] = None
     license: Optional[str] = None
+    publisher: Optional[str] = None
     source_text: Optional[str] = None
     source_url: Optional[str] = None
     lead_performer: Optional[str] = None
@@ -132,6 +135,7 @@ class FullRecordingDetailsUpdate(BaseModel):
     performers: Optional[str] = None
     recording_year: Optional[int] = None
     youtube_url: Optional[str] = None
+    publisher: Optional[str] = None
     title: Optional[str] = None
     title_ru: Optional[str] = None
     title_original: Optional[str] = None

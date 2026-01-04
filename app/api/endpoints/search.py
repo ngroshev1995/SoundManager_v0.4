@@ -126,6 +126,7 @@ def universal_search(q: str, db: Session = Depends(get_db)):
                            r for r in all_recordings
                            if check_obj([
             r.performers, r.conductor, r.lead_performer,
+            r.publisher,
             str(r.recording_year or ''),
             r.composition.title_ru,  # Название части
             r.composition.work.name_ru,  # Название произведения

@@ -1731,6 +1731,10 @@ function addEventListeners() {
         document.getElementById("add-recording-license").value || ""
       );
       fd.append(
+        "publisher",
+        document.getElementById("add-recording-publisher").value || ""
+      );
+      fd.append(
         "source_text",
         document.getElementById("add-recording-source-text").value || ""
       );
@@ -1777,6 +1781,8 @@ function addEventListeners() {
           document.getElementById("add-video-conductor").value.trim() || null,
         recording_year:
           parseInt(document.getElementById("add-video-year").value) || null,
+        publisher:
+          document.getElementById("add-video-publisher").value.trim() || null,
       };
 
       handleCreateEntity(
@@ -2144,9 +2150,11 @@ function addEventListeners() {
         state.isSelectionMode = false;
         ui.updateSelectionBar(0);
         ui.updateSelectionStyles();
-        document
-          .querySelectorAll(".selection-checkbox-container")
-          .forEach((el) => el.classList.add("hidden"));
+        // === ИСПРАВЛЕНИЕ: Сбрасываем и класс, и инлайн-стиль ===
+        document.querySelectorAll(".selection-checkbox-container").forEach((el) => {
+            el.classList.add("hidden");
+            el.style.display = ""; 
+        });
       }
     }
 
@@ -2161,9 +2169,11 @@ function addEventListeners() {
         state.isSelectionMode = false;
         ui.updateSelectionBar(0);
         ui.updateSelectionStyles();
-        document
-          .querySelectorAll(".selection-checkbox-container")
-          .forEach((el) => el.classList.add("hidden"));
+        // === ИСПРАВЛЕНИЕ ===
+        document.querySelectorAll(".selection-checkbox-container").forEach((el) => {
+            el.classList.add("hidden");
+            el.style.display = "";
+        });
       }
     }
 
@@ -4042,11 +4052,11 @@ window.playPlaylistFromCard = async (playlistId) => {
 window.deleteScore = async (id) => {
   if (!confirm("Удалить эту ссылку?")) return;
   try {
-      await apiRequest(`/api/scores/${id}`, "DELETE");
-      showNotification("Удалено", "success");
-      window.location.reload();
+    await apiRequest(`/api/scores/${id}`, "DELETE");
+    showNotification("Удалено", "success");
+    window.location.reload();
   } catch (e) {
-      showNotification(e.message, "error");
+    showNotification(e.message, "error");
   }
 };
 // Добавь это в window, чтобы UI мог вызывать

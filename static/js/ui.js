@@ -481,7 +481,13 @@ export function renderDashboard(data, lang = "ru") {
                       </h2>
                       
                       <p class="text-lg text-gray-300 mb-8 max-w-xl font-light leading-relaxed drop-shadow-md mx-auto md:mx-0">
-                          Вдохновитесь шедевром <a href="/works/${spotlightWork.slug || spotlightWork.id}" data-navigo class="font-semibold text-white hover:underline">"${getLocalizedText(spotlightWork, "name", lang)}"</a> и откройте для себя мир великого мастера.
+                          Вдохновитесь шедевром <a href="/works/${
+                            spotlightWork.slug || spotlightWork.id
+                          }" data-navigo class="font-semibold text-white hover:underline">"${getLocalizedText(
+      spotlightWork,
+      "name",
+      lang
+    )}"</a> и откройте для себя мир великого мастера.
                       </p>
                       
                       <a href="${compLink}" data-navigo 
@@ -620,11 +626,11 @@ export function renderDashboard(data, lang = "ru") {
                 ]
                   .map(
                     (e) => `
-                    <button onclick="window.goToEpoch('${e.id}')" 
-                       class="relative h-40 rounded-xl overflow-hidden group text-left shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
-                        <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
-                             style="background-image: url('${e.img}');">
-                        </div>
+                  <button onclick="window.goToEpoch('${e.id}')" 
+                     class="cursor-pointer relative h-40 rounded-xl overflow-hidden group text-left shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
+                      <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" 
+                           style="background-image: url('${e.img}');">
+                      </div>
                         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                         <div class="absolute bottom-0 left-0 p-4 z-20 text-white w-full">
                             <div class="flex justify-between items-end">
@@ -916,16 +922,25 @@ export function renderRecordingList(
           ? getLocalizedText(r.composition.work, "name", lang)
           : getLocalizedText(r.composition, "title", lang);
 
+        // --- ЛОГИКА БЕЙДЖА ---
         const sortOrder = r.composition.sort_order;
         const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
         let metaBadge = "";
 
+        // Фиксированная ширина (w-16 моб, w-24 пк), текст справа, не сжимается
+        const badgeClass =
+          "text-[10px] sm:text-xs text-gray-400 font-mono text-right w-16 sm:w-24 flex-shrink-0 mr-2 whitespace-nowrap overflow-hidden text-ellipsis select-none"; // ДОБАВЛЕНО select-none
+
         if (isAdmin()) {
-          metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text" title="ID и Номер части">#${
-            r.id
-          }${roman ? `, ${roman}` : ""}</span>`;
+          // Убрали select-all cursor-text
+          metaBadge = `<span class="${badgeClass}">#${r.id}${
+            roman ? `, ${roman}` : ""
+          }</span>`;
         } else if (roman) {
-          metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium" title="Номер части">${roman}</span>`;
+          metaBadge = `<span class="${badgeClass} font-serif tracking-wider font-medium">${roman}</span>`;
+        } else {
+          // Пустой блок той же ширины для выравнивания
+          metaBadge = `<span class="${badgeClass}"></span>`;
         }
 
         const compoName = getLocalizedText(
@@ -957,7 +972,6 @@ export function renderRecordingList(
                  <i data-lucide="grip-vertical" class="w-4 h-4 pointer-events-none"></i>
                </div>`
           : "";
-        // -----------------------------------------------------
 
         return `
           <div class="recording-item ${sortableClass} relative group flex items-center p-3 hover:bg-gray-50 ${
@@ -966,66 +980,69 @@ export function renderRecordingList(
                ${draggableAttr}
                data-recording-id="${r.id}" data-index="${i}">
                
-               <!-- ВОТ ЗДЕСЬ ДОБАВЛЕНА РУЧКА -->
                ${dragHandleHtml}
   
-               <!-- 1. Чекбокс -->
-               <div class="selection-checkbox-container w-10 justify-center items-center flex-shrink-0 transition-all ${
-                 window.state?.isSelectionMode ? "flex" : "hidden md:flex"
-               }">
-                 <input type="checkbox" class="recording-checkbox w-5 h-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
-                   r.id
-                 }" ${isSelected ? "checked" : ""}>
+               <!-- 1. ЛЕВАЯ ЧАСТЬ (Чекбокс + Play + Обложка) -->
+               <div class="flex items-center flex-shrink-0">
+                   <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 mr-1 transition-all ${
+                     window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+                   }">
+                     <input type="checkbox" class="recording-checkbox w-4 h-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-id="${
+                       r.id
+                     }" ${isSelected ? "checked" : ""}>
+                   </div>
+                   
+                   <!-- Кнопка Play (flex-shrink-0 чтобы не сжималась) -->
+                   <div class="w-8 flex-shrink-0 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                     r.id
+                   }">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                   </div>
+      
+                   <div class="flex-shrink-0 mx-3 hidden sm:block">
+                        <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy" alt="Обложка">
+                   </div>
                </div>
-               ${!isLoggedIn() ? '<div class="hidden md:block w-2"></div>' : ""}
   
-               <!-- 2. Play -->
-               <div class="w-12 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
-                 r.id
-               }">
-                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-               </div>
-  
-               <!-- 3. Обложка -->
-                <div class="flex-shrink-0 mx-2 md:mx-4">
-              <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm border border-gray-100" loading="lazy" alt="Обложка">
-                </div>
-  
-               <!-- 4. Информация -->
-               <div class="flex-1 min-w-0">
-                   <div class="font-bold text-gray-800 text-sm leading-tight break-words flex items-baseline">
-                        <span>${compName}</span>
-                        ${metaBadge}
+               <!-- 2. ЦЕНТР (Информация) -->
+               <div class="flex-1 min-w-0 mr-2 ml-1">
+                   <div class="font-bold text-gray-800 text-sm leading-tight break-words">
+                        ${compName}
                    </div>
                    <div class="text-xs text-gray-500 mt-0.5 break-words">
    
-   <!-- 1. ССЫЛКА НА ПРОИЗВЕДЕНИЕ (Только мобильные, если это часть) -->
-   ${
-     !isFullWork
-       ? `<div class="lg:hidden mb-0.5"><a href="${workLink}" data-navigo class="text-cyan-700 font-medium hover:underline relative z-10">${workName}</a></div>`
-       : ""
-   }
-
-   <!-- 2. ИСПОЛНИТЕЛЬ -->
-   <span>${r.performers || "Исполнитель не указан"}</span>
-   
-   <!-- 3. ГОД ЗАПИСИ -->
-   ${
-     r.recording_year
-       ? `<span class="ml-1 text-gray-400">(${r.recording_year})</span>`
-       : ""
-   }
-
-   <!-- 4. ССЫЛКА НА КОМПОЗИТОРА (Только мобильные) -->
-   ${
-     !hideComposer
-       ? `<span class="lg:hidden"><span class="text-gray-300 mx-1">•</span><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline relative z-10 transition-colors">${compoName}</a></span>`
-       : ""
-   }
-</div>
+                       <!-- ССЫЛКА НА ПРОИЗВЕДЕНИЕ (Только мобильные, если это часть) -->
+                       ${
+                         !isFullWork
+                           ? `<div class="lg:hidden mb-0.5"><a href="${workLink}" data-navigo class="text-cyan-700 font-medium hover:underline relative z-10">${workName}</a></div>`
+                           : ""
+                       }
+                    
+                       <!-- ИСПОЛНИТЕЛЬ + ГОД -->
+                       <span>${r.performers || "Исполнитель не указан"}</span>
+                       ${
+                         r.recording_year
+                           ? `<span class="ml-1 text-gray-400">(${r.recording_year})</span>`
+                           : ""
+                       }
+                    
+                       <!-- ССЫЛКА НА КОМПОЗИТОРА (Только мобильные) -->
+                       ${
+                         !hideComposer
+                           ? `<span class="lg:hidden"><span class="text-gray-300 mx-1">•</span><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline relative z-10 transition-colors">${compoName}</a></span>`
+                           : ""
+                       }
+                       
+                       <!-- ИЗДАТЕЛЬ -->
+                       ${
+                         r.publisher
+                           ? `<div class="text-[10px] text-cyan-600 font-bold uppercase tracking-wider mt-0.5 truncate">${r.publisher}</div>`
+                           : ""
+                       }
+                   </div>
                </div>
 
-               <!-- Колонки для ПК -->
+               <!-- 3. КОЛОНКИ ДЛЯ ПК (Восстановлены) -->
                ${
                  !hideComposer
                    ? `<div class="hidden lg:block w-1/4 text-sm text-gray-600 truncate mr-4"><a href="${composerLink}" data-navigo class="hover:text-cyan-600 hover:underline">${compoName}</a></div>`
@@ -1037,46 +1054,47 @@ export function renderRecordingList(
                    : ""
                }
   
-               <!-- 5. Правая часть -->
-               <div class="flex items-center ml-auto pl-3 flex-shrink-0 gap-3">
+               <!-- 4. ПРАВАЯ ЧАСТЬ -->
+               <div class="flex items-center ml-auto pl-2 flex-shrink-0">
                     
-                    <!-- МОБИЛЬНАЯ СОРТИРОВКА (ТОЛЬКО В ПЛЕЙЛИСТЕ/ПОДБОРКЕ) -->
+                    <!-- БЕЙДЖ НОМЕРА/ID (Вставлен сюда) -->
+                    ${metaBadge}
+
+                    <!-- КНОПКИ СОРТИРОВКИ (Мобильные плейлисты) -->
                     ${
                       options.isPlaylist
                         ? `
                     <div class="flex flex-col gap-1 md:hidden mr-2">
-                        <button class="sort-up-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
-                                data-index="${i}">
-                            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                        <button class="sort-up-btn p-1 bg-gray-50 border border-gray-200 rounded text-gray-400 active:text-cyan-600 transition-all" data-index="${i}">
+                            <i data-lucide="chevron-up" class="w-3 h-3"></i>
                         </button>
-                        <button class="sort-down-btn p-2 bg-gray-50 border border-gray-200 rounded shadow-sm text-gray-400 active:bg-cyan-50 active:text-cyan-600 active:border-cyan-200 transition-all" 
-                                data-index="${i}">
-                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        <button class="sort-down-btn p-1 bg-gray-50 border border-gray-200 rounded text-gray-400 active:text-cyan-600 transition-all" data-index="${i}">
+                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
                         </button>
                     </div>
                     `
                         : ""
                     }
 
-                    <div class="hidden md:flex items-center">
+                    <!-- ЛАЙК (Скрыт на мобильных hidden, виден на ПК sm:flex) -->
+                    <div class="hidden sm:flex items-center w-8 justify-center">
                         ${
                           isLoggedIn()
                             ? `
-                            <button class="favorite-btn p-2 mr-2 ${
-                              isFav
-                                ? "text-red-500"
-                                : "text-gray-300 hover:text-red-400"
-                            }" data-recording-id="${r.id}">
+                            <button class="favorite-btn text-gray-300 hover:text-red-400 transition-colors" data-recording-id="${
+                              r.id
+                            }">
                                 <i data-lucide="heart" class="w-4 h-4 ${
-                                  isFav ? "fill-current" : ""
+                                  isFav ? "fill-current text-red-500" : ""
                                 }"></i>
                             </button>`
-                            : '<div class="w-10"></div>'
+                            : ""
                         }
                     </div>
-                   <div class="text-xs text-gray-500 font-mono w-10 text-right">${formatDuration(
+                    
+                   <span class="text-xs text-gray-400 font-mono w-10 text-right flex-shrink-0">${formatDuration(
                      r.duration
-                   )}</div>
+                   )}</span>
                </div>
           </div>`;
       })
@@ -1127,6 +1145,11 @@ export function renderRecordingList(
                           ${
                             r.performers || "Исполнитель не указан"
                           } • ${workName}
+                          ${
+                            r.publisher
+                              ? ` • <span class="text-cyan-600 font-medium">${r.publisher}</span>`
+                              : ""
+                          }
                      </div>
                  </div>
              </div>
@@ -2255,9 +2278,17 @@ export function renderCompositionDetailView(
                             <div class="font-bold text-gray-800 text-lg leading-snug break-words">${
                               r.performers || "Исполнитель не указан"
                             }</div>
-                            <div class="text-sm text-gray-500 font-mono mt-1">${
-                              r.recording_year || "Год не указан"
-                            }</div>
+                            <div class="text-sm text-gray-500 font-mono mt-1 flex items-center flex-wrap gap-2">
+                                <span>${
+                                  r.recording_year || "Год не указан"
+                                }</span>
+                                <!-- ДОБАВЛЕНО -->
+                                ${
+                                  r.publisher
+                                    ? `<span class="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 uppercase tracking-wide">${r.publisher}</span>`
+                                    : ""
+                                }
+                            </div>
                         </div>
                     </div>
 
@@ -2298,7 +2329,24 @@ export function updatePlayerInfo(rec) {
 
   if (rec) {
     recId = rec.id;
-    title = getLocalizedText(rec.composition, "title", "ru");
+
+    // === ИСПРАВЛЕНИЕ: Если это "Полное произведение" (sort_order === 0), берем название Произведения ===
+    if (rec.composition.sort_order === 0) {
+      // Если это "Полное произведение", просто пишем название произведения
+      title = getLocalizedText(rec.composition.work, "name", "ru");
+    } else {
+      // Если это часть, добавляем римскую цифру (I. Allegro)
+      const rawTitle = getLocalizedText(rec.composition, "title", "ru");
+      const order = rec.composition.sort_order;
+
+      if (order > 0) {
+        title = `${toRoman(order)}. ${rawTitle}`;
+      } else {
+        title = rawTitle;
+      }
+    }
+    // ===================================================================================================
+
     const composer = getLocalizedText(
       rec.composition.work.composer,
       "name",
@@ -2451,6 +2499,15 @@ export function updatePlayerInfo(rec) {
             <div>
                 <strong class="block text-gray-400 font-medium">Дирижёр:</strong>
                 <span>${rec.conductor}</span>
+            </div>`
+                : ""
+            }
+            ${
+              rec.publisher
+                ? `
+            <div>
+                <strong class="block text-gray-400 font-medium">Издатель:</strong>
+                <span>${rec.publisher}</span>
             </div>`
                 : ""
             }
@@ -3338,6 +3395,9 @@ export async function showEditEntityModal(type, data, onSave) {
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год записи</label><input type="number" id="edit-rec-year" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.recording_year || ""
             }"></div>
+            <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Издатель</label><input type="text" id="edit-publisher" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.publisher || ""
+            }"></div>
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Лицензия</label><select id="edit-license" class="w-full px-3 py-2 border rounded-lg bg-white outline-none"><option value="">Не указана</option>${licenseOptions}</select></div>
             <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Источник (анкор)</label><input type="text" id="edit-source-text" class="w-full px-3 py-2 border rounded-lg" value="${
               data.source_text || ""
@@ -3368,6 +3428,9 @@ export async function showEditEntityModal(type, data, onSave) {
             }"></div>
             <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Год записи</label><input type="number" id="edit-rec-year" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
               data.recording_year || ""
+            }"></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Издатель</label><input type="text" id="edit-publisher" class="w-full px-3 py-2 border rounded-lg outline-none" value="${
+              data.publisher || ""
             }"></div>
         </div>
     `;
@@ -3619,6 +3682,7 @@ export async function showEditEntityModal(type, data, onSave) {
           performers: document.getElementById("edit-performers").value,
           lead_performer: document.getElementById("edit-lead-performer").value,
           conductor: document.getElementById("edit-conductor").value,
+          publisher: document.getElementById("edit-publisher").value,
           recording_year:
             parseInt(document.getElementById("edit-rec-year").value) || null,
           license: document.getElementById("edit-license").value,
@@ -3638,6 +3702,7 @@ export async function showEditEntityModal(type, data, onSave) {
           performers: performers,
           lead_performer: document.getElementById("edit-lead-performer").value,
           conductor: document.getElementById("edit-conductor").value,
+          publisher: document.getElementById("edit-publisher").value,
           recording_year:
             parseInt(document.getElementById("edit-rec-year").value) || null,
         };
@@ -5505,71 +5570,74 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                     window.state.selectedRecordingIds &&
                     window.state.selectedRecordingIds.has(t.id);
 
-                  // --- ЛОГИКА БЕЙДЖА ---
+                  // --- ЛОГИКА БЕЙДЖА (Фикс ширины) ---
                   const sortOrder = t.composition.sort_order;
                   const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
                   let metaBadge = "";
+
+                  // Используем адаптивную ширину: w-16 на мобильных, w-24 на ПК
+                  const badgeClass =
+                    "text-[10px] sm:text-xs text-gray-400 font-mono text-right w-16 sm:w-24 flex-shrink-0 mr-2 whitespace-nowrap overflow-hidden text-ellipsis select-none";
+
                   if (isAdmin()) {
-                    metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text">#${
-                      t.id
-                    }${roman ? `, ${roman}` : ""}</span>`;
+                    // Убрали select-all cursor-text
+                    metaBadge = `<span class="${badgeClass}">#${t.id}${
+                      roman ? `, ${roman}` : ""
+                    }</span>`;
                   } else if (roman) {
-                    metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium">${roman}</span>`;
+                    metaBadge = `<span class="${badgeClass} font-serif tracking-wider font-medium">${roman}</span>`;
+                  } else {
+                    metaBadge = `<span class="${badgeClass}"></span>`;
                   }
-                  // --------------------
 
                   return `
                           <div class="recording-item flex items-center py-2 px-3 hover:bg-cyan-50 transition-colors group/track cursor-pointer border-b border-gray-50 last:border-0 ${
                             isSelected ? "bg-cyan-50" : ""
                           }"
                                data-recording-id="${t.id}">
-                               <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 mr-2 transition-all ${
-                                 window.state?.isSelectionMode
-                                   ? "flex"
-                                   : "hidden md:flex"
-                               }">
-        <input type="checkbox" 
-               class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" 
-               data-id="${t.id}" 
-               ${isSelected ? "checked" : ""}>
-    </div>
-    
-    <!-- СТАРЫЙ БЛОК С ID УДАЛЕН ОТСЮДА -->
+                               
+                               <!-- 1. ЛЕВАЯ ЧАСТЬ (Play) -->
+                               <div class="flex items-center flex-shrink-0">
+                                   <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 mr-1 transition-all ${
+                                     window.state?.isSelectionMode
+                                       ? "flex"
+                                       : "hidden md:flex"
+                                   }">
+                                        <input type="checkbox" 
+                                               class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" 
+                                               data-id="${t.id}" 
+                                               ${isSelected ? "checked" : ""}>
+                                   </div>
+                                   
+                                   <div class="w-8 flex-shrink-0 flex justify-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                                     t.id
+                                   }">
+                                      <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                                   </div>
+                               </div>
 
-                              <div class="w-8 flex justify-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
-                                t.id
-                              }">
-                                  <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                              </div>
-                              <div class="flex-1 text-sm text-gray-700 font-medium ml-3 break-words flex items-baseline">
-                                  <span>
-                                  ${
-                                    t.composition.sort_order === 0
-                                      ? getLocalizedText(work, "name", "ru")
-                                      : getLocalizedText(
-                                          t.composition,
-                                          "title",
-                                          "ru"
-                                        )
-                                  }
-                                  </span>
-                                  ${metaBadge} <!-- ВСТАВЛЕНО СЮДА -->
-                              </div>
-                              <div class="flex items-center gap-3">
+                               <!-- 2. НАЗВАНИЕ (Центр) -->
+                               <div class="flex-1 min-w-0 ml-2 mr-2">
+                                  <div class="text-sm text-gray-700 font-medium leading-tight">
+                                      ${
+                                        t.composition.sort_order === 0
+                                          ? getLocalizedText(work, "name", "ru")
+                                          : getLocalizedText(
+                                              t.composition,
+                                              "title",
+                                              "ru"
+                                            )
+                                      }
+                                  </div>
+                               </div>
 
-                                  ${
-                                    isLoggedIn()
-                                      ? `
-                                  <button class="favorite-btn text-gray-300 hover:text-red-500" data-recording-id="${
-                                    t.id
-                                  }">
-                                      <i data-lucide="heart" class="w-4 h-4 ${
-                                        isFav ? "fill-current text-red-500" : ""
-                                      }"></i>
-                                  </button>`
-                                      : ""
-                                  }
-                                  <span class="text-xs text-gray-400 font-mono">${formatDuration(
+                               <!-- 3. ПРАВАЯ ЧАСТЬ (Инфо) -->
+                               <div class="flex items-center flex-shrink-0 ml-auto">
+                                  <!-- Номер/ID (Фикс ширина) -->
+                                  ${metaBadge}
+                                  
+                                  <!-- Время (Фикс ширина) -->
+                                  <span class="text-xs text-gray-400 font-mono w-10 text-right flex-shrink-0">${formatDuration(
                                     t.duration
                                   )}</span>
                               </div>
@@ -5675,44 +5743,51 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
             const sortOrder = r.composition.sort_order;
             const roman = sortOrder > 0 ? toRoman(sortOrder) : "";
             let metaBadge = "";
+
+            // Адаптивная ширина: w-16 mobile / w-24 desktop
+            const badgeClass =
+              "text-[10px] sm:text-xs text-gray-400 font-mono text-right w-16 sm:w-24 flex-shrink-0 mr-2 whitespace-nowrap overflow-hidden text-ellipsis hidden sm:block select-none";
+
             if (isAdmin()) {
-              metaBadge = `<span class="text-[10px] text-gray-400 font-mono ml-2 select-all cursor-text">#${
-                r.id
-              }${roman ? `, ${roman}` : ""}</span>`;
+              // Убрали select-all cursor-text
+              metaBadge = `<span class="${badgeClass}">#${r.id}${
+                roman ? `, ${roman}` : ""
+              }</span>`;
             } else if (roman) {
-              metaBadge = `<span class="text-xs text-gray-400 font-serif ml-2 tracking-wider font-medium">${roman}</span>`;
+              metaBadge = `<span class="${badgeClass} font-serif tracking-wider font-medium">${roman}</span>`;
+            } else {
+              metaBadge = `<span class="${badgeClass}"></span>`;
             }
-            // --------------------
 
             return `
-            <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 transition-colors cursor-pointer ${
+            <div class="recording-item group flex items-center p-3 hover:bg-cyan-50 transition-colors cursor-pointer border-b border-gray-100 last:border-0 ${
               isSelected ? "bg-cyan-50" : ""
             }"
                  data-recording-id="${r.id}" data-index="${i}">
-                <!-- ... (чекбокс и play без изменений) ... -->
-                <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 ${
-                  window.state?.isSelectionMode ? "flex" : "hidden md:flex"
-                }">
-                     <input type="checkbox" class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500" data-id="${
-                       r.id
-                     }" ${isSelected ? "checked" : ""}>
+                
+                <!-- 1. ЛЕВАЯ ЧАСТЬ -->
+                <div class="flex items-center flex-shrink-0">
+                    <div class="selection-checkbox-container w-8 justify-center items-center flex-shrink-0 ${
+                      window.state?.isSelectionMode ? "flex" : "hidden md:flex"
+                    }">
+                         <input type="checkbox" class="recording-checkbox w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500" data-id="${
+                           r.id
+                         }" ${isSelected ? "checked" : ""}>
+                    </div>
+                    <div class="w-10 flex-shrink-0 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform" id="list-play-btn-${
+                      r.id
+                    }">
+                        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                    </div>
+                    <div class="flex-shrink-0 mx-3 hidden sm:block">
+                         <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm" loading="lazy">
+                    </div>
                 </div>
-                <div class="w-10 flex justify-center items-center text-cyan-600 recording-play-pause-btn hover:scale-110 transition-transform flex-shrink-0" id="list-play-btn-${
-                  r.id
-                }">
-                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                </div>
-                <div class="flex-shrink-0 mx-3">
-                     <img src="${cover}" class="w-10 h-10 rounded-lg object-cover shadow-sm" loading="lazy">
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="font-bold text-gray-800 text-sm truncate flex items-baseline">
-                         <span>${getLocalizedText(
-                           r.composition,
-                           "title",
-                           "ru"
-                         )}</span>
-                         ${metaBadge} <!-- ВСТАВЛЕНО СЮДА -->
+
+                <!-- 2. ЦЕНТР -->
+                <div class="flex-1 min-w-0 mr-2 ml-2">
+                    <div class="font-bold text-gray-800 text-sm truncate">
+                         ${getLocalizedText(r.composition, "title", "ru")}
                     </div>
                     <div class="text-xs text-gray-500 truncate">
                          ${r.performers} • ${
@@ -5720,20 +5795,27 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
             }
                     </div>
                 </div>
-                  <div class="ml-auto pl-2 flex items-center gap-3">
-                       ${
-                         isLoggedIn()
-                           ? `
-                       <button class="favorite-btn text-gray-300 hover:text-red-500 hidden sm:block" data-recording-id="${
-                         r.id
-                       }">
-                           <i data-lucide="heart" class="w-4 h-4 ${
-                             isFav ? "fill-current text-red-500" : ""
-                           }"></i>
-                       </button>`
-                           : ""
-                       }
-                       <span class="text-xs text-gray-400 font-mono w-10 text-right">${formatDuration(
+                
+                <!-- 3. ПРАВАЯ ЧАСТЬ -->
+                <div class="flex items-center flex-shrink-0 ml-auto">
+                       ${metaBadge}
+                       
+                       <!-- Лайк оставляем только на больших экранах, если нужно -->
+                       <div class="w-8 flex justify-center flex-shrink-0 hidden sm:flex">
+                           ${
+                             isLoggedIn()
+                               ? `<button class="favorite-btn text-gray-300 hover:text-red-500 transition-colors" data-recording-id="${
+                                   r.id
+                                 }">
+                                   <i data-lucide="heart" class="w-4 h-4 ${
+                                     isFav ? "fill-current text-red-500" : ""
+                                   }"></i>
+                                  </button>`
+                               : ""
+                           }
+                       </div>
+                       
+                       <span class="text-xs text-gray-400 font-mono w-10 text-right flex-shrink-0">${formatDuration(
                          r.duration
                        )}</span>
                   </div>
@@ -5785,18 +5867,26 @@ export function renderLibraryContent(data, type = "list", favs, reset = false) {
                   </p>
 
                   <div class="mt-auto pt-2 border-t border-gray-100">
-                    <p class="text-xs text-gray-500 font-medium">
+                    <p class="text-xs text-gray-500 font-medium truncate">
                       ${getLocalizedText(
                         r.composition.work.composer,
                         "name",
                         "ru"
                       )}
                     </p>
-                    <p class="text-xs text-gray-400">
+                    <p class="text-xs text-gray-400 line-clamp-1" title="${
+                      r.performers
+                    }">
                       ${r.performers} ${
           r.recording_year ? `(${r.recording_year})` : ""
         }
                     </p>
+                    <!-- ДОБАВЛЕНО -->
+                    ${
+                      r.publisher
+                        ? `<p class="text-[10px] text-cyan-600 font-bold uppercase tracking-wider mt-1 truncate" title="${r.publisher}">${r.publisher}</p>`
+                        : ""
+                    }
                   </div>
               </div>
           </div>
@@ -5828,7 +5918,14 @@ export function renderQueue(nowPlaying, queue) {
     const comp = nowPlaying.composition;
     const work = comp.work;
     const composer = work.composer;
-    const partTitle = getLocalizedText(comp, "title", "ru");
+
+    // === ИСПРАВЛЕНИЕ ===
+    const partTitle =
+      comp.sort_order === 0
+        ? getLocalizedText(work, "name", "ru")
+        : getLocalizedText(comp, "title", "ru");
+    // ===================
+
     const workTitle = getLocalizedText(work, "name", "ru");
     const composerName = getLocalizedText(composer, "name", "ru");
 
@@ -5857,7 +5954,14 @@ export function renderQueue(nowPlaying, queue) {
         const comp = rec.composition;
         const work = comp.work;
         const composer = work.composer;
-        const partTitle = getLocalizedText(comp, "title", "ru");
+
+        // === ИСПРАВЛЕНИЕ ===
+        const partTitle =
+          comp.sort_order === 0
+            ? getLocalizedText(work, "name", "ru")
+            : getLocalizedText(comp, "title", "ru");
+        // ===================
+
         const workTitle = getLocalizedText(work, "name", "ru");
         const composerName = getLocalizedText(composer, "name", "ru");
         const cover =
@@ -5907,7 +6011,13 @@ export function renderQueue(nowPlaying, queue) {
     if (queue && queue.length > 0) {
       const mobHtml = queue
         .map((rec, index) => {
-          const title = getLocalizedText(rec.composition, "title", "ru");
+          // === ИСПРАВЛЕНИЕ ===
+          const title =
+            rec.composition.sort_order === 0
+              ? getLocalizedText(rec.composition.work, "name", "ru")
+              : getLocalizedText(rec.composition, "title", "ru");
+          // ===================
+
           const artist = rec.performers || "Исполнитель не указан";
 
           return `

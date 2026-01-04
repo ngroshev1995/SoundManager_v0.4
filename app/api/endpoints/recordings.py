@@ -18,35 +18,37 @@ from app.services import audio_processor
 
 router = APIRouter()
 
+
 # --- СОЗДАНИЕ (ТОЛЬКО АДМИН) ---
 
 @router.post("/composers", response_model=schemas.music.Composer, status_code=status.HTTP_201_CREATED)
 def create_new_composer(
-    composer_in: schemas.music.ComposerCreate,
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin) # <--- ЗАЩИТА
+        composer_in: schemas.music.ComposerCreate,
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)  # <--- ЗАЩИТА
 ):
     return crud.music.create_composer(db, composer_in=composer_in)
 
 
 @router.post("/composers/{composer_id}/works", response_model=schemas.music.Work, status_code=status.HTTP_201_CREATED)
 def create_new_work(
-    composer_id: int,
-    work_in: schemas.music.WorkCreate,
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        composer_id: int,
+        work_in: schemas.music.WorkCreate,
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     if not db.query(models.music.Composer).get(composer_id):
         raise HTTPException(404, "Composer not found")
     return crud.music.create_work_for_composer(db, work_in=work_in, composer_id=composer_id)
 
 
-@router.post("/works/{work_id}/compositions", response_model=schemas.music.Composition, status_code=status.HTTP_201_CREATED)
+@router.post("/works/{work_id}/compositions", response_model=schemas.music.Composition,
+             status_code=status.HTTP_201_CREATED)
 def create_new_composition(
-    work_id: int,
-    comp_in: schemas.music.CompositionCreate,
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        work_id: int,
+        comp_in: schemas.music.CompositionCreate,
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     if not db.query(models.music.Work).get(work_id):
         raise HTTPException(404, "Work not found")
@@ -63,6 +65,7 @@ def upload_audio_recording(
         conductor: Optional[str] = Form(None),
         recording_year: Optional[int] = Form(None),
         license: Optional[str] = Form(None),
+        publisher: Optional[str] = Form(None),
         source_text: Optional[str] = Form(None),
         source_url: Optional[str] = Form(None),
         db: Session = Depends(get_db),
@@ -100,6 +103,7 @@ def upload_audio_recording(
             conductor=conductor,
             recording_year=recording_year,
             license=license,
+            publisher=publisher,
             source_text=source_text,
             source_url=source_url
         )
@@ -163,25 +167,32 @@ def add_video_recording(
 # --- ОБНОВЛЕНИЕ (ТОЛЬКО АДМИН) ---
 
 @router.put("/composers/{cid}", response_model=schemas.music.Composer)
-def update_composer(cid: int, comp_in: schemas.music.ComposerUpdate, db: Session = Depends(get_db), u: models.User = Depends(deps.get_current_active_admin)):
+def update_composer(cid: int, comp_in: schemas.music.ComposerUpdate, db: Session = Depends(get_db),
+                    u: models.User = Depends(deps.get_current_active_admin)):
     c = crud.music.get_composer(db, cid)
     if not c: raise HTTPException(404, "Not found")
     return crud.music.update_composer(db, c, comp_in)
 
+
 @router.put("/works/{wid}", response_model=schemas.music.Work)
-def update_work(wid: int, work_in: schemas.music.WorkUpdate, db: Session = Depends(get_db), u: models.User = Depends(deps.get_current_active_admin)):
+def update_work(wid: int, work_in: schemas.music.WorkUpdate, db: Session = Depends(get_db),
+                u: models.User = Depends(deps.get_current_active_admin)):
     w = crud.music.get_work(db, wid)
     if not w: raise HTTPException(404, "Not found")
     return crud.music.update_work(db, w, work_in)
 
+
 @router.put("/compositions/{cid}", response_model=schemas.music.Composition)
-def update_composition(cid: int, comp_in: schemas.music.CompositionUpdate, db: Session = Depends(get_db), u: models.User = Depends(deps.get_current_active_admin)):
+def update_composition(cid: int, comp_in: schemas.music.CompositionUpdate, db: Session = Depends(get_db),
+                       u: models.User = Depends(deps.get_current_active_admin)):
     c = crud.music.get_composition(db, cid)
     if not c: raise HTTPException(404, "Not found")
     return crud.music.update_composition(db, c, comp_in)
 
+
 @router.put("/{rid}", response_model=schemas.music.Recording)
-def update_recording(rid: int, rec_in: schemas.music.RecordingUpdate, db: Session = Depends(get_db), u: models.User = Depends(deps.get_current_active_admin)):
+def update_recording(rid: int, rec_in: schemas.music.RecordingUpdate, db: Session = Depends(get_db),
+                     u: models.User = Depends(deps.get_current_active_admin)):
     r = crud.music.get_recording(db, rid)
     if not r: raise HTTPException(404, "Not found")
     return crud.music.update_recording(db, r, rec_in)
@@ -202,7 +213,8 @@ def delete_work(wid: int, db: Session = Depends(get_db), u: models.User = Depend
 
 
 @router.delete("/compositions/{cid}", status_code=204)
-def delete_composition(cid: int, db: Session = Depends(get_db), u: models.User = Depends(deps.get_current_active_admin)):
+def delete_composition(cid: int, db: Session = Depends(get_db),
+                       u: models.User = Depends(deps.get_current_active_admin)):
     if not crud.music.delete_composition(db, cid): raise HTTPException(404, "Not found")
     return Response(status_code=204)
 
@@ -217,11 +229,12 @@ def delete_recording(rid: int, db: Session = Depends(get_db), u: models.User = D
 
 @router.get("/composers", response_model=List[schemas.music.Composer])
 def get_composers(
-    skip: int = 0,       # <-- Добавлено
-    limit: int = 12,     # <-- Добавлено (по умолчанию 12 штук)
-    db: Session = Depends(get_db)
+        skip: int = 0,  # <-- Добавлено
+        limit: int = 12,  # <-- Добавлено (по умолчанию 12 штук)
+        db: Session = Depends(get_db)
 ):
     return db.query(models.music.Composer).order_by(models.music.Composer.name_ru).offset(skip).limit(limit).all()
+
 
 @router.get("/composers/{slug}", response_model=schemas.music.Composer)
 def get_composer(slug: str, db: Session = Depends(get_db)):
@@ -230,12 +243,14 @@ def get_composer(slug: str, db: Session = Depends(get_db)):
     if not c: raise HTTPException(404, "Not found")
     return c
 
+
 @router.get("/composers/{slug}/works", response_model=List[schemas.music.Work])
 def get_composer_works(slug: str, db: Session = Depends(get_db)):
     c = crud.music.get_composer_by_slug(db, slug)
     if not c and slug.isdigit(): c = db.query(models.music.Composer).get(int(slug))
     if not c: raise HTTPException(404, "Composer not found")
-    return db.query(models.music.Work).filter(models.music.Work.composer_id == c.id).order_by(models.music.Work.name_ru).all()
+    return db.query(models.music.Work).filter(models.music.Work.composer_id == c.id).order_by(
+        models.music.Work.name_ru).all()
 
 
 @router.get("/works/{slug}", response_model=schemas.music.Work)
@@ -266,6 +281,7 @@ def get_work(slug: str, db: Session = Depends(get_db)):
 
     return query.filter(models.music.Work.id == w.id).first()
 
+
 @router.get("/compositions/{slug}", response_model=schemas.music.Composition)
 def get_composition(slug: str, db: Session = Depends(get_db)):
     c = crud.music.get_composition_by_slug(db, slug)
@@ -274,6 +290,7 @@ def get_composition(slug: str, db: Session = Depends(get_db)):
     return db.query(models.music.Composition).options(
         joinedload(models.music.Composition.work).joinedload(models.music.Work.composer)
     ).filter(models.music.Composition.id == c.id).first()
+
 
 @router.get("/compositions/{slug}/recordings", response_model=List[schemas.music.Recording])
 def get_comp_recordings(slug: str, db: Session = Depends(get_db)):
@@ -373,7 +390,7 @@ def list_recordings(
         group_by: Optional[Literal["work", "recording"]] = "recording",
         composer_id: Optional[int] = None,
         genre: Optional[str] = None,
-        epoch: Optional[str] = None, # <--- 1. ДОБАВИЛИ ПАРАМЕТР
+        epoch: Optional[str] = None,  # <--- 1. ДОБАВИЛИ ПАРАМЕТР
         sort_by: Optional[Literal["newest", "oldest"]] = "newest",
         db: Session = Depends(get_db)
 ):
@@ -436,6 +453,7 @@ def list_recordings(
 
     return {"total": total, "recordings": items, "items": []}
 
+
 # --- ПРОЧЕЕ ---
 @router.get("/stream/{rid}")
 def stream(rid: int, db: Session = Depends(get_db)):
@@ -443,9 +461,11 @@ def stream(rid: int, db: Session = Depends(get_db)):
     if not rec or not os.path.exists(rec.file_path.lstrip('/')): raise HTTPException(404, "Not found")
     return FileResponse(rec.file_path.lstrip('/'))
 
+
 @router.post("/{rid}/favorite", status_code=204)
 def fav_add(rid: int, db: Session = Depends(get_db), u=Depends(deps.get_current_user)):
     if r := crud.music.get_recording(db, rid): crud.music.add_recording_to_favorites(db, u, r)
+
 
 @router.delete("/{rid}/favorite", status_code=204)
 def fav_del(rid: int, db: Session = Depends(get_db), u=Depends(deps.get_current_user)):
@@ -456,32 +476,34 @@ def fav_del(rid: int, db: Session = Depends(get_db), u=Depends(deps.get_current_
 
 @router.post("/composers/{id}/cover", response_model=schemas.music.Composer)
 def upload_composer_cover(
-    id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        id: int,
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     if not crud.music.get_composer(db, id): raise HTTPException(404, "Composer not found")
     url = utils.save_upload_file(file, "composers", f"comp_{id}")
     return crud.music.update_composer_portrait(db, id, url)
 
+
 @router.post("/works/{id}/cover", response_model=schemas.music.Work)
 def upload_work_cover(
-    id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        id: int,
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     if not crud.music.get_work(db, id): raise HTTPException(404, "Work not found")
     url = utils.save_upload_file(file, "works", f"work_{id}")
     return crud.music.update_work_cover(db, id, url)
 
+
 @router.post("/compositions/{id}/cover", response_model=schemas.music.Composition)
 def upload_composition_cover(
-    id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        id: int,
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     if not crud.music.get_composition(db, id): raise HTTPException(404, "Composition not found")
     url = utils.save_upload_file(file, "compositions", f"part_{id}")
@@ -490,13 +512,14 @@ def upload_composition_cover(
 
 @router.put("/works/{work_id}/reorder-compositions", status_code=200)
 def reorder_work_compositions(
-    work_id: int,
-    payload: schemas.music.CompositionReorder,
-    db: Session = Depends(get_db),
-    u: models.User = Depends(deps.get_current_active_admin)
+        work_id: int,
+        payload: schemas.music.CompositionReorder,
+        db: Session = Depends(get_db),
+        u: models.User = Depends(deps.get_current_active_admin)
 ):
     crud.music.reorder_compositions(db, work_id, payload.composition_ids)
     return {"status": "ok"}
+
 
 @router.get("/random-interactive", response_model=schemas.music.Work)
 def get_random_work_for_interactive(db: Session = Depends(get_db)):

@@ -93,6 +93,7 @@ def get_library_works(
                             func.lower_utf8(models.music.Work.nickname).contains(token),
                             func.lower_utf8(models.music.Composer.name_ru).contains(token),
                             func.lower_utf8(models.music.Recording.performers).contains(token),
+                            func.lower_utf8(models.music.Recording.publisher).contains(token),
 
                             # "Безпробельный" поиск (для каталогов и номеров: kv 525 == kv525)
                             func.lower_utf8(func.replace(models.music.Work.catalog_number, ' ', '')).contains(
@@ -243,6 +244,7 @@ def create_recording_for_composition(
         lead_performer = rec_in.lead_performer,
         conductor = rec_in.conductor,
         license = rec_in.license,
+        publisher=rec_in.publisher,
         source_text = rec_in.source_text,
         source_url = rec_in.source_url
     )
@@ -272,6 +274,7 @@ def update_full_details(db: Session, recording: models.music.Recording, d: schem
     if d.performers: recording.performers = d.performers
     if d.recording_year: recording.recording_year = d.recording_year
     if d.youtube_url is not None: recording.youtube_url = d.youtube_url
+    if d.publisher is not None: recording.publisher = d.publisher
     db.commit()
     db.refresh(recording)
     return recording
